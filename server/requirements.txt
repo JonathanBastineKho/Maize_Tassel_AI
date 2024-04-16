@@ -1,2 +1,7 @@
 uvicorn==0.29.0
 fastapi==0.110.1
+redis[hiredis]==5.0.3
+python-dotenv==1.0.0
+SQLAlchemy==2.0.29
+bcrypt==4.1.2
+itsdangerous==2.1.2
