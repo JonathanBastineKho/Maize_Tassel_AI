@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
-from app.database.schema import User
+from app.database.schema import User, UserType
 from app.request.user import UserCreateRequest
 from app.database.utils import get_db
 from app.database import session_mgr
@@ -20,7 +20,7 @@ async def register(user : UserCreateRequest, db: Session = Depends(get_db)):
     
     # Adding new user
     password_hash = hashpw(user.password.encode('utf-8'), gensalt())
-    db_user = User(email=user.email, password=password_hash)
+    db_user = User(email=user.email, password=password_hash, userType = UserType.REGULAR)
     db.add(db_user)
     db.commit()
 
