@@ -101,7 +101,7 @@ function LoginPage() {
               </Link>
             </Label>
             <Label htmlFor="agree" className="flex">
-              <Link to="/" className="text-green-700 hover:underline">
+              <Link to="/reset-password" className="text-green-700 hover:underline">
                 Forgot Password?
               </Link>
             </Label>

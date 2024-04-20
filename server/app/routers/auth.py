@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Body
 from app.database.schema import User, TypeOfUser
-from app.utils.payload import UserCreateRequest, LoginRequired, UserLoginRequest, googleAuth
+from app.utils.payload import UserCreateRequest, UserRequest, LoginRequired, UserLoginRequest, ResetPasswordRequest, googleAuth
 from app.database.utils import get_db
 from app.database import session_mgr
-from app.utils.payload import send_confirm_email
+from app.utils.payload import EmailSender
 from config import Config
 from sqlalchemy.orm import Session
 from bcrypt import hashpw, gensalt, checkpw
@@ -33,7 +33,7 @@ async def register(user : UserCreateRequest, request: Request, db: Session = Dep
     db.commit()
 
     # Generating confirmation token
-    await send_confirm_email(user.email)
+    await EmailSender.send_confirm_email(user.email)
     return session_mgr.login_user(email=user.email,
                                   name=user.name,
                                   role=db_user.role, 
@@ -96,7 +96,6 @@ async def google_login(request:Request, token:googleAuth, db: Session = Depends(
                                   verified=db_user.verified, 
                                   request=request)
     
-
 @router.post("/logout")
 async def logout(request: Request, user:dict = Depends(LoginRequired(verified=False))):
     return session_mgr.logout_user(request)
@@ -107,14 +106,12 @@ async def verify_email(token: str,
                        db: Session = Depends(get_db), 
                        user:dict = Depends(LoginRequired(verified=False))):
     # Check if token valid
-    serializer = URLSafeTimedSerializer(Config.SECRET_KEY)
-    try:
-        email = serializer.loads(token, max_age=3600)
-    except:
-        raise HTTPException(status_code=400, detail="Invalid or expired token")
-    
+    valid_token = EmailSender.check_token(token, "email", 7200)
+
     # check if user already confirmed
-    db_user = db.query(User).filter(User.email == email).first()
+    db_user = db.query(User).filter(User.email == valid_token["email"]).first()
+    if db_user == None:
+        raise HTTPException(status_code=400, detail="User does not exist")
     if db_user.verified:
         raise HTTPException(status_code=409, detail="User already verified")
     
@@ -125,7 +122,35 @@ async def verify_email(token: str,
 
 @router.post("/request-verification")
 async def request_verification(user:dict = Depends(LoginRequired(verified=False))):
-    await send_confirm_email(user["email"])
+    await EmailSender.send_confirm_email(user["email"])
+    return {"Success" : True}
+
+@router.post("/reset-password/request")
+async def request_reset_password(user: UserRequest, db: Session = Depends(get_db)):
+    db_user = db.query(User).filter(User.email == user.email).first()
+    if db_user == None or db_user.password == None:
+        raise HTTPException(status_code=401, detail="Email is not valid")
+    sent_token = await EmailSender.send_reset_password(user.email)
+    session_mgr.r.set(sent_token, user.email)
+    return {"Success" : True}
+
+@router.get("/reset-password/check/{token}")
+async def check_reset_password(token:str, request:Request):
+    session_mgr.check_if_already_logged_in(request)
+    EmailSender.check_token(token, "reset_password", 900)
+    if not session_mgr.r.exists(token):
+        raise HTTPException(status_code=400, detail="Invalid or expired token")
+    return {"Success" : True}
+
+@router.patch("/reset-password/confirm/{token}")
+async def confirm_reset_password(token:str, new_password:ResetPasswordRequest, request:Request, db: Session = Depends(get_db)):
+    session_mgr.check_if_already_logged_in(request)
+    valid_token = EmailSender.check_token(token, "reset_password", 900)
+    db_user = db.query(User).filter(User.email == valid_token["email"]).first()
+
+    db_user.password = hashpw(new_password.password.encode('utf-8'), gensalt())
+    db.commit()
+    session_mgr.r.delete(token)
     return {"Success" : True}
 
 @router.get("/whoami")

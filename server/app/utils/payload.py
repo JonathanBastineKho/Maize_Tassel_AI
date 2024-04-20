@@ -9,6 +9,9 @@ from config import Config, MailConf
 class UserRequest(BaseModel):
     email: str
 
+class ResetPasswordRequest(BaseModel):
+    password: str
+
 class UserLoginRequest(UserRequest):
     password: str
 
@@ -48,13 +51,40 @@ class LoginRequired:
         
         return user
     
-async def send_confirm_email(email:str):
+class EmailSender:
     serializer = URLSafeTimedSerializer(Config.SECRET_KEY)
-    token = serializer.dumps(email)
-    message = MessageSchema(
+    fm = FastMail(MailConf)
+
+    @staticmethod
+    async def send_confirm_email(email:str):
+        token = EmailSender.serializer.dumps({"purpose" : "email", "email" : email})
+        message = MessageSchema(
             subject="Confirmation Email",
             recipients=[email],
             body=f"<p>Confirm your email here {Config.CONFIRMATION_LINK}/{token} </p>",
             subtype=MessageType.html)
-    fm = FastMail(MailConf)
-    await fm.send_message(message)
+        await EmailSender.fm.send_message(message)
+        return token
+    
+    @staticmethod
+    async def send_reset_password(email:str):
+        token = EmailSender.serializer.dumps({"purpose" : "reset_password", "email" : email})
+        message = MessageSchema(
+            subject="Reset Your Password",
+            recipients=[email],
+            body=f"<p>Reset Your Password here {Config.RESET_PASSWORD_LINK}/{token} </p>",
+            subtype=MessageType.html)
+        await EmailSender.fm.send_message(message)
+        return token
+
+    @staticmethod
+    def check_token(token:str, purpose:str, max_age:int):
+        try:
+            valid_token = EmailSender.serializer.loads(token, max_age=max_age)
+        except:
+            raise HTTPException(status_code=400, detail="Invalid or expired token")
+        # Check if token is used for email
+        if valid_token["purpose"] != purpose:
+            raise HTTPException(status_code=400, detail="Invalid or expired token")
+        
+        return valid_token

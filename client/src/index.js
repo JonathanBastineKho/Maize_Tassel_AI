@@ -6,11 +6,13 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 // Import Pages
 import PrivateRoute from './Components/Authentication/PrivateRoute';
-import GuestRoot from './Components/Authentication/GuestRoute';
+import GuestRoute from './Components/Authentication/GuestRoute';
 import UnverifiedPage from './Pages/Auth/UnverifiedPage';
 import ConfirmPage from './Pages/Auth/ConfirmPage';
 import RegisterPage from "./Pages/Auth/RegisterPage"
 import LoginPage from './Pages/Auth/LoginPage';
+import ResetPasswordPage from './Pages/Auth/ResetPasswordPage';
+import ConfirmResetPasswordPage from './Pages/Auth/ConfirmResetPassword';
 import HomePage from './Pages/HomePage';
 import AdminDashboardPage from './Pages/Admin/AdminDashboardPage';
 import AuthProvider from './Components/Authentication/AuthContext';
@@ -26,11 +28,17 @@ root.render(
         <Route exact path="/" 
         element={<HomePage />}/>
 
+        <Route exact path="/reset-password" 
+        element={<GuestRoute><ResetPasswordPage /></GuestRoute>}/>
+
+        <Route exact path="/reset-password/:token" 
+        element={<GuestRoute><ConfirmResetPasswordPage/></GuestRoute>}/>
+
         <Route exact path="/register" 
-        element={<GuestRoot><RegisterPage /></GuestRoot>}/>
+        element={<GuestRoute><RegisterPage /></GuestRoute>}/>
 
         <Route exact path="/login" 
-        element={<GuestRoot><LoginPage /></GuestRoot>}/>
+        element={<GuestRoute><LoginPage /></GuestRoute>}/>
 
         <Route exact path="/unverified"
         element={<PrivateRoute requiredRoles={["admin","regular","premium"]} verified={false}><UnverifiedPage /></PrivateRoute>}/>

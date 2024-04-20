@@ -15,8 +15,8 @@ class SessionManager:
             return self.serializer.loads(session)
         except:
             return None
-
-    def login_user(self, email:str, name:str, verified:bool, role:str, request: Request):
+        
+    def check_if_already_logged_in(self, request:Request):
         # Check if users already logged in
         session_token = request.cookies.get(self.session_key)
         # Check signature
@@ -24,6 +24,10 @@ class SessionManager:
         # Check if already logged in
         if session_token and self.r.exists(session_token):
             raise HTTPException(status_code=403, detail="Users already Logged in")
+
+    def login_user(self, email:str, name:str, verified:bool, role:str, request: Request):
+        
+        self.check_if_already_logged_in(request)
         
         # generate a secure session token
         while True:

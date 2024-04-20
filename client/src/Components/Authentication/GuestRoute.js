@@ -4,7 +4,7 @@ import { Spinner } from "flowbite-react";
 import axios from "axios";
 import { Navigate } from "react-router-dom";
 
-const GuestRoot = ({ children }) => {
+const GuestRoute = ({ children }) => {
     const { user, setUser } = useContext(AuthContext);
     const [isValidated, setIsValidated] = useState(false);
 
@@ -42,4 +42,4 @@ const GuestRoot = ({ children }) => {
     }
 }
 
-export default GuestRoot;
+export default GuestRoute;
