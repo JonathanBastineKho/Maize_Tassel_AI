@@ -1,0 +1,133 @@
+from fastapi import APIRouter, Depends, HTTPException, Request, Body
+from app.database.schema import User, TypeOfUser
+from app.utils.payload import UserCreateRequest, LoginRequired, UserLoginRequest, googleAuth
+from app.database.utils import get_db
+from app.database import session_mgr
+from app.utils.payload import send_confirm_email
+from config import Config
+from sqlalchemy.orm import Session
+from bcrypt import hashpw, gensalt, checkpw
+from itsdangerous import URLSafeTimedSerializer
+import requests
+
+router = APIRouter(tags=["auth"], prefix="/api")
+
+@router.get("/")
+async def test():
+    return {"Success" : True}
+
+@router.post("/register")
+async def register(user : UserCreateRequest, request: Request, db: Session = Depends(get_db)):
+    # Check if email already exists
+    db_user = db.query(User).filter(User.email == user.email).first()
+    if db_user != None:
+        if db_user.password != None:
+            raise HTTPException(status_code=400, detail="Email already registered")
+        elif user.password == None:
+            raise HTTPException(status_code=400, detail="Email already registered with Google")
+    
+    # Adding new user
+    password_hash = hashpw(user.password.encode('utf-8'), gensalt())
+    db_user = User(email=user.email, name=user.name, password=password_hash)
+    db.add(db_user)
+    db.commit()
+
+    # Generating confirmation token
+    await send_confirm_email(user.email)
+    return session_mgr.login_user(email=user.email,
+                                  name=user.name,
+                                  role=db_user.role, 
+                                  verified=db_user.verified, 
+                                  request=request)
+
+@router.post("/login")
+async def login(user : UserLoginRequest, request:Request, db: Session = Depends(get_db)):
+    # Check if user exist
+    db_user = db.query(User).filter(User.email == user.email).first()
+    if not db_user:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    if db_user.password == None:
+        raise HTTPException(status_code=409, detail="Email is registered using Google")
+
+    # Check if password match
+    if not checkpw(user.password.encode("utf-8"), db_user.password):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    return session_mgr.login_user(email=user.email, 
+                                  name=db_user.name,
+                                  role=db_user.role, 
+                                  verified=db_user.verified, 
+                                  request=request)
+
+@router.post("/google-login")
+async def google_login(request:Request, token:googleAuth, db: Session = Depends(get_db)):
+    print(token.auth_code)
+    data = {
+        'code' : token.auth_code,
+        'client_id' : Config.GOOGLE_CLIENT_ID,
+        'client_secret' : Config.GOOGLE_CLIENT_SECRET,
+        'redirect_uri' : 'postmessage',
+        'grant_type' : 'authorization_code'
+    }
+    response = requests.post('https://oauth2.googleapis.com/token', data=data)
+    if not response.ok:
+        raise HTTPException(status_code=401, detail="Invalid request")
+    headers = {
+        'Authorization': f'Bearer {response.json()["access_token"]}'
+    }
+    user = requests.get('https://www.googleapis.com/oauth2/v3/userinfo', headers=headers).json()
+
+    db_user = db.query(User).filter(User.email == user["email"]).first()
+    # Check if email already registered with regular login
+    if db_user != None and db_user.password != None:
+        raise HTTPException(status_code=400, detail="Email is already registered without google")
+    
+    # If email doesn't exist in the database
+    if db_user == None:
+        new_user = User(email=user["email"], role=TypeOfUser.REGULAR, name=user["name"], verified=True)
+        db_user = new_user
+        db.add(new_user)
+        db.commit()
+    
+    return session_mgr.login_user(email=user["email"], 
+                                  name=user["name"],
+                                  role=db_user.role, 
+                                  verified=db_user.verified, 
+                                  request=request)
+    
+
+@router.post("/logout")
+async def logout(request: Request, user:dict = Depends(LoginRequired(verified=False))):
+    return session_mgr.logout_user(request)
+
+@router.patch("/confirm/{token}")
+async def verify_email(token: str,
+                       request: Request,
+                       db: Session = Depends(get_db), 
+                       user:dict = Depends(LoginRequired(verified=False))):
+    # Check if token valid
+    serializer = URLSafeTimedSerializer(Config.SECRET_KEY)
+    try:
+        email = serializer.loads(token, max_age=3600)
+    except:
+        raise HTTPException(status_code=400, detail="Invalid or expired token")
+    
+    # check if user already confirmed
+    db_user = db.query(User).filter(User.email == email).first()
+    if db_user.verified:
+        raise HTTPException(status_code=409, detail="User already verified")
+    
+    db_user.verified = True
+    db.commit()
+    session_mgr.logout_user(request)
+    return session_mgr.login_user(db_user.email, name=db_user.name, verified=True, role=db_user.role, request=request)
+
+@router.post("/request-verification")
+async def request_verification(user:dict = Depends(LoginRequired(verified=False))):
+    await send_confirm_email(user["email"])
+    return {"Success" : True}
+
+@router.get("/whoami")
+async def whomai(user:dict = Depends(LoginRequired(verified=False))):
+    return user

@@ -16,10 +16,9 @@ class SessionManager:
         except:
             return None
 
-    def login_user(self, email:str, request: Request):
+    def login_user(self, email:str, name:str, verified:bool, role:str, request: Request):
         # Check if users already logged in
         session_token = request.cookies.get(self.session_key)
-        print(session_token)
         # Check signature
         session_token = self.load_signed_session(session_token)
         # Check if already logged in
@@ -30,8 +29,16 @@ class SessionManager:
         while True:
             session_token = secrets.token_urlsafe(32)
             if not self.r.exists(session_token):
-                self.r.set(session_token, email, 7200)
+                data = {
+                    "email" : email,
+                    "role" : role,
+                    "name" : name,
+                    "verified" : int(verified)
+                }
+                self.r.hmset(session_token, data)
+                self.r.expire(session_token, 7200)
                 break
+
         # Setting the signed session to the user
         response = Response(content="Login Successful", 
                         media_type="text/plain")
@@ -40,22 +47,8 @@ class SessionManager:
                             httponly=True)
         return response
 
-    def verify_session(self, request: Request) -> str:
-        signed_session = request.cookies.get(self.session_key)
-        # Check if session signature valid
-        if not signed_session:
-            raise HTTPException(status_code=401, detail="Unauthorized")
-        
-        # Check if session valid
-        session_token = self.load_signed_session(signed_session)
-        if not session_token or not self.r.exists(session_token):
-            raise HTTPException(status_code=401, detail="Unauthorized")
-        
-        return self.r.get(session_token)
-
     def logout_user(self, request:Request):
         # Check if users already Logged out
-        self.verify_session(request)
         response = Response(content="Logged out Successfully",
                             media_type="text/plain")
         response.delete_cookie(self.session_key)

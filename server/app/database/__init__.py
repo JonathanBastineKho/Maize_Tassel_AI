@@ -2,7 +2,7 @@ from config import Config
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from app.database.session import SessionManager
+from app.utils.session import SessionManager
 
 # Initialize Database
 engine = create_engine(Config.DATABASE_URL, connect_args={"check_same_thread": False})

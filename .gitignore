@@ -2,3 +2,5 @@ __pycache__
 .env
 tempCodeRunnerFile.py
 .DS_Store
+*.db
+client_secret.json
