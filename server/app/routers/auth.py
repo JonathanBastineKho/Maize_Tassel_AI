@@ -62,7 +62,6 @@ async def login(user : UserLoginRequest, request:Request, db: Session = Depends(
 
 @router.post("/google-login")
 async def google_login(request:Request, token:googleAuth, db: Session = Depends(get_db)):
-    print(token.auth_code)
     data = {
         'code' : token.auth_code,
         'client_id' : Config.GOOGLE_CLIENT_ID,
