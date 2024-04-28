@@ -26,7 +26,7 @@ function GoogleLoginButton({setLoading, setInvalidEmailmsg}) {
         flow: 'auth-code',
       });
 
-    return <Button onClick={() => loginGoogle()} className="border border-gray-300 bg-white focus:ring-4 focus:ring-green-300 enabled:hover:bg-gray-200 text-gray-800 flex items-center justify-center">
+    return <Button onClick={() => loginGoogle()} className="border border-gray-300 bg-white focus:ring-4 focus:ring-green-400 enabled:hover:bg-gray-200 text-gray-800 flex items-center justify-center">
     <div className="flex items-center">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="24px">
         <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 4.63C12.43 13.72 17.74 9.5 24 9.5z" />

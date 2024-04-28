@@ -3,6 +3,7 @@ import { Button, Label, TextInput, Spinner, Card } from "flowbite-react";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import GoogleLoginButton from "../../Components/Authentication/GoogleLoginButton";
+import { inputTheme, spinnerTheme } from "../../Components/theme";
 
 function LoginPage() {
     const [loading, setLoading] = useState(false);
@@ -45,35 +46,40 @@ function LoginPage() {
         <div className="flex justify-center items-center h-screen">
             <Card className="p-4 md:w-[32rem]">
             <h1 className="text-2xl font-semibold mb-4">Sign in to your Account</h1>
-            <form className="flex max-w-md flex-col gap-4" onSubmit={handleSubmit}>
+        <form className="flex max-w-md flex-col gap-4" onSubmit={handleSubmit}>
           <div>
             <div className="mb-2 block">
-              <Label htmlFor="email2" value="Your email" />
+              <Label htmlFor="email" value="Your email" />
             </div>
             <TextInput
-              id="email2"
+              theme={inputTheme}
+              id="email"
               type="email"
               placeholder="myname@gmail.com"
               required
               name="email"
               shadow
+              color={invalidEmailmsg === '' ? "gray" : "failure"}
+              helperText={<span className="font-medium">{invalidEmailmsg}</span>}
             />
-            {invalidEmailmsg !== '' && <div id="passwordError" className="text-red-500 text-sm mt-1">
-                {invalidEmailmsg}
-            </div>}
           </div>
           <div>
             <div className="mb-2 block">
-              <Label htmlFor="password2" value="Your password" />
+            <Label htmlFor="password" value="Your password" />
             </div>
-            <TextInput id="password2" name="password" type="password" required shadow />
-            {invalidPasswordlmsg !== '' && <div id="passwordError" className="text-red-500 text-sm mt-1">
-                {invalidPasswordlmsg}
-            </div>}
+            <TextInput 
+            theme={inputTheme}
+            id="password" 
+            name="password"
+            type="password" 
+            required shadow
+            color={invalidPasswordlmsg === '' ? "gray" : "failure"}
+            helperText={<span className="font-medium">{invalidPasswordlmsg}</span>}
+             />
           </div>
           
           <div className="inline-flex items-center justify-center w-full">
-            <hr className="w-full h-px my-4 bg-gray-200 border-0 dark:bg-gray-700" />
+            <hr className="w-full h-px my-3 bg-gray-200 border-0 dark:bg-gray-700" />
             <span className="absolute px-3 font-medium text-gray-900 -translate-x-1/2 bg-white left-1/2 dark:text-white dark:bg-gray-900">
               or
             </span>
@@ -83,10 +89,10 @@ function LoginPage() {
           type="submit"
           disabled={loading}
           className={`bg-green-600 focus:ring-4 focus:ring-green-300 enabled:hover:bg-green-800 ${loading ? 'cursor-not-allowed opacity-50' : ''}`}
-        >
+          >
           {loading ? (
             <div className="flex items-center">
-              <Spinner aria-label="Spinner button example" size="sm" />
+              <Spinner aria-label="Spinner button example" size="sm" theme={spinnerTheme} />
               <span className="pl-3">Loading...</span>
             </div>
           ) : (

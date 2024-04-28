@@ -14,6 +14,7 @@ import {
   } from "flowbite-react";
   
   import { AuthContext } from "../Authentication/AuthContext";
+  import { navbarTheme } from "../theme";
   import { useContext, useState, useEffect } from "react";
   import { Link } from "react-router-dom";
   import axios from "axios";
@@ -52,7 +53,7 @@ import {
         .then(() => setIsValidated(true));
     }, [setUser]);
     return (
-      <Navbar fluid rounded>
+      <Navbar fluid  theme={navbarTheme} className="fixed top-0 left-0 right-0 z-50 shadow-lg shadow-gray-200/20">
         <NavbarBrand href="/">
           <img src="https://storage.googleapis.com/corn_sight_public/apple-touch-icon.png" className="mr-3 h-6 sm:h-9" alt="logo" />
           <span className="self-center whitespace-nowrap text-xl font-bold text-gray-800">CornSight</span>

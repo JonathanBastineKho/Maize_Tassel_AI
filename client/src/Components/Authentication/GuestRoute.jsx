@@ -3,6 +3,7 @@ import { useContext, useState, useEffect } from "react";
 import { Spinner } from "flowbite-react";
 import axios from "axios";
 import { Navigate } from "react-router-dom";
+import { spinnerTheme } from "../theme";
 
 const GuestRoute = ({ children }) => {
     const { user, setUser } = useContext(AuthContext);
@@ -27,7 +28,7 @@ const GuestRoute = ({ children }) => {
     if (!isValidated){
         return (
             <div className="text-center text-8xl">
-                <Spinner aria-label="Extra large spinner example" size="xl" />
+                <Spinner aria-label="Extra large spinner example" size="xl" theme={spinnerTheme} />
             </div>
         );
     }
