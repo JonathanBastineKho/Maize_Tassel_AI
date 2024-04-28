@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, APIRouter
 from app.database.utils import create_database
 from app.routers import auth
 
@@ -7,4 +7,7 @@ create_database()
 
 # Initiate route
 app = FastAPI()
-app.include_router(auth.router)
+api_router = APIRouter(prefix="/api")
+api_router.include_router(auth.router)
+
+app.include_router(api_router)

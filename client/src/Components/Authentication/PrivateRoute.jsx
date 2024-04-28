@@ -3,13 +3,14 @@ import { useContext, useState, useEffect } from "react";
 import { Spinner } from "flowbite-react";
 import axios from "axios";
 import { Navigate } from "react-router-dom";
+import { spinnerTheme } from "../theme";
 
 const PrivateRoute = ({ requiredRoles, verified, children }) => {
     const { user, setUser } = useContext(AuthContext);
     const [isValidated, setIsValidated] = useState(false);
 
     useEffect(() => {
-        axios.get("/api/whoami")
+        axios.get("/api/auth/whoami")
         .then((res) => {
             if (res.status === 200) {
                 // User is authenticated
@@ -27,7 +28,7 @@ const PrivateRoute = ({ requiredRoles, verified, children }) => {
     if (!isValidated){
         return (
             <div className="text-center text-8xl">
-                <Spinner aria-label="Extra large spinner example" size="xl" />
+                <Spinner aria-label="Extra large spinner example" size="xl" theme={spinnerTheme} />
             </div>
         );
     }

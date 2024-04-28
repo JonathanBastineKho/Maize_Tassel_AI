@@ -2,6 +2,7 @@ import { Card, Label, TextInput, Button, Spinner } from "flowbite-react";
 import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { inputTheme, spinnerTheme } from "../../Components/theme";
 
 function ResetPasswordPage() {
   const [Isloading, setIsLoading] = useState(false);
@@ -19,7 +20,7 @@ function ResetPasswordPage() {
       data[key] = value;
     });
     await axios
-      .post("/api/reset-password/request", data)
+      .post("/api/auth/reset-password/request", data)
       .then((res) => {
         if (res.status === 200) {
           setIsSuccess(true);
@@ -38,20 +39,15 @@ function ResetPasswordPage() {
     <div className="flex justify-center items-center h-screen">
       <Card className="sm:w-96 md:w-[32rem] p-4">
         <div>
-          <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 mb-2">
+          <h1 className="text-4xl font-bold tracking-tight text-gray-900 mb-2">
             Reset Your Password
           </h1>
-          {Isloading &&
-            <div className="text-center">
-                <Spinner size="xl" aria-label="Loading" />
-            </div>
-          }
-          {isSuccess && !Isloading &&
+          {isSuccess && !Isloading && (
             <Label className="text-center font-normal text-gray-700 dark:text-gray-400">
-                Check your email for reset password link
+              Check your email for reset password link
             </Label>
-          }
-          {!isSuccess && !Isloading && (
+          )}
+          {!isSuccess && (
             <>
               <Label className="font-normal text-gray-700 dark:text-gray-400">
                 Don't fret! Just type in your email and we will send you a code
@@ -71,17 +67,33 @@ function ResetPasswordPage() {
                     name="email"
                     placeholder="mymail@gmail.com"
                     required
+                    theme={inputTheme}
+                    color={invalidEmailmsg === "" ? "gray" : "failure"}
+                    helperText={
+                      <span className="font-medium">{invalidEmailmsg}</span>
+                    }
                   />
-                  {invalidEmailmsg !== "" && (
-                  <div
-                    id="emailError"
-                    className="text-red-500 text-sm mt-1"
-                  >
-                    {invalidEmailmsg}
-                  </div>
-                )}
                 </div>
-                <Button type="submit" className="bg-green-600">Submit</Button>
+                <Button
+                  type="submit"
+                  disabled={Isloading}
+                  className={`bg-green-600 focus:ring-4 focus:ring-green-300 enabled:hover:bg-green-800 ${
+                    Isloading ? "cursor-not-allowed opacity-50" : ""
+                  }`}
+                >
+                  {Isloading ? (
+                    <div className="flex items-center">
+                      <Spinner
+                        aria-label="Spinner button example"
+                        size="sm"
+                        theme={spinnerTheme}
+                      />
+                      <span className="pl-3">Loading...</span>
+                    </div>
+                  ) : (
+                    "Submit"
+                  )}
+                </Button>
               </form>
             </>
           )}
