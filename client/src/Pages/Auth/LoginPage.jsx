@@ -21,7 +21,7 @@ function LoginPage() {
         formData.forEach((value, key) => {
           data[key] = value;
         });
-        await axios.post("/api/login", data)
+        await axios.post("/api/auth/login", data)
         .then((res) => {
             if (res.status === 200) {
                 setInvalidEmailmsg('');

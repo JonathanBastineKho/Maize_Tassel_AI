@@ -15,7 +15,7 @@ function ConfirmResetPasswordPage() {
 
   useEffect(() => {
     axios
-      .get(`/api/reset-password/check/${token}`)
+      .get(`/api/auth/reset-password/check/${token}`)
       .then((res) => {
         if (res.status === 200) {
           setIsPageLoading(false);
@@ -44,7 +44,7 @@ function ConfirmResetPasswordPage() {
     } else {
       // Submission
       await axios
-      .patch(`/api/reset-password/confirm/${token}`, data)
+      .patch(`/api/auth/reset-password/confirm/${token}`, data)
       .then((res) => {
         if (res.status === 200) {
           setIsSuccess(true);

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, Body
+from fastapi import APIRouter, Depends, HTTPException, Request
 from app.database.schema import User, TypeOfUser
 from app.utils.payload import UserCreateRequest, UserRequest, LoginRequired, UserLoginRequest, ResetPasswordRequest, googleAuth
 from app.database.utils import get_db
@@ -7,10 +7,10 @@ from app.utils.payload import EmailSender
 from config import Config
 from sqlalchemy.orm import Session
 from bcrypt import hashpw, gensalt, checkpw
-from itsdangerous import URLSafeTimedSerializer
 import requests
+import re
 
-router = APIRouter(tags=["auth"], prefix="/api")
+router = APIRouter(tags=["auth"], prefix="/auth")
 
 @router.get("/")
 async def test():
@@ -18,6 +18,14 @@ async def test():
 
 @router.post("/register")
 async def register(user : UserCreateRequest, request: Request, db: Session = Depends(get_db)):
+
+    email_regex = r'^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$'
+    if not user.email or not re.match(email_regex, user.email):
+        raise HTTPException(status_code=400, detail="Invalid email format")
+
+    if len(user.password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters long")
+    
     # Check if email already exists
     db_user = db.query(User).filter(User.email == user.email).first()
     if db_user != None:
@@ -143,6 +151,10 @@ async def check_reset_password(token:str, request:Request):
 
 @router.patch("/reset-password/confirm/{token}")
 async def confirm_reset_password(token:str, new_password:ResetPasswordRequest, request:Request, db: Session = Depends(get_db)):
+    # Check for password
+    if len(new_password.password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters long")
+    
     session_mgr.check_if_already_logged_in(request)
     valid_token = EmailSender.check_token(token, "reset_password", 900)
     db_user = db.query(User).filter(User.email == valid_token["email"]).first()

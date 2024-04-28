@@ -20,7 +20,7 @@ function ResetPasswordPage() {
       data[key] = value;
     });
     await axios
-      .post("/api/reset-password/request", data)
+      .post("/api/auth/reset-password/request", data)
       .then((res) => {
         if (res.status === 200) {
           setIsSuccess(true);

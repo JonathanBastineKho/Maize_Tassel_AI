@@ -16,7 +16,7 @@ function ConfirmPage() {
 
   useEffect(() => {
     axios
-      .patch(`/api/confirm/${token}`)
+      .patch(`/api/auth/confirm/${token}`)
       .then((res) => {
         if (res.status === 200) {
           setIsSuccess(true);
@@ -37,7 +37,7 @@ function ConfirmPage() {
   const sendEmail = async () => {
     setEmailSentLoading(true);
     await axios
-      .post("/api/request-verification")
+      .post("/api/auth/request-verification")
       .then((res) => {
         if (res.status === 200) {
           setEmailSent(true);

@@ -13,7 +13,7 @@ function UnverifiedPage() {
   const sendEmail = async () => {
     setEmailSentLoading(true);
     await axios
-      .post("/api/request-verification")
+      .post("/api/auth/request-verification")
       .then((res) => {
         if (res.status === 200) {
           setEmailSent(true);

@@ -33,7 +33,7 @@ function RegisterPage() {
       setInvalidPasswordmsg("Password must be atleast 8 characters");
     } else {
       await axios
-      .post("/api/register", data)
+      .post("/api/auth/register", data)
       .then((res) => {
         if (res.status === 200) {
           setInvalidEmailmsg("");

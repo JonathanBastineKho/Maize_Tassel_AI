@@ -9,7 +9,7 @@ function GoogleLoginButton({setLoading, setInvalidEmailmsg}) {
         onSuccess: async (codeResponse) => {
             setLoading(true);
             setInvalidEmailmsg('');
-            await axios.post("/api/google-login", {"auth_code" : codeResponse.code})
+            await axios.post("/api/auth/google-login", {"auth_code" : codeResponse.code})
             .then((res) => {
                 if (res.status === 200) {
                     setInvalidEmailmsg('');

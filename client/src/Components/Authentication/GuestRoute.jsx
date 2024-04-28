@@ -10,7 +10,7 @@ const GuestRoute = ({ children }) => {
     const [isValidated, setIsValidated] = useState(false);
 
     useEffect(() => {
-        axios.get("/api/whoami")
+        axios.get("/api/auth/whoami")
         .then((res) => {
             if (res.status === 200) {
                 // User is 
