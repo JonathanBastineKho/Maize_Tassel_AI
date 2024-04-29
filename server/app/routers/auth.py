@@ -31,9 +31,8 @@ async def register(user : UserCreateRequest, request: Request, db: Session = Dep
     if db_user != None:
         if db_user.password != None:
             raise HTTPException(status_code=400, detail="Email already registered")
-        elif user.password == None:
+        elif db_user.password == None:
             raise HTTPException(status_code=400, detail="Email already registered with Google")
-    
     # Adding new user
     password_hash = hashpw(user.password.encode('utf-8'), gensalt())
     db_user = User(email=user.email, name=user.name, password=password_hash)
