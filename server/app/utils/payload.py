@@ -5,6 +5,7 @@ from typing import Set
 from fastapi_mail import MessageSchema, MessageType, FastMail
 from itsdangerous import URLSafeTimedSerializer
 from config import Config, MailConf
+from jinja2 import Environment, FileSystemLoader
 
 class UserRequest(BaseModel):
     email: str
@@ -58,10 +59,13 @@ class EmailSender:
     @staticmethod
     async def send_confirm_email(email:str):
         token = EmailSender.serializer.dumps({"purpose" : "email", "email" : email})
+        env = Environment(loader=FileSystemLoader('app/templates/'))
+        template = env.get_template('VerifyAccount.html')
+        html_body = template.render(link=f"{Config.CONFIRMATION_LINK}/{token}", email=email)
         message = MessageSchema(
             subject="Confirmation Email",
             recipients=[email],
-            body=f"<p>Confirm your email here {Config.CONFIRMATION_LINK}/{token} </p>",
+            body=html_body,
             subtype=MessageType.html)
         await EmailSender.fm.send_message(message)
         return token
@@ -69,10 +73,13 @@ class EmailSender:
     @staticmethod
     async def send_reset_password(email:str):
         token = EmailSender.serializer.dumps({"purpose" : "reset_password", "email" : email})
+        env = Environment(loader=FileSystemLoader('app/templates/'))
+        template = env.get_template('ResetPassword.html')
+        html_body = template.render(link=f"{Config.RESET_PASSWORD_LINK}/{token}", email=email)
         message = MessageSchema(
             subject="Reset Your Password",
             recipients=[email],
-            body=f"<p>Reset Your Password here {Config.RESET_PASSWORD_LINK}/{token} </p>",
+            body=html_body,
             subtype=MessageType.html)
         await EmailSender.fm.send_message(message)
         return token
