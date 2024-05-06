@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
-from app.database.schema import User, TypeOfUser
+from app.database.schema import User, TypeOfUser, Folder
 from app.utils.payload import UserCreateRequest, UserRequest, LoginRequired, UserLoginRequest, ResetPasswordRequest, googleAuth
 from app.database.utils import get_db
 from app.utils import session_mgr
@@ -37,6 +37,9 @@ async def register(user : UserCreateRequest, request: Request, db: Session = Dep
     password_hash = hashpw(user.password.encode('utf-8'), gensalt())
     db_user = User(email=user.email, name=user.name, password=password_hash)
     db.add(db_user)
+    # Adding default root folder for new user
+    root_folder = Folder(name="root", user_email=user.email)
+    db.add(root_folder)
     db.commit()
 
     # Generating confirmation token
@@ -94,6 +97,9 @@ async def google_login(request:Request, token:googleAuth, db: Session = Depends(
         new_user = User(email=user["email"], role=TypeOfUser.REGULAR, name=user["name"], verified=True)
         db_user = new_user
         db.add(new_user)
+        # Adding default root folder for new user
+        root_folder = Folder(name="root", user_email=user["email"])
+        db.add(root_folder)
         db.commit()
     
     return session_mgr.login_user(email=user["email"], 

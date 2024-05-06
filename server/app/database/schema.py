@@ -11,6 +11,12 @@ class TypeOfUser(Enum):
     REGULAR = 'regular'
     PREMIUM = 'premium'
 
+class TypeOfImageStatus(Enum):
+    IN_QUEUE = "in_queue"
+    PROCESSING = "processing"
+    DONE = "done"
+    ERROR = "error"
+
 class User(Base):
     __tablename__ = "users"
     email = Column(String, primary_key=True)
@@ -24,11 +30,13 @@ class Folder(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4())) # Change to UUID data type during production
     name = Column(String)
     parent_id = Column(String(36), ForeignKey('folders.id'), nullable=True) # Change to UUID data type during production
+    user_email = Column(String, ForeignKey('users.email'), nullable=False)
 
     parent = relationship('Folder', remote_side=[id], backref='children')
+    user = relationship('User', backref='folders')
 
     __table_args__ = (
-        UniqueConstraint('name', 'parent_id'),
+        UniqueConstraint('name', 'parent_id', 'user_email'),
     )
     
 class Image(Base):
@@ -38,8 +46,9 @@ class Image(Base):
     size = Column(Integer)
     width = Column(Integer)
     height = Column(Integer)
-    imageURL = Column(String)
-    processing_status = Column(Boolean, default=False)
+    image_url = Column(String)
+    thumbnail_url = Column(String)
+    processing_status = Column(Enum(TypeOfImageStatus.IN_QUEUE, TypeOfImageStatus.PROCESSING, TypeOfImageStatus.DONE, TypeOfImageStatus.ERROR), default=TypeOfImageStatus.IN_QUEUE)
     folder = relationship('Folder', backref='images')
     __table_args__ = (
         UniqueConstraint('name', 'folder_id'),

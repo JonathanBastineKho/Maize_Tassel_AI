@@ -1,8 +1,11 @@
 from fastapi import Request, HTTPException
-from . import session_mgr
 from pydantic import BaseModel
 from typing import Set
+from . import session_mgr
+from app.database.schema import TypeOfUser
 
+# JSON FORMAT
+# Authentication
 class UserRequest(BaseModel):
     email: str
 
@@ -19,8 +22,9 @@ class UserCreateRequest(UserRequest):
 class googleAuth(BaseModel):
     auth_code: str
 
+# Dependencies 
 class LoginRequired:
-    def __init__(self, verified: bool = False, roles_required: Set[str] = set({"admin", "regular", "premium"})):
+    def __init__(self, verified: bool = True, roles_required: Set[str] = set({TypeOfUser.ADMIN, TypeOfUser.REGULAR, TypeOfUser.PREMIUM})):
         self.verified = verified
         self.roles_required = roles_required
 

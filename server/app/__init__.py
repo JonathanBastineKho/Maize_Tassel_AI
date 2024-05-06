@@ -2,7 +2,7 @@ from fastapi import FastAPI, APIRouter
 from app.database.utils import create_database
 from app.routers import auth, user
 
-# Create Database
+ # Create Database
 create_database()
 
 # Initiate route
