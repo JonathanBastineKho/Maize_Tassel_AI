@@ -1,12 +1,11 @@
 from fastapi import Request, HTTPException
-from app.database import session_mgr
 from pydantic import BaseModel
-from typing import Set
-from fastapi_mail import MessageSchema, MessageType, FastMail
-from itsdangerous import URLSafeTimedSerializer
-from config import Config, MailConf
-from jinja2 import Environment, FileSystemLoader
+from typing import Set, List
+from . import session_mgr
+from app.database.schema import TypeOfUser
 
+# JSON FORMAT
+# Authentication
 class UserRequest(BaseModel):
     email: str
 
@@ -23,8 +22,20 @@ class UserCreateRequest(UserRequest):
 class googleAuth(BaseModel):
     auth_code: str
 
+# Webhook
+class Job(BaseModel):
+    image_name: str
+    folder_id: str
+
+class JobStatus(Job):
+    job_status: str
+
+class JobPrediction(Job):
+    box: List[dict]
+
+# Dependencies 
 class LoginRequired:
-    def __init__(self, verified: bool = False, roles_required: Set[str] = set({"admin", "regular", "premium"})):
+    def __init__(self, verified: bool = True, roles_required: Set[str] = set({TypeOfUser.ADMIN, TypeOfUser.REGULAR, TypeOfUser.PREMIUM})):
         self.verified = verified
         self.roles_required = roles_required
 
@@ -51,47 +62,3 @@ class LoginRequired:
             raise HTTPException(status_code=401, detail="Unauthorized")
         
         return user
-    
-class EmailSender:
-    serializer = URLSafeTimedSerializer(Config.SECRET_KEY)
-    fm = FastMail(MailConf)
-
-    @staticmethod
-    async def send_confirm_email(email:str):
-        token = EmailSender.serializer.dumps({"purpose" : "email", "email" : email})
-        env = Environment(loader=FileSystemLoader('app/templates/'))
-        template = env.get_template('VerifyAccount.html')
-        html_body = template.render(link=f"{Config.CONFIRMATION_LINK}/{token}", email=email)
-        message = MessageSchema(
-            subject="Confirmation Email",
-            recipients=[email],
-            body=html_body,
-            subtype=MessageType.html)
-        await EmailSender.fm.send_message(message)
-        return token
-    
-    @staticmethod
-    async def send_reset_password(email:str):
-        token = EmailSender.serializer.dumps({"purpose" : "reset_password", "email" : email})
-        env = Environment(loader=FileSystemLoader('app/templates/'))
-        template = env.get_template('ResetPassword.html')
-        html_body = template.render(link=f"{Config.RESET_PASSWORD_LINK}/{token}", email=email)
-        message = MessageSchema(
-            subject="Reset Your Password",
-            recipients=[email],
-            body=html_body,
-            subtype=MessageType.html)
-        await EmailSender.fm.send_message(message)
-        return token
-
-    @staticmethod
-    def check_token(token:str, purpose:str, max_age:int):
-        try:
-            valid_token = EmailSender.serializer.loads(token, max_age=max_age)
-        except:
-            raise HTTPException(status_code=400, detail="Invalid or expired token")
-        # Check if token is used for email
-        if valid_token["purpose"] != purpose:
-            raise HTTPException(status_code=400, detail="Invalid or expired token")
-        
-        return valid_token

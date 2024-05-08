@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
-from app.database.schema import User, TypeOfUser
+from app.database.schema import User, TypeOfUser, Folder
 from app.utils.payload import UserCreateRequest, UserRequest, LoginRequired, UserLoginRequest, ResetPasswordRequest, googleAuth
 from app.database.utils import get_db
-from app.database import session_mgr
-from app.utils.payload import EmailSender
+from app.utils import session_mgr
+from app.utils import email_sender
 from config import Config
 from sqlalchemy.orm import Session
 from bcrypt import hashpw, gensalt, checkpw
@@ -37,10 +37,13 @@ async def register(user : UserCreateRequest, request: Request, db: Session = Dep
     password_hash = hashpw(user.password.encode('utf-8'), gensalt())
     db_user = User(email=user.email, name=user.name, password=password_hash)
     db.add(db_user)
+    # Adding default root folder for new user
+    root_folder = Folder(name="root", user_email=user.email)
+    db.add(root_folder)
     db.commit()
 
     # Generating confirmation token
-    await EmailSender.send_confirm_email(user.email)
+    await email_sender.send_confirm_email(user.email)
     return session_mgr.login_user(email=user.email,
                                   name=user.name,
                                   role=db_user.role, 
@@ -94,6 +97,9 @@ async def google_login(request:Request, token:googleAuth, db: Session = Depends(
         new_user = User(email=user["email"], role=TypeOfUser.REGULAR, name=user["name"], verified=True)
         db_user = new_user
         db.add(new_user)
+        # Adding default root folder for new user
+        root_folder = Folder(name="root", user_email=user["email"])
+        db.add(root_folder)
         db.commit()
     
     return session_mgr.login_user(email=user["email"], 
@@ -112,7 +118,7 @@ async def verify_email(token: str,
                        db: Session = Depends(get_db), 
                        user:dict = Depends(LoginRequired(verified=False))):
     # Check if token valid
-    valid_token = EmailSender.check_token(token, "email", 7200)
+    valid_token = email_sender.check_token(token, "email", 7200)
 
     # check if user already confirmed
     db_user = db.query(User).filter(User.email == valid_token["email"]).first()
@@ -128,7 +134,7 @@ async def verify_email(token: str,
 
 @router.post("/request-verification")
 async def request_verification(user:dict = Depends(LoginRequired(verified=False))):
-    await EmailSender.send_confirm_email(user["email"])
+    await email_sender.send_confirm_email(user["email"])
     return {"Success" : True}
 
 @router.post("/reset-password/request")
@@ -136,14 +142,14 @@ async def request_reset_password(user: UserRequest, db: Session = Depends(get_db
     db_user = db.query(User).filter(User.email == user.email).first()
     if db_user == None or db_user.password == None:
         raise HTTPException(status_code=401, detail="Email is not valid")
-    sent_token = await EmailSender.send_reset_password(user.email)
+    sent_token = await email_sender.send_reset_password(user.email)
     session_mgr.r.set(sent_token, user.email)
     return {"Success" : True}
 
 @router.get("/reset-password/check/{token}")
 async def check_reset_password(token:str, request:Request):
     session_mgr.check_if_already_logged_in(request)
-    EmailSender.check_token(token, "reset_password", 900)
+    email_sender.check_token(token, "reset_password", 900)
     if not session_mgr.r.exists(token):
         raise HTTPException(status_code=400, detail="Invalid or expired token")
     return {"Success" : True}
@@ -155,7 +161,7 @@ async def confirm_reset_password(token:str, new_password:ResetPasswordRequest, r
         raise HTTPException(status_code=400, detail="Password must be at least 8 characters long")
     
     session_mgr.check_if_already_logged_in(request)
-    valid_token = EmailSender.check_token(token, "reset_password", 900)
+    valid_token = email_sender.check_token(token, "reset_password", 900)
     db_user = db.query(User).filter(User.email == valid_token["email"]).first()
 
     db_user.password = hashpw(new_password.password.encode('utf-8'), gensalt())

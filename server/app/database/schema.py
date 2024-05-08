@@ -1,10 +1,21 @@
-from sqlalchemy import Column, String, Boolean, Enum
+import uuid
+from sqlalchemy import Column, String, Boolean, Integer, Float, Enum, UniqueConstraint, ForeignKey, ForeignKeyConstraint
+from sqlalchemy.orm import relationship
 from app.database import Base
+
+# Production change
+# from sqlalchemy.dialects.postgresql import UUID # Change to postgreSQL in production
 
 class TypeOfUser(Enum):
     ADMIN = 'admin'
     REGULAR = 'regular'
     PREMIUM = 'premium'
+
+class TypeOfImageStatus(Enum):
+    IN_QUEUE = "in_queue"
+    PROCESSING = "processing"
+    DONE = "done"
+    ERROR = "error"
 
 class User(Base):
     __tablename__ = "users"
@@ -13,3 +24,47 @@ class User(Base):
     password = Column(String, nullable=True)
     verified = Column(Boolean, default=False)
     role = Column(Enum(TypeOfUser.ADMIN, TypeOfUser.REGULAR, TypeOfUser.PREMIUM), default=TypeOfUser.REGULAR)
+
+class Folder(Base):
+    __tablename__ = "folders"
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4())) # Change to UUID data type during production
+    name = Column(String)
+    parent_id = Column(String(36), ForeignKey('folders.id'), nullable=True) # Change to UUID data type during production
+    user_email = Column(String, ForeignKey('users.email'), nullable=False)
+
+    parent = relationship('Folder', remote_side=[id], backref='children')
+    user = relationship('User', backref='folders')
+
+    __table_args__ = (
+        UniqueConstraint('name', 'parent_id', 'user_email'),
+    )
+    
+class Image(Base):
+    __tablename__ = "images"
+    name = Column(String, primary_key=True)
+    folder_id = Column(String(36), ForeignKey('folders.id'), primary_key=True)  # Change to UUID data type during production
+    size = Column(Integer)
+    width = Column(Integer)
+    height = Column(Integer)
+    image_url = Column(String)
+    thumbnail_url = Column(String)
+    processing_status = Column(Enum(TypeOfImageStatus.IN_QUEUE, TypeOfImageStatus.PROCESSING, TypeOfImageStatus.DONE, TypeOfImageStatus.ERROR), default=TypeOfImageStatus.IN_QUEUE)
+    folder = relationship('Folder', backref='images')
+    __table_args__ = (
+        UniqueConstraint('name', 'folder_id'),
+    )
+
+class Prediction(Base):
+    __tablename__ = "predictions"
+    folder_id = Column(String(36), primary_key=True)  # Change to UUID data type during production
+    image_name = Column(String, primary_key=True)
+    box_id = Column(Integer, primary_key=True)
+    xCenter = Column(Integer)
+    yCenter = Column(Integer)
+    width = Column(Integer)
+    height = Column(Integer)
+    confidence = Column(Float)
+    image = relationship('Image', backref='predictions', primaryjoin='and_(Prediction.folder_id == Image.folder_id, Prediction.image_name == Image.name)')
+    __table_args__ = (
+        ForeignKeyConstraint(['folder_id', 'image_name'], ['images.folder_id', 'images.name']),
+    )
