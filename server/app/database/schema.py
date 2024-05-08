@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Boolean, Integer, Enum, UniqueConstraint, ForeignKey, ForeignKeyConstraint
+from sqlalchemy import Column, String, Boolean, Integer, Float, Enum, UniqueConstraint, ForeignKey, ForeignKeyConstraint
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -63,6 +63,7 @@ class Prediction(Base):
     yCenter = Column(Integer)
     width = Column(Integer)
     height = Column(Integer)
+    confidence = Column(Float)
     image = relationship('Image', backref='predictions', primaryjoin='and_(Prediction.folder_id == Image.folder_id, Prediction.image_name == Image.name)')
     __table_args__ = (
         ForeignKeyConstraint(['folder_id', 'image_name'], ['images.folder_id', 'images.name']),

@@ -5,6 +5,7 @@ from app.utils import storage_mgr
 from app.database.schema import Folder, TypeOfUser, Image
 from app.database.utils import get_db
 from app.utils.payload import LoginRequired
+from app.utils import job_mgr
 
 router = APIRouter(tags=["User"], prefix="/user")
 
@@ -18,15 +19,15 @@ async def count(file: UploadFile, folder_uuid: str = Form(...),  # Change to UUI
     if file_extension not in set({".jpg", ".jpeg", ".png"}):
         raise HTTPException(status_code=400, detail="Image must be jpg or png")
     
-    try:
-        # Check if folder is valid
-        folder = db.query(Folder).filter(Folder.id == folder_uuid).one_or_none()
-        if not folder:
-            raise HTTPException(status_code=400, detail="Folder does not exist")
+    # Check if folder is valid
+    folder = db.query(Folder).filter(Folder.id == folder_uuid).one_or_none()
+    if not folder:
+        raise HTTPException(status_code=400, detail="Folder does not exist")
 
-        # Check if there is a same name in the folder
-        if db.query(Image).filter(Image.folder_id == folder.id, Image.name == file.filename).one_or_none():
-            raise HTTPException(status_code=409, detail="An image with the same name already exists in this folder.")
+    # Check if there is a same name in the folder
+    if db.query(Image).filter(Image.folder_id == folder.id, Image.name == file.filename).one_or_none():
+        raise HTTPException(status_code=409, detail="An image with the same name already exists in this folder.")
+    try:
         
         metadata = await storage_mgr.upload_image(file, email=user["email"], folder=folder.id)
         # Add image to database
@@ -42,6 +43,9 @@ async def count(file: UploadFile, folder_uuid: str = Form(...),  # Change to UUI
             )
         )
         db.commit()
+        # Submit job
+        job_mgr.submit_inference_job(email=user["email"], folder_id=folder_uuid, image_name=file.filename)
+
         return {"Success" : True}
     except Exception as e:
         raise HTTPException(status_code=500, detail="Some error occured, please retry")
