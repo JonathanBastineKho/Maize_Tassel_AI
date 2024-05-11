@@ -2,12 +2,13 @@ import { AuthContext } from "./AuthContext";
 import { useContext, useState, useEffect } from "react";
 import { Spinner } from "flowbite-react";
 import axios from "axios";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { spinnerTheme } from "../theme";
 
 const PrivateRoute = ({ requiredRoles, verified, children }) => {
     const { user, setUser } = useContext(AuthContext);
     const [isValidated, setIsValidated] = useState(false);
+    const location = useLocation();
 
     useEffect(() => {
         axios.get("/api/auth/whoami")
@@ -24,7 +25,7 @@ const PrivateRoute = ({ requiredRoles, verified, children }) => {
             setUser(null);
         })
         .then(() => setIsValidated(true));
-    }, [setUser]);
+    }, [setUser, location.pathname]);
     if (!isValidated){
         return (
             <div className="text-center text-8xl">
