@@ -55,7 +55,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     {/* User Path */}
         <Route path="/user" element={<PrivateRoute requiredRoles={["regular","premium"]} verified={true}><UserLayout /></PrivateRoute>}>
           <Route path="dashboard" element={<UserDashboardPage />}/>
-          <Route path="images" element={<UserImagePage />}/>
+          <Route path="images" element={<UserImagePage />} index />
+          <Route path="images/:folderId" element={<UserImagePage />}/>
         </Route>
     {/* Admin Path */}
         

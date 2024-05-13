@@ -4,16 +4,26 @@ import {
   TextInput,
   Textarea,
   Button,
+  Spinner,
+  Progress,
 } from "flowbite-react";
 import { inputTheme, textAreaTheme } from "../../Components/theme";
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { BsStars } from "react-icons/bs";
 import { FaTrash } from "react-icons/fa";
 import { spinnerTheme } from "../../Components/theme";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import { AuthContext } from "../Authentication/AuthContext";
 
-function UploadModal({ open, setOpen }) {
+function UploadModal({ setImage, folder, open, setOpen }) {
+  const navigate = useNavigate();
+  const { setUser } = useContext(AuthContext);
   const [file, setFile] = useState(null);
+  const [name, setName] = useState("");
+  const [nameError, setNameError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
 
   const handleDrop = (e) => {
     e.preventDefault();
@@ -24,40 +34,87 @@ function UploadModal({ open, setOpen }) {
 
     if (validFiles.length > 0) {
       setFile(validFiles[0]);
+      setName(validFiles[0].name);
     } else {
       console.log("Invalid file type. Only JPG and PNG files are allowed.");
     }
   };
 
-  const handleRemove = () => {
-    setFile(null);
-  };
+  const closeModal = () => {
+        setLoading(false);
+        setFile(null);
+        setOpen(false);
+        setName("");
+        setNameError('');
+  }
 
   const handleUpload = async (e) => {
     e.preventDefault();
     setLoading(true);
-  }
+
+    const formData = new FormData(e.target);
+    formData.append("file", file);
+    formData.append("folder_uuid", folder.id);
+    axios
+      .post("/api/service/count", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round(
+            (progressEvent.loaded * 100) / progressEvent.total
+          );
+          setProgress(percentCompleted);
+        },
+      })
+      .then((res) => {
+        if (res.status === 200) {
+          setImage(prev => ({
+            ...prev,
+            [res.data.name] : {
+              size: res.data.size,
+              status: "in_queue",
+              upload_date : new Date(res.data.upload_date).toLocaleDateString(undefined, {month: 'long', day: 'numeric', year: 'numeric'})
+            }
+          }));
+          closeModal();
+        }
+      })
+      .catch((err) => {
+        if (err.response.status === 409) {
+            setNameError(err.response.data.detail);
+        } else if (err.response.status === 401) {
+            setUser(null);
+            navigate('/login')
+        }
+      })
+      .then(() => setLoading(false));
+  };
 
   return (
     <Modal
       show={open}
-      onClose={() => {
-        setFile(null);
-        setOpen(false);
-      }}
+      onClose={closeModal}
       size="lg"
     >
       <Modal.Header>Upload Maize Image</Modal.Header>
       <Modal.Body>
-        <form className="flex flex-col gap-4" onSubmit={handleUpload}>
+        <form className="flex flex-col gap-2" onSubmit={handleUpload}>
           <div>
             <div className="mb-2 block">
-              <Label htmlFor="imageName" value="Image Name" />
+              <Label htmlFor="name" value="Image Name" />
             </div>
             <TextInput
               theme={inputTheme}
-              id="imageName"
+              id="name"
+              name="name"
               placeholder="Your image name"
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+              }}
+              color={nameError === '' ? "gray" : "failure"}
+              helperText={<span className="font-medium">{nameError}</span>}
               required
             />
           </div>
@@ -68,6 +125,8 @@ function UploadModal({ open, setOpen }) {
             <Textarea
               theme={textAreaTheme}
               id="description"
+              name="description"
+              className="mb-2"
               placeholder="Image Description"
             />
           </div>
@@ -75,22 +134,32 @@ function UploadModal({ open, setOpen }) {
             <Label htmlFor="imageFile" value="Image File" />
             <div className="flex w-full">
               {file ? (
-                <div className="w-full flex justify-between flex-row py-4">
-                    <div className="flex flex-row gap-3 items-center">
+                <div className="w-full flex flex-row py-3">
+                    <div className="w-full flex flex-row gap-3 items-center">
                         <img
                         src={URL.createObjectURL(file)}
                         alt={file.name}
-                        className="w-8 h-8 object-cover rounded"
+                        className="w-11 h-11 object-cover rounded"
                         />
-                    <Label >{file.name}</Label>
-                  </div>
-                  <button onClick={handleRemove} className="p-2 hover:bg-gray-100 rounded-md">
-                    <FaTrash className="text-red-500"/>
-                  </button>
+                        <div className="flex flex-col w-full gap-2">
+                            <div className="flex flex-row justify-between items-center w-full">
+                                <Label>{file.name}</Label>
+                                {!loading &&
+                                    <button
+                                    onClick={() => setFile(null)}
+                                    className="p-2 hover:bg-gray-100 rounded-md"
+                                    >
+                                    <FaTrash className="text-red-500" />
+                                    </button>
+                                }
+                            </div>
+                            {loading && <Progress color="green" size="sm" progress={progress} />}
+                        </div>
+                    </div>
                 </div>
               ) : (
                 <Label
-                  htmlFor="dropzone-file"
+                  htmlFor="file"
                   onDrop={handleDrop}
                   onDragOver={(e) => e.preventDefault()}
                   className={`flex h-64 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:hover:border-gray-500 dark:hover:bg-gray-600 ${
@@ -122,33 +191,42 @@ function UploadModal({ open, setOpen }) {
                     </p>
                   </div>
                   <input
-                    id="dropzone-file"
+                    id="file"
                     type="file"
                     className="hidden"
                     accept="image/jpeg, image/png"
-                    onChange={(ev) => setFile(ev.target.files[0])}
+                    onChange={(ev) => {
+                      setFile(ev.target.files[0]);
+                      setName(ev.target.files[0].name);
+                    }}
                   />
                 </Label>
               )}
             </div>
           </div>
           <Button
-          type="submit"
-          disabled={loading}
-          className={`bg-green-500 focus:ring-4 focus:ring-green-300 enabled:hover:bg-green-700 ${loading ? 'cursor-not-allowed opacity-50' : ''}`}
+            type="submit"
+            disabled={loading}
+            className={`bg-green-500 focus:ring-4 focus:ring-green-300 enabled:hover:bg-green-700 ${
+              loading ? "cursor-not-allowed opacity-50" : ""
+            }`}
           >
-          {loading ? (
-            <div className="flex items-center">
-              <Spinner aria-label="Spinner button example" size="sm" theme={spinnerTheme} />
-              <span className="pl-3">Loading...</span>
-            </div>
-          ) : (
-            <div className="flex items-center">
-              <BsStars />
-              <span className="pl-3">Count Tassel</span>
-            </div>
-          )}
-        </Button>
+            {loading ? (
+              <div className="flex items-center">
+                <Spinner
+                  aria-label="Spinner button example"
+                  size="sm"
+                  theme={spinnerTheme}
+                />
+                <span className="pl-3">Loading...</span>
+              </div>
+            ) : (
+              <div className="flex items-center">
+                <BsStars />
+                <span className="pl-3">Count Tassel</span>
+              </div>
+            )}
+          </Button>
         </form>
       </Modal.Body>
     </Modal>

@@ -52,6 +52,7 @@ class Worker:
             on_message_callback=self.process_inference_job,
             auto_ack=True
         )
+        self.channel.basic_qos(prefetch_count=1)
 
     def close(self):
         if self.connection and self.connection.is_open:
@@ -80,11 +81,10 @@ class Worker:
 
         # Perform inference tasks
         try:
-            image = self.bucket.blob(f"{job['email']}/{job['folder_id']}/image/{job['image_name']}").download_as_bytes()
+            image = self.bucket.blob(job['path']).download_as_bytes()
             image = Image.open(io.BytesIO(image))
             results = self.model(image)
 
-            width, height = image.size
             # Process the bounding boxes
             bounding_boxes = []
             for box in results[0].boxes:

@@ -5,23 +5,20 @@ import { FaPlus } from "react-icons/fa6";
 import { useState } from "react";
 
 import { inputTheme } from "../../Components/theme";
+import BreadcrumbFolder from "./BreadCrumbFolder";
 import UserImageTable from "../../Components/User/UserImageTable";
 import UploadModal from "../../Components/User/UserUploadModal";
 
 function UserImagePage() {
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
-
+  const [breadCrumbfolder, setBreadCrumbFolder] = useState([]); // BreadCrumb folders
+  const [folder, setFolder] = useState([]); // Folder in the search
+  const [image, setImage] = useState({});
   return (
     <>
-    <UploadModal className="w-screen h-screen" open={uploadModalOpen} setOpen={setUploadModalOpen} />
-    <div className="ml-[16.3rem] px-5 mt-24 flex flex-col gap-6 w-screen">
-      <Breadcrumb aria-label="Default breadcrumb example">
-        <Breadcrumb.Item href="#" icon={HiHome}>
-          Home
-        </Breadcrumb.Item>
-        <Breadcrumb.Item href="#">Section 1</Breadcrumb.Item>
-        <Breadcrumb.Item>Patch 2</Breadcrumb.Item>
-      </Breadcrumb>
+    <UploadModal className="w-screen h-screen" setImage={setImage} folder={breadCrumbfolder[breadCrumbfolder.length - 1]} open={uploadModalOpen} setOpen={setUploadModalOpen} />
+    <div className="ml-[16.3rem] px-5 mt-24 flex flex-col gap-5 w-screen">
+      <BreadcrumbFolder folder={breadCrumbfolder} setFolder={setBreadCrumbFolder} />
       <h2 className="font-bold text-2xl">Your Images</h2>
       <div className="flex flex-wrap flex-row justify-between">
         <div className="flex flex-row items-center gap-4">
@@ -55,7 +52,7 @@ function UserImagePage() {
           </Button>
         </div>
       </div>
-      <UserImageTable />
+      <UserImageTable image={image} setImage={setImage} folder={folder} setFolder={setFolder} breadCrumbfolder={breadCrumbfolder} />
     </div>
     </>
     

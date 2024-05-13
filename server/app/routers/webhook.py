@@ -2,7 +2,9 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 import json
 import hmac
 import hashlib
+from datetime import timezone
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from config import Config
 from app.database.utils import get_db
 from app.database.schema import Image, Prediction, TypeOfImageStatus
@@ -61,6 +63,7 @@ async def prediction(prediction:JobPrediction, signature: str = Header(...), db:
         counter += 1
     # Change the status of the processing
     image.processing_status = TypeOfImageStatus.DONE
+    image.finish_date = func.now(timezone=timezone.utc)
     db.commit()
     
     return {"Success" : True}
