@@ -1,5 +1,6 @@
 import uuid
-from sqlalchemy import Column, String, Boolean, Integer, Float, Enum, UniqueConstraint, ForeignKey, ForeignKeyConstraint
+from datetime import timezone
+from sqlalchemy import func, DateTime, Column, String, Boolean, Integer, Float, Enum, UniqueConstraint, ForeignKey, ForeignKeyConstraint
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -31,7 +32,7 @@ class Folder(Base):
     name = Column(String)
     parent_id = Column(String(36), ForeignKey('folders.id'), nullable=True) # Change to UUID data type during production
     user_email = Column(String, ForeignKey('users.email'), nullable=False)
-
+    create_date = Column(DateTime(timezone=True), server_default=func.now(timezone=timezone.utc))
     parent = relationship('Folder', remote_side=[id], backref='children')
     user = relationship('User', backref='folders')
 
@@ -42,6 +43,7 @@ class Folder(Base):
 class Image(Base):
     __tablename__ = "images"
     name = Column(String, primary_key=True)
+    description = Column(String)
     folder_id = Column(String(36), ForeignKey('folders.id'), primary_key=True)  # Change to UUID data type during production
     size = Column(Integer)
     width = Column(Integer)
@@ -49,6 +51,8 @@ class Image(Base):
     image_url = Column(String)
     thumbnail_url = Column(String)
     processing_status = Column(Enum(TypeOfImageStatus.IN_QUEUE, TypeOfImageStatus.PROCESSING, TypeOfImageStatus.DONE, TypeOfImageStatus.ERROR), default=TypeOfImageStatus.IN_QUEUE)
+    upload_date = Column(DateTime(timezone=True), server_default=func.now(timezone=timezone.utc))
+    finish_date = Column(DateTime(timezone=True))
     folder = relationship('Folder', backref='images')
     __table_args__ = (
         UniqueConstraint('name', 'folder_id'),

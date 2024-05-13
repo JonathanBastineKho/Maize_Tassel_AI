@@ -1,14 +1,16 @@
 from config import Config
+from typing import Dict
 import redis
 import secrets
 from itsdangerous import URLSafeSerializer
-from fastapi import Response, Request, HTTPException, Request
+from fastapi import Response, Request, HTTPException, Request, WebSocket
 
 class SessionManager:
     def __init__(self, host:str="localhost", port=6379) -> None:
         self.session_key = "session"
         self.r = redis.Redis(host=host, port=port, decode_responses=True)
         self.serializer = URLSafeSerializer(Config.SECRET_KEY)
+        self.connections: Dict[str, WebSocket] = {}  # Store WebSocket connections
 
     def load_signed_session(self, session):
         try:

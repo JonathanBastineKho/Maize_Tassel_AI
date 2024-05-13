@@ -17,6 +17,7 @@ import {
   import { navbarTheme } from "../theme";
   import { useContext, useState, useEffect } from "react";
   import { Link } from "react-router-dom";
+  import { spinnerTheme } from "../theme";
   import axios from "axios";
 
 
@@ -53,8 +54,8 @@ import {
         .then(() => setIsValidated(true));
     }, [setUser]);
     return (
-      <Navbar fluid  theme={navbarTheme} className="fixed top-0 left-0 right-0 z-50 shadow-lg shadow-gray-200/20">
-        <NavbarBrand href="/">
+      <Navbar fluid  theme={navbarTheme} className="p-3.5 fixed top-0 left-0 right-0 z-50 shadow-lg shadow-gray-200/20">
+        <NavbarBrand as={Link} to="/">
           <img src="https://storage.googleapis.com/corn_sight_public/apple-touch-icon.png" className="mr-3 h-6 sm:h-9" alt="logo" />
           <span className="self-center whitespace-nowrap text-xl font-bold text-gray-800">CornSight</span>
         </NavbarBrand>
@@ -68,7 +69,7 @@ import {
                         <span className="block text-sm">{user.name}</span>
                         <span className="block truncate text-sm font-medium">{user?.email}</span>
                     </DropdownHeader>
-                    <DropdownItem>Dashboard</DropdownItem>
+                    <DropdownItem as={Link} to="/user/dashboard">Dashboard</DropdownItem>
                     <DropdownItem>Settings</DropdownItem>
                     <DropdownDivider />
                     <DropdownItem onClick={signOut}>Sign out</DropdownItem>
@@ -84,7 +85,7 @@ import {
                 </Link>
             </div>}
             {!isValidated && 
-            <Spinner className="bg-green-600" aria-label="Loading" />}
+            <Spinner theme={spinnerTheme} aria-label="Loading" />}
           
         </div>
         <NavbarCollapse>

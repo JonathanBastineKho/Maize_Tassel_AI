@@ -38,7 +38,7 @@ async def register(user : UserCreateRequest, request: Request, db: Session = Dep
     db_user = User(email=user.email, name=user.name, password=password_hash)
     db.add(db_user)
     # Adding default root folder for new user
-    root_folder = Folder(name="root", user_email=user.email)
+    root_folder = Folder(name="Home", user_email=user.email)
     db.add(root_folder)
     db.commit()
 
@@ -98,7 +98,7 @@ async def google_login(request:Request, token:googleAuth, db: Session = Depends(
         db_user = new_user
         db.add(new_user)
         # Adding default root folder for new user
-        root_folder = Folder(name="root", user_email=user["email"])
+        root_folder = Folder(name="Home", user_email=user["email"])
         db.add(root_folder)
         db.commit()
     

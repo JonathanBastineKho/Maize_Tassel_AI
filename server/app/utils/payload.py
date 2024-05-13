@@ -39,8 +39,10 @@ class LoginRequired:
         self.verified = verified
         self.roles_required = roles_required
 
-    async def __call__(self, request: Request):
-        signed_session = request.cookies.get(session_mgr.session_key)
+    async def verify_session_id(self, session_id: str):
+        return await self.verify_session(session_id)
+
+    async def verify_session(self, signed_session: str):
         # Check if session available
         if not signed_session:
             raise HTTPException(status_code=401, detail="Unauthorized")
@@ -62,3 +64,7 @@ class LoginRequired:
             raise HTTPException(status_code=401, detail="Unauthorized")
         
         return user
+
+    async def __call__(self, request: Request):
+        signed_session = request.cookies.get(session_mgr.session_key)
+        return await self.verify_session(signed_session)
