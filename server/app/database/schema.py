@@ -1,7 +1,7 @@
 import uuid
 from datetime import timezone
 from sqlalchemy import func, DateTime, Column, String, Boolean, Integer, Float, Enum, UniqueConstraint, ForeignKey, ForeignKeyConstraint
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from app.database import Base
 
 # Production change
@@ -68,7 +68,9 @@ class Prediction(Base):
     width = Column(Integer)
     height = Column(Integer)
     confidence = Column(Float)
-    image = relationship('Image', backref='predictions', primaryjoin='and_(Prediction.folder_id == Image.folder_id, Prediction.image_name == Image.name)')
+    image = relationship('Image', backref=backref('predictions', cascade='all, delete-orphan'), 
+                         primaryjoin='and_(Prediction.folder_id == Image.folder_id, Prediction.image_name == Image.name)')
+
     __table_args__ = (
         ForeignKeyConstraint(['folder_id', 'image_name'], ['images.folder_id', 'images.name']),
     )

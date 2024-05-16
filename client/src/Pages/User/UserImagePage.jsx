@@ -1,11 +1,11 @@
-import { Breadcrumb, Button, TextInput } from "flowbite-react";
-import { HiHome, HiSearch } from "react-icons/hi";
+import { Button, TextInput } from "flowbite-react";
+import { HiSearch } from "react-icons/hi";
 import { FaTrashAlt, FaFilter, FaFolderPlus } from "react-icons/fa";
 import { FaPlus } from "react-icons/fa6";
 import { useState } from "react";
 
 import { inputTheme } from "../../Components/theme";
-import BreadcrumbFolder from "./BreadCrumbFolder";
+import BreadcrumbFolder from "../../Components/User/BreadCrumbFolder";
 import UserImageTable from "../../Components/User/UserImageTable";
 import UploadModal from "../../Components/User/UserUploadModal";
 

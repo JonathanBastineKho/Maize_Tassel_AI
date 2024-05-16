@@ -1,6 +1,6 @@
 from fastapi import Request, HTTPException
 from pydantic import BaseModel
-from typing import Set, List
+from typing import Set, List, Optional
 from . import session_mgr
 from app.database.schema import TypeOfUser
 
@@ -22,15 +22,17 @@ class UserCreateRequest(UserRequest):
 class googleAuth(BaseModel):
     auth_code: str
 
-# Webhook
-class Job(BaseModel):
-    image_name: str
-    folder_id: str
+# service
+class FolderPayload(BaseModel):
+    folder_id: Optional[str] = None
 
-class JobStatus(Job):
+class ImagePayload(FolderPayload):
+    name: str
+
+class JobStatus(ImagePayload):
     job_status: str
 
-class JobPrediction(Job):
+class JobPrediction(ImagePayload):
     box: List[dict]
 
 # Dependencies 

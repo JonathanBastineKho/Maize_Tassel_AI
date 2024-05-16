@@ -2,6 +2,7 @@ from config import Config
 from typing import Dict
 import redis
 import secrets
+from collections import defaultdict
 from itsdangerous import URLSafeSerializer
 from fastapi import Response, Request, HTTPException, Request, WebSocket
 
@@ -10,7 +11,7 @@ class SessionManager:
         self.session_key = "session"
         self.r = redis.Redis(host=host, port=port, decode_responses=True)
         self.serializer = URLSafeSerializer(Config.SECRET_KEY)
-        self.connections: Dict[str, WebSocket] = {}  # Store WebSocket connections
+        self.connections: Dict[str, WebSocket] = defaultdict(set)  # Store WebSocket connections
 
     def load_signed_session(self, session):
         try:

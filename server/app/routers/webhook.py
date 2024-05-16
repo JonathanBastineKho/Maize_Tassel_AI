@@ -14,7 +14,7 @@ router = APIRouter(tags=["WebHook"], prefix="/hook")
 
 def verify_signature(data:dict, signature: str):
     data = {
-        'image_name' : data["image_name"],
+        'name' : data["name"],
         'folder_id' : data['folder_id']
     }
     payload_json = json.dumps(data).encode('utf-8')
@@ -27,7 +27,7 @@ async def update_job_status(job_status: JobStatus, signature: str = Header(...),
         raise HTTPException(403, detail="Invalid signature")
     
     # Check if image name and folder id is valid
-    image = db.query(Image).filter(Image.folder_id == job_status.folder_id, Image.name == job_status.image_name).one_or_none()
+    image = db.query(Image).filter(Image.folder_id == job_status.folder_id, Image.name == job_status.name).one_or_none()
     if not image:
         raise HTTPException(400, detail="Invalid image name or folder")
     
@@ -41,7 +41,7 @@ async def prediction(prediction:JobPrediction, signature: str = Header(...), db:
         raise HTTPException(403, detail="Invalid signature")
     
     # Check if image name and folder id is valid
-    image = db.query(Image).filter(Image.folder_id == prediction.folder_id, Image.name == prediction.image_name).one_or_none()
+    image = db.query(Image).filter(Image.folder_id == prediction.folder_id, Image.name == prediction.name).one_or_none()
     if not image:
         raise HTTPException(400, detail="Invalid image name or folder")
     
@@ -50,7 +50,7 @@ async def prediction(prediction:JobPrediction, signature: str = Header(...), db:
     for pred_box in prediction.box:
         db.add(
             Prediction(
-                image_name=prediction.image_name,
+                image_name=prediction.name,
                 folder_id=prediction.folder_id,
                 box_id=counter,
                 xCenter=pred_box.get('xCenter'),

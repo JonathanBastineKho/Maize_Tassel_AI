@@ -25,7 +25,7 @@ async def connect(sid, env):
 
         # Store the authenticated user information in the Socket.IO session
         sio_server.environ[sid]['user'] = user['email']
-        session_mgr.connections[user['email']] = sid
+        session_mgr.connections[user['email']].add(sid)
 
     except HTTPException as e:
         print(f"Connection rejected for {sid}: {e.detail}")
@@ -36,5 +36,5 @@ async def disconnect(sid):
     print(f"Client {sid} disconnected")
     user_email = sio_server.environ[sid].get('user')
     if user_email:
-        session_mgr.connections.pop(user_email, None)
+        session_mgr.connections[user_email].discard(sid)
     

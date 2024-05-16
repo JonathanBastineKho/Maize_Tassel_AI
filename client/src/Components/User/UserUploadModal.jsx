@@ -74,7 +74,8 @@ function UploadModal({ setImage, folder, open, setOpen }) {
             [res.data.name] : {
               size: res.data.size,
               status: "in_queue",
-              upload_date : new Date(res.data.upload_date).toLocaleDateString(undefined, {month: 'long', day: 'numeric', year: 'numeric'})
+              upload_date : new Date(res.data.upload_date).toLocaleDateString(undefined, {month: 'long', day: 'numeric', year: 'numeric'}),
+              thumbnail_url : res.data.thumbnail_url
             }
           }));
           closeModal();

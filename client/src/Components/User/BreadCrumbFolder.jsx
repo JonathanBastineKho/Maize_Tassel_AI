@@ -1,9 +1,9 @@
 import { Breadcrumb, Spinner } from "flowbite-react";
 import { useEffect, useState, useContext } from "react";
 import { HiHome } from "react-icons/hi";
-import { spinnerTheme } from "../../Components/theme";
+import { spinnerTheme } from "../theme";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { AuthContext } from "../../Components/Authentication/AuthContext";
+import { AuthContext } from "../Authentication/AuthContext";
 import axios from "axios";
 
 function BreadcrumbFolder({ folder, setFolder }) {
