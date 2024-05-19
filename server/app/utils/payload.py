@@ -1,6 +1,6 @@
 from fastapi import Request, HTTPException
 from pydantic import BaseModel
-from typing import Set, List
+from typing import Set, List, Optional
 from . import session_mgr
 from app.database.schema import TypeOfUser
 
@@ -68,3 +68,8 @@ class LoginRequired:
     async def __call__(self, request: Request):
         signed_session = request.cookies.get(session_mgr.session_key)
         return await self.verify_session(signed_session)
+    
+# Utilities 
+class CreateFolderBody(BaseModel):
+    folder_name : str
+    parent_id : Optional[str] = None

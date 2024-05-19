@@ -6,7 +6,7 @@ import asyncio
 from app.utils import storage_mgr
 from app.database.schema import Folder, TypeOfUser, Image
 from app.database.utils import get_db
-from app.utils.payload import LoginRequired
+from app.utils.payload import LoginRequired, CreateFolderBody
 from app.utils.sockets import sio_server
 from app.utils import job_mgr, session_mgr
 from pydantic import BaseModel
@@ -86,10 +86,6 @@ async def search_item(folder_id: Optional[str] = None, db: Session = Depends(get
         "folders" : folders,
         "images" : images
     }
-    
-class CreateFolderBody(BaseModel):
-    folder_name : str
-    parent_id : Optional[str] = None
     
 @router.post("/create-folder")
 async def create_folder(folder: CreateFolderBody, db: Session = Depends(get_db), user:dict = Depends(LoginRequired(roles_required={TypeOfUser.REGULAR, TypeOfUser.PREMIUM}))):
