@@ -69,7 +69,7 @@ import {
                         <span className="block text-sm">{user.name}</span>
                         <span className="block truncate text-sm font-medium">{user?.email}</span>
                     </DropdownHeader>
-                    <DropdownItem as={Link} to="/user/dashboard">Dashboard</DropdownItem>
+                    <DropdownItem as={Link} to={user.role === 'admin' ? '/admin/dashboard' : '/user/dashboard'}>Dashboard</DropdownItem>
                     <DropdownItem>Settings</DropdownItem>
                     <DropdownDivider />
                     <DropdownItem onClick={signOut}>Sign out</DropdownItem>

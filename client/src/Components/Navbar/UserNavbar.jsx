@@ -16,8 +16,9 @@ import { Link, useNavigate } from "react-router-dom";
 import { useContext } from "react";
 import { AuthContext } from "../Authentication/AuthContext";
 import { inputTheme } from "../theme";
+import axios from "axios";
 
-function UserNavbar() {
+function UserNavbar({collapsed, setCollapsed}) {
   const { user, setUser } = useContext(AuthContext);
   const navigate = useNavigate();
 
@@ -36,7 +37,7 @@ function UserNavbar() {
     <Navbar className="border p-3.5 fixed top-0 left-0 right-0 z-50" fluid>
     <div className="flex flex-row justify-between gap-16">
         <div className="flex gap-4">
-            <button className="px-2 hover:bg-gray-100 rounded-md">
+            <button className="px-2 hover:bg-gray-100 rounded-md" onClick={()=>{setCollapsed(!collapsed)}}>
                 <HiMenuAlt1 className="w-6 h-6 text-gray-900"/>
             </button>
             <NavbarBrand as={Link} to="/">
