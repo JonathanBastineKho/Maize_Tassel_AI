@@ -23,6 +23,8 @@ import AuthProvider from './Components/Authentication/AuthContext';
 import UserDashboardPage from './Pages/User/UserDashboardPage';
 import UserImagePage from './Pages/User/UserImagePage';
 
+import TestPage from './Pages/TestPage';
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <GoogleOAuthProvider clientId={import.meta.env.VITE_REACT_APP_GOOGLE_CLIENT_ID}>
   <AuthProvider>
@@ -59,6 +61,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           <Route path="images/:folderId" element={<UserImagePage />}/>
         </Route>
     {/* Admin Path */}
+
+    {/* Other Path */}
+        <Route path="/test" element={<TestPage />}/>
         
       </Routes>
     </BrowserRouter>

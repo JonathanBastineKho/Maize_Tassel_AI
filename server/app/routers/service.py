@@ -9,6 +9,7 @@ from app.database.utils import get_db
 from app.utils.payload import LoginRequired
 from app.utils.sockets import sio_server
 from app.utils import job_mgr, session_mgr
+from pydantic import BaseModel
 
 router = APIRouter(tags=["Regular Service"], prefix="/service")
 
@@ -85,10 +86,21 @@ async def search_item(folder_id: Optional[str] = None, db: Session = Depends(get
         "folders" : folders,
         "images" : images
     }
-
+    
+class CreateFolderBody(BaseModel):
+    folder_name : str
+    parent_id : Optional[str] = None
+    
 @router.post("/create-folder")
-async def create_folder():
-    return
+async def create_folder(folder: CreateFolderBody, db: Session = Depends(get_db), user:dict = Depends(LoginRequired(roles_required={TypeOfUser.REGULAR, TypeOfUser.PREMIUM}))):
+    new_Folder = Folder(
+        name = folder.folder_name,
+        parent_id = folder.parent_id,
+        user_email = user['email']
+    )
+    db.add(new_Folder)
+    db.commit()
+    return {"Success" : True}
 
 @router.delete("/delete-folder")
 async def delete_folder():
