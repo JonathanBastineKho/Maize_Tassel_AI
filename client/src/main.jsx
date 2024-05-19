@@ -7,6 +7,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 // Import Layout
 import PublicLayout from "./Pages/Public/PublicLayout";
 import UserLayout from './Pages/User/UserLayout';
+import AdminLayout from './Pages/Admin/AdminLayout';
 
 // Import Pages
 import PrivateRoute from './Components/Authentication/PrivateRoute';
@@ -22,6 +23,8 @@ import AuthProvider from './Components/Authentication/AuthContext';
 
 import UserDashboardPage from './Pages/User/UserDashboardPage';
 import UserImagePage from './Pages/User/UserImagePage';
+import AdminDashboardPage from './Pages/Admin/AdminDashboardPage';
+import AdminUsersPage from './Pages/Admin/AdminUsersPage';
 
 import TestPage from './Pages/TestPage';
 
@@ -58,13 +61,16 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <Route path="/user" element={<PrivateRoute requiredRoles={["regular","premium"]} verified={true}><UserLayout /></PrivateRoute>}>
           <Route path="dashboard" element={<UserDashboardPage />}/>
           <Route path="images" element={<UserImagePage />} index />
-          <Route path="images/:folderId" element={<UserImagePage />}/>
+          <Route path="images/:folderId/:imageName" element={<UserImagePage />}/>
+          <Route path="images/root/:imageName" element={<UserImagePage />}/>
         </Route>
     {/* Admin Path */}
-
-    {/* Other Path */}
-        <Route path="/test" element={<TestPage />}/>
-        
+        <Route path="/admin" element={<PrivateRoute requiredRoles={["admin"]} verified={true}><AdminLayout /></PrivateRoute>}>
+          <Route path="dashboard" element={<AdminDashboardPage />} />
+          <Route path="users" element={<AdminUsersPage />} />
+        </Route>
+   {/* Other Path */}
+      <Route path="/test" element={<TestPage />}/>
       </Routes>
     </BrowserRouter>
   </AuthProvider>
