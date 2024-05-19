@@ -59,13 +59,13 @@ class Worker:
             self.connection.close()
 
     def generate_signature(self, payload):
-        signature_payload = json.dumps({'image_name': payload['image_name'],
+        signature_payload = json.dumps({'name': payload['name'],
                              'folder_id': payload['folder_id']})
         return hmac.new(Config.SECRET_KEY.encode('utf-8'), signature_payload.encode('utf-8'), hashlib.sha256).hexdigest()
 
     def update_job_status(self, image_name: str, folder_id: str, status: str):
         data = {
-            'image_name': image_name,
+            'name': image_name,
             'folder_id': folder_id,
             'job_status': status
         }
@@ -98,7 +98,7 @@ class Worker:
 
             # Sending predictions:
             data = {
-                'image_name': job["image_name"],
+                'name': job["image_name"],
                 'folder_id': job["folder_id"],
                 'box' : bounding_boxes
             }

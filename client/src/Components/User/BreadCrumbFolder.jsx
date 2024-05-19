@@ -1,13 +1,12 @@
 import { Breadcrumb, Spinner } from "flowbite-react";
 import { useEffect, useState, useContext } from "react";
 import { HiHome } from "react-icons/hi";
-import { spinnerTheme } from "../../Components/theme";
-import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { AuthContext } from "../../Components/Authentication/AuthContext";
+import { spinnerTheme } from "../theme";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { AuthContext } from "../Authentication/AuthContext";
 import axios from "axios";
 
 function BreadcrumbFolder({ folder, setFolder }) {
-  const location = useLocation();
   const { setUser } = useContext(AuthContext);
   const navigate = useNavigate();
   const { folderId } = useParams();
@@ -31,7 +30,7 @@ function BreadcrumbFolder({ folder, setFolder }) {
   })
   .catch((err) => {})
   .then(() => {setLoading(false)})
-  }, [location.pathname])
+  }, [folderId])
 
   return (
     <>

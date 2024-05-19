@@ -3,7 +3,8 @@ from fastapi import UploadFile, HTTPException
 from sqlalchemy.orm import Session
 from PIL import Image as PILImage
 from io import BytesIO
-import os
+import os, datetime, asyncio
+from typing import List, Union
 from app.database.schema import Folder, Image
 
 class StorageManager:
@@ -57,10 +58,9 @@ class StorageManager:
         thumbnail_bytes = BytesIO()
         image.save(thumbnail_bytes, format='JPEG')
         thumbnail_bytes.seek(0)
-        thumbnail_name = os.path.splitext(file.filename)[0]
-        thumbnail_path = f"{email}/{folder_name}/thumbnail/{thumbnail_name}.jpg"
+        thumbnail_path = f"{email}/{folder_name}/thumbnail/{name}{file_extension}"
         blob = self.bucket.blob(thumbnail_path)
-        blob.upload_from_file(thumbnail_bytes, content_type="image/jpeg")
+        blob.upload_from_file(thumbnail_bytes, content_type=content_type)
 
         return {
             "image_path" : image_path,
@@ -69,3 +69,33 @@ class StorageManager:
             "height": height,
             "size": size
         }
+    
+    async def get_image(self, urls: Union[str, List[str]]) -> List[str]:
+        if isinstance(urls, str):
+            urls = [urls]
+        async def generate_signed_url(blob):
+            return blob.generate_signed_url(
+                version="v4",
+                expiration=datetime.timedelta(minutes=1),
+                method="GET"
+            )
+
+        blobs = [self.bucket.blob(url) for url in urls]
+        signed_urls = await asyncio.gather(*[generate_signed_url(blob) for blob in blobs])
+        return signed_urls
+    
+    async def delete_image(self, urls: Union[str, List[str]]):
+        if isinstance(urls, str):
+            urls = [urls]
+
+        blobs = []
+        for url in urls:
+            blobs.append(self.bucket.blob(url))
+            thumbnail_url = url.replace("/image/", "/thumbnail/")
+            blobs.append(self.bucket.blob(thumbnail_url))
+
+        for blob in blobs:
+            try:
+                blob.delete()
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Failed to delete image: {e}")
