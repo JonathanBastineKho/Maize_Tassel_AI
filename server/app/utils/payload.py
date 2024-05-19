@@ -70,3 +70,8 @@ class LoginRequired:
     async def __call__(self, request: Request):
         signed_session = request.cookies.get(session_mgr.session_key)
         return await self.verify_session(signed_session)
+    
+# Utilities 
+class CreateFolderBody(BaseModel):
+    folder_name : str
+    parent_id : Optional[str] = None

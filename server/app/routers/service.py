@@ -6,7 +6,7 @@ import asyncio
 from app.utils import storage_mgr
 from app.database.schema import Folder, TypeOfUser, Image, Prediction, TypeOfImageStatus
 from app.database.utils import get_db
-from app.utils.payload import LoginRequired, FolderPayload, ImagePayload
+from app.utils.payload import LoginRequired, FolderPayload, ImagePayload, CreateFolderBody
 from app.utils.sockets import sio_server
 from app.utils import job_mgr, session_mgr
 
@@ -186,10 +186,16 @@ async def get_parent_folders(folder_id: Optional[str] = None, db: Session = Depe
 
     return {"Success": True, "parent_folders": parent_folders.reverse()}
 
-
 @router.post("/create-folder")
-async def create_folder():
-    return
+async def create_folder(folder: CreateFolderBody, db: Session = Depends(get_db), user:dict = Depends(LoginRequired(roles_required={TypeOfUser.REGULAR, TypeOfUser.PREMIUM}))):
+    new_Folder = Folder(
+        name = folder.folder_name,
+        parent_id = folder.parent_id,
+        user_email = user['email']
+    )
+    db.add(new_Folder)
+    db.commit()
+    return {"Success" : True}
 
 
 @router.delete("/delete-folder")
