@@ -1,57 +1,58 @@
+import { useRef } from "react";
+import { Dropdown } from "flowbite-react";
 import { BsThreeDotsVertical } from "react-icons/bs";
-import { useRef, useState } from "react";
-import { MdDelete, MdCloudDownload, MdModeEdit } from "react-icons/md";
-import useOnClickOutside from "use-onclickoutside"
+import { MdCloudDownload } from "react-icons/md";
+import { RiPencilFill } from "react-icons/ri";
+import { FaTrashCan } from "react-icons/fa6";
 
-function ActionButton() {
-    const [isOpen, setIsOpen] = useState(false);
-    const dropdownRef = useRef(null);
+import React from "react";
+
+const ThreeDotsVerticalIcon = React.forwardRef((props, ref) => (
+  <div ref={ref} {...props}>
+    <BsThreeDotsVertical />
+  </div>
+));
+
+function ActionButton({ setDeleteModalOpen, setImageToAction, imgName }) {
+  const dropdownRef = useRef(null);
+
+  const handleDropdownClick = (event) => {
+    if (dropdownRef.current && dropdownRef.current.contains(event.target)) {
+      event.stopPropagation();
+    }
+  };
   
-    const handleTriggerClick = (e) => {
-    e.stopPropagation();
-      setIsOpen(!isOpen);
-    };
-  
-    useOnClickOutside(dropdownRef, () => setIsOpen(false));
-  
-    return (
-      <div ref={dropdownRef} className="relative">
-        <button
-          className="hover:bg-gray-100 p-2 rounded-md"
-          onClick={handleTriggerClick}
-        >
-          <BsThreeDotsVertical />
-        </button>
-        {isOpen && (
-          <div className="absolute right-0 mt-2 w-36 bg-white border border-gray-200 rounded-md shadow-lg z-10">
-            <button
-              className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
-            >
-              <div className="flex flex-row gap-3 items-center">
-                    <MdModeEdit className="w-5 h-5 text-gray-500" /> 
-                    Edit
-                </div>
-            </button>
-            <button
-              className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
-            >
-              <div className="flex flex-row gap-3 items-center">
-                    <MdCloudDownload className="w-5 h-5 text-gray-500" /> 
-                    Download
-                </div>
-            </button>
-            <button
-              className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
-            >
-                <div className="flex flex-row gap-3 items-center">
-                    <MdDelete className="w-5 h-5 text-gray-500" /> 
-                    Delete
-                </div>
-            </button>
-          </div>
-        )}
-      </div>
-    );
-  }
-  
+  return (
+    <div ref={dropdownRef} onClick={handleDropdownClick} className="relative">
+      <Dropdown
+        renderTrigger={() => <div className="w-fit p-2 rounded-md hover:bg-gray-100"><ThreeDotsVerticalIcon /></div>}
+        arrowIcon={false}
+        placement="bottom-end"
+        className="absolute right-0"
+      >
+        <div className="min-w-36">
+          <Dropdown.Item>
+            <div className="flex flex-row items-center gap-3">
+              <RiPencilFill className="text-gray-500 w-5 h-5" />
+              Edit
+            </div>
+          </Dropdown.Item>
+          <Dropdown.Item>
+            <div className="flex flex-row items-center gap-3">
+              <MdCloudDownload className="text-gray-500 w-5 h-5" />
+              Download
+            </div>
+          </Dropdown.Item>
+          <Dropdown.Item onClick={()=>{setImageToAction(imgName); setDeleteModalOpen(true);}}>
+            <div className="flex flex-row items-center gap-3">
+              <FaTrashCan className="text-gray-500 w-5 h-5" />
+              Delete
+            </div>
+          </Dropdown.Item>
+        </div>
+      </Dropdown>
+    </div>
+  );
+}
+
 export default ActionButton;

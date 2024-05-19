@@ -8,16 +8,19 @@ import { inputTheme } from "../../Components/theme";
 import BreadcrumbFolder from "../../Components/User/BreadCrumbFolder";
 import UserImageTable from "../../Components/User/UserImageTable";
 import UploadModal from "../../Components/User/UserUploadModal";
+import DeleteImageModal from "../../Components/User/DeleteImageModal";
 
 function UserImagePage() {
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [breadCrumbfolder, setBreadCrumbFolder] = useState([]); // BreadCrumb folders
   const [folder, setFolder] = useState([]); // Folder in the search
-  const [image, setImage] = useState({});
+  const [image, setImage] = useState({}); // Images in the search
+  const [imageToAction, setImageToAction] = useState(null); // Images to view, edit, delete, etc
   return (
-    <>
-    <UploadModal className="w-screen h-screen" setImage={setImage} folder={breadCrumbfolder[breadCrumbfolder.length - 1]} open={uploadModalOpen} setOpen={setUploadModalOpen} />
-    <div className="ml-[16.3rem] px-5 mt-24 flex flex-col gap-5 w-screen">
+    <div className="px-5 mt-24 flex flex-col gap-5">
+      <DeleteImageModal setImageList={setImage} setImageToDelete={setImageToAction} imageToDelete={imageToAction} open={deleteModalOpen} setOpen={setDeleteModalOpen} />
+      <UploadModal className="w-screen h-screen" setImage={setImage} folder={breadCrumbfolder[breadCrumbfolder.length - 1]} open={uploadModalOpen} setOpen={setUploadModalOpen} />
       <BreadcrumbFolder folder={breadCrumbfolder} setFolder={setBreadCrumbFolder} />
       <h2 className="font-bold text-2xl">Your Images</h2>
       <div className="flex flex-wrap flex-row justify-between">
@@ -52,10 +55,13 @@ function UserImagePage() {
           </Button>
         </div>
       </div>
-      <UserImageTable image={image} setImage={setImage} folder={folder} setFolder={setFolder} breadCrumbfolder={breadCrumbfolder} />
+      <UserImageTable
+      setDeleteModalOpen={setDeleteModalOpen}
+      setImageToAction={setImageToAction} 
+      image={image} setImage={setImage} 
+      folder={folder} setFolder={setFolder}
+      breadCrumbfolder={breadCrumbfolder} />
     </div>
-    </>
-    
   );
 }
 

@@ -43,7 +43,7 @@ class SessionManager:
                     "verified" : int(verified)
                 }
                 self.r.hmset(session_token, data)
-                self.r.expire(session_token, 7200)
+                self.r.expire(session_token, 86400)
                 break
 
         # Setting the signed session to the user

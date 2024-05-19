@@ -100,14 +100,21 @@ async def view_image(img_name: str, folder_id: Optional[str] = None, db: Session
     image_data['width'] = img.width
     image_data['height'] = img.height
     image_data['status'] = img.processing_status
+    image_data['upload_date'] = img.upload_date
     if img.finish_date and img.upload_date:
         processing_time = img.finish_date - img.upload_date
         hours, remainder = divmod(processing_time.seconds, 3600)
         minutes, seconds = divmod(remainder, 60)
-        image_data['processing_time'] = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+        if hours > 0:
+            image_data['processing_time'] = f"{hours} hr{'s' if hours > 1 else ''}, {minutes} min{'s' if minutes > 1 else ''}"
+        elif minutes > 0:
+            image_data['processing_time'] = f"{minutes} min{'s' if minutes > 1 else ''}, {seconds} sec{'s' if seconds > 1 else ''}"
+        else:
+            image_data['processing_time'] = f"{seconds} second{'s' if seconds > 1 else ''}"
     else:
         image_data['processing_time'] = "N/A"
-    url = await storage_mgr.get_image([img.image_url])
+    url = await storage_mgr.get_image([img.image_url, img.thumbnail_url])
+    image_data['thumbnail_url'] = url[1]
     image_data['url'] = url[0]
     if img.processing_status == TypeOfImageStatus.DONE:
         # Get Image predictions

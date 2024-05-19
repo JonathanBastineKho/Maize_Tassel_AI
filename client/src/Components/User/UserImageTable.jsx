@@ -4,20 +4,20 @@ import { Checkbox, Table, Badge, Avatar, Spinner, Label } from "flowbite-react";
 import { useEffect, useState } from "react";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { useNavigate, useParams } from "react-router-dom";
-import { spinnerTheme } from "../theme";
+import { spinnerTheme, tableTheme } from "../theme";
 import UserImageModal from "./UserImageModal";
 import ActionButton from "./ActionButton";
 
-function UserImageTable({ image, setImage, folder, setFolder }) {
+function UserImageTable({ setDeleteModalOpen, setImageToAction, image, setImage, folder, setFolder }) {
   const { folderId } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [imageToOpen, setImageToOpen] = useState(null);
-
+  const [currImageIdx, setCurrImageIdx] = useState(0);
   useEffect(() => {
     setLoading(true);
+    let socket;
     const connectToWebSocket = () => {
-      const socket = io("http://localhost:8000", {
+      socket = io("http://localhost:8000", {
         path: "/job_socket",
         withCredentials: true,
       });
@@ -27,16 +27,20 @@ function UserImageTable({ image, setImage, folder, setFolder }) {
       });
 
       socket.on("image_status_update", (updatedImage) => {
-        setImage((prev) => ({
-          ...prev,
-          [updatedImage.name]: {
-            ...prev[updatedImage.name],
-            status: updatedImage.status,
-          },
-        }));
+        setImage((prev) => {
+          if (prev.hasOwnProperty(updatedImage.name)) {
+            return {
+              ...prev,
+              [updatedImage.name]: {
+                ...prev[updatedImage.name],
+                status: updatedImage.status,
+              },
+            };
+          }
+          return prev;
+        });
       });
     };
-
     let url = "/api/service/search-item";
     if (folderId) {
       url = `/api/service/search-item?folder_id=${folderId}`;
@@ -58,21 +62,24 @@ function UserImageTable({ image, setImage, folder, setFolder }) {
       .finally(() => {
         setLoading(false);
       });
+      return () => {
+        socket.disconnect();
+      };
   }, [folderId]);
 
   return (
     <>
       <UserImageModal
-        imgName={imageToOpen}
-        setImgName={setImageToOpen}
+        imageList={Object.entries(image)}
+        index={currImageIdx}
+        setIndex={setCurrImageIdx}
       />
       {loading ? (
         <div className="mt-8 flex items-center justify-center">
           <Spinner className="" theme={spinnerTheme} />
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <Table hoverable>
+          <Table hoverable theme={tableTheme}>
             <Table.Head className="p-4">
               <Table.HeadCell>
                 <Checkbox />
@@ -109,13 +116,20 @@ function UserImageTable({ image, setImage, folder, setFolder }) {
                   </Table.Row>
               ))}
               {Object.entries(image).map(([key, img], index) => (
-                <Table.Row key={index} className="cursor-pointer" onClick={()=>{setImageToOpen(key)}}>
+                <Table.Row key={index} className="cursor-pointer" onClick={()=>{
+                  setCurrImageIdx(index);
+                  if (folderId){
+                    navigate(`/user/images/${folderId}/${key}`);
+                  } else {
+                    navigate(`/user/images/root/${key}`);
+                  }
+                  }}>
                   <Table.Cell>
                     <Checkbox />
                   </Table.Cell>
                   <Table.Cell className="whitespace-nowrap font-medium text-gray-900 flex flex-row gap-2 items-center">
                     <Avatar size="xs" img={img.thumbnail_url} />
-                    <Label className="truncate">{key}</Label>
+                    <Label className="truncate max-w-72">{key}</Label>
                   </Table.Cell>
                   <Table.Cell>{img.size} MB</Table.Cell>
                   <Table.Cell>
@@ -145,13 +159,12 @@ function UserImageTable({ image, setImage, folder, setFolder }) {
                     })}
                   </Table.Cell>
                   <Table.Cell>
-                    <ActionButton />
+                    <ActionButton imgName={key} setImageToAction={setImageToAction} setDeleteModalOpen={setDeleteModalOpen}/>
                   </Table.Cell>
                 </Table.Row>
               ))}
             </Table.Body>
           </Table>
-        </div>
       )}
     </>
   );

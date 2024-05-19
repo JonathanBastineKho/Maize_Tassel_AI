@@ -69,10 +69,10 @@ class StorageManager:
             "height": height,
             "size": size
         }
+    
     async def get_image(self, urls: Union[str, List[str]]) -> List[str]:
         if isinstance(urls, str):
             urls = [urls]
-
         async def generate_signed_url(blob):
             return blob.generate_signed_url(
                 version="v4",
