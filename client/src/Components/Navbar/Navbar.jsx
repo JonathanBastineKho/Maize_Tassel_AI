@@ -63,7 +63,18 @@ import {
             {user != null && isValidated && <><Dropdown
                     arrowIcon={false}
                     inline
-                    label={<Avatar alt="User settings" img="https://storage.googleapis.com/corn_sight_public/profile.jpg" rounded />}
+                    label={<Avatar
+                        alt="User settings"
+                        img={(avatarProps) => (
+                          <img
+                            {...avatarProps}
+                            referrerPolicy="no-referrer"
+                            src={user.profile_pict}
+                            alt={avatarProps.alt}
+                          />
+                        )}
+                        rounded
+                      />}
                 >
                     <DropdownHeader>
                         <span className="block text-sm">{user.name}</span>

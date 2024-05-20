@@ -20,6 +20,7 @@ import {
   
   function AdminNavbar({collapsed, setCollapsed}) {
     const { user, setUser } = useContext(AuthContext);
+    console.log(user);
     const navigate = useNavigate();
   
     const signOut = async () => {
@@ -71,7 +72,7 @@ import {
             label={
               <Avatar
                 alt="User settings"
-                img="https://storage.googleapis.com/corn_sight_public/profile.jpg"
+                img={`${user.profile_pict}`}
                 rounded
               />
             }

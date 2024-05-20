@@ -1,6 +1,6 @@
 from fastapi import FastAPI, APIRouter
 from app.database.utils import create_database
-from app.routers import auth, webhook, service
+from app.routers import auth, webhook, service, user
 from app.utils.sockets import sio_app
 
  # Create Database
@@ -13,5 +13,6 @@ api_router = APIRouter(prefix="/api")
 api_router.include_router(auth.router)
 api_router.include_router(service.router)
 api_router.include_router(webhook.router)
+api_router.include_router(user.router)
 
 app.include_router(api_router)

@@ -74,7 +74,14 @@ function UserNavbar({collapsed, setCollapsed}) {
           label={
             <Avatar
               alt="User settings"
-              img="https://storage.googleapis.com/corn_sight_public/profile.jpg"
+              img={(avatarProps) => (
+                <img
+                  {...avatarProps}
+                  referrerPolicy="no-referrer"
+                  src={user.profile_pict}
+                  alt={avatarProps.alt}
+                />
+              )}
               rounded
             />
           }
