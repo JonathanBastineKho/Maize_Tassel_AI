@@ -23,8 +23,19 @@ class User(Base):
     email = Column(String, primary_key=True)
     name = Column(String)
     password = Column(String, nullable=True)
+    phone = Column(String, nullable=True)
+    country = Column(String, nullable=True)
+    profile_pict = Column(String, default="https://storage.googleapis.com/corn_sight_public/default_profile.jpg")
     verified = Column(Boolean, default=False)
     role = Column(Enum(TypeOfUser.ADMIN, TypeOfUser.REGULAR, TypeOfUser.PREMIUM), default=TypeOfUser.REGULAR)
+
+class Suspension(Base):
+    __tablename__ = "suspensions"
+    user_email = Column(String, ForeignKey('users.email'), primary_key=True)
+    start_date = Column(DateTime(timezone=True), primary_key=True)
+    end_date = Column(DateTime(timezone=True))
+    suspension = Column(String)
+    user = relationship('User', backref='suspensions')
 
 class Folder(Base):
     __tablename__ = "folders"

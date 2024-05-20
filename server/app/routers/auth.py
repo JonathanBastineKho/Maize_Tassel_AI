@@ -68,7 +68,8 @@ async def login(user : UserLoginRequest, request:Request, db: Session = Depends(
                                   name=db_user.name,
                                   role=db_user.role, 
                                   verified=db_user.verified, 
-                                  request=request)
+                                  request=request,
+                                  profile_pict=db_user.profile_pict)
 
 @router.post("/google-login")
 async def google_login(request:Request, token:googleAuth, db: Session = Depends(get_db)):
@@ -94,7 +95,7 @@ async def google_login(request:Request, token:googleAuth, db: Session = Depends(
     
     # If email doesn't exist in the database
     if db_user == None:
-        new_user = User(email=user["email"], role=TypeOfUser.REGULAR, name=user["name"], verified=True)
+        new_user = User(email=user["email"], role=TypeOfUser.REGULAR, name=user["name"], verified=True, profile_pict=user["picture"])
         db_user = new_user
         db.add(new_user)
         # Adding default root folder for new user
@@ -106,7 +107,8 @@ async def google_login(request:Request, token:googleAuth, db: Session = Depends(
                                   name=user["name"],
                                   role=db_user.role, 
                                   verified=db_user.verified, 
-                                  request=request)
+                                  request=request,
+                                  profile_pict=db_user.profile_pict)
     
 @router.post("/logout")
 async def logout(request: Request, user:dict = Depends(LoginRequired(verified=False))):
