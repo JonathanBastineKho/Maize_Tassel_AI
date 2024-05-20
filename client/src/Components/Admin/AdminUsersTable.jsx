@@ -87,7 +87,18 @@ function AdminUsersTable() {
               <Table.Row key={idx}>
                 <Table.Cell>
                   <div className="flex flex-row gap-8">
-                    <Avatar rounded img={user.profile_pict} />
+                  <Avatar
+                    alt="User settings"
+                    img={(avatarProps) => (
+                        <img
+                        {...avatarProps}
+                        referrerPolicy="no-referrer"
+                        src={user.profile_pict}
+                        alt={avatarProps.alt}
+                        />
+                    )}
+                    rounded
+                    />
                     <div className="flex flex-col">
                       <Label>{user.name}</Label>
                       <Label className="text-gray-500">{user.email}</Label>
