@@ -45,3 +45,8 @@ def search_user(page: int = 1, page_size: int = 5, search: str = None, db: Sessi
         })
 
     return {"users": user_data}
+
+@router.get("/view-account")
+def view_account(user:dict = Depends(LoginRequired(roles_required={TypeOfUser.REGULAR, TypeOfUser.PREMIUM})), db: Session = Depends(get_db)):
+    db_user = db.query(User).filter(User.email == user['email']).first()
+    return db_user
