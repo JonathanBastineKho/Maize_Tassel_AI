@@ -5,10 +5,12 @@ import secrets
 from collections import defaultdict
 from itsdangerous import URLSafeSerializer
 from fastapi import Response, Request, HTTPException, Request, WebSocket
+from app.database.schema import TypeOfUser
 
 class SessionManager:
     def __init__(self, host:str="localhost", port=6379) -> None:
         self.session_key = "session"
+        self.email_key = "email_session"
         self.r = redis.Redis(host=host, port=port, decode_responses=True)
         self.serializer = URLSafeSerializer(Config.SECRET_KEY)
         self.connections: Dict[str, WebSocket] = defaultdict(set)  # Store WebSocket connections
@@ -45,6 +47,8 @@ class SessionManager:
                 }
                 self.r.hmset(session_token, data)
                 self.r.expire(session_token, 86400)
+                self.r.sadd(f"{self.email_key}:{email}", session_token)
+                self.r.expire(f"{self.email_key}:{email}", 86400)
                 break
 
         # Setting the signed session to the user
@@ -60,5 +64,18 @@ class SessionManager:
         response = Response(content="Logged out Successfully",
                             media_type="text/plain")
         response.delete_cookie(self.session_key)
-        self.r.delete(self.load_signed_session(request.cookies.get(self.session_key)))
+        session_token = self.load_signed_session(request.cookies.get(self.session_key))
+        email = self.r.hget(session_token, "email")
+        self.r.delete(session_token)
+        self.r.srem(f"{self.email_key}:{email}", session_token)
         return response
+    
+    def upgrade_user(self, email: str):
+        session_tokens = self.r.smembers(f"{self.email_key}:{email}")
+        for session_token in session_tokens:
+            self.r.hset(session_token, "role", TypeOfUser.PREMIUM)
+
+    def downgrade_user(self, email: str):
+        session_tokens = self.r.smembers(f"{self.email_key}:{email}")
+        for session_token in session_tokens:
+            self.r.hset(session_token, "role", TypeOfUser.REGULAR)

@@ -37,7 +37,7 @@ function UserSideBar({setCollapsed, collapsed}) {
                         <Sidebar.Item as={Link} to="/user/images" icon={IoMdImages}>
                             Images
                         </Sidebar.Item>
-                        <Sidebar.Item icon={FaCreditCard}>
+                        <Sidebar.Item as={Link} to="/user/subscription" icon={FaCreditCard}>
                             Subscription
                         </Sidebar.Item>
                     </Sidebar.ItemGroup>

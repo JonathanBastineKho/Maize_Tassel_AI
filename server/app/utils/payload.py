@@ -35,6 +35,9 @@ class JobStatus(ImagePayload):
 class JobPrediction(ImagePayload):
     box: List[dict]
 
+class CheckoutSessionRequest(BaseModel):
+    is_monthly: bool = True
+
 # Dependencies 
 class LoginRequired:
     def __init__(self, verified: bool = True, roles_required: Set[str] = set({TypeOfUser.ADMIN, TypeOfUser.REGULAR, TypeOfUser.PREMIUM})):
