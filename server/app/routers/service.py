@@ -187,7 +187,8 @@ async def get_parent_folders(folder_id: Optional[str] = None, db: Session = Depe
     return {"Success": True, "parent_folders": parent_folders.reverse()}
 
 @router.post("/create-folder")
-async def create_folder(folder: CreateFolderBody, db: Session = Depends(get_db), user:dict = Depends(LoginRequired(roles_required={TypeOfUser.REGULAR, TypeOfUser.PREMIUM}))):
+async def create_folder(folder: CreateFolderBody, db: Session = Depends(get_db), user:dict = Depends(LoginRequired(roles_required={TypeOfUser.REGULAR, TypeOfUser.PREMIUM}))): 
+    
     new_Folder = Folder(
         name = folder.folder_name,
         parent_id = folder.parent_id,

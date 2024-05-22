@@ -10,10 +10,13 @@ import {
 
 import { useState, useRef } from "react";
 import { FaTimes } from "react-icons/fa";
+import { useParams } from "react-router-dom";
 import axios from "axios";
 
 function UserNewFolderModal({ state, setState }) {
   const folderNameRef = useRef();
+
+  const { folderId } = useParams();
 
   function onCloseModal() {
     setState(false);
@@ -21,17 +24,40 @@ function UserNewFolderModal({ state, setState }) {
 
   function handleCreateFolder() {
     const folderName = folderNameRef.current.value;
+    const parentID = "2";
 
-    axios.post('api/service/create-folder', {
-      folder_name: folderName,
-      parent_id: null,
-    })
-    .then(response => {
-      console.log(response.data);
-    })
-    .catch(error => {
-      console.error(error);
-    });
+    // console.log({
+    //   folderName,
+    //   parentID,
+    // })
+    // console.log("Creating folder")
+
+    if (folderId) {
+      axios
+        .post("/api/service/create-folder", {
+          // need to change url
+          folder_name: folderName,
+          parent_id: folderId,
+        })
+        .then((response) => {
+          console.log(response.data);
+        })
+        .catch((error) => {
+          console.error(error);
+        });
+    } else {
+      axios
+        .post("/api/service/create-folder", {
+          // need to change url
+          folder_name: folderName,
+        })
+        .then((response) => {
+          console.log(response.data);
+        })
+        .catch((error) => {
+          console.error(error);
+        });
+    }
   }
 
   return (
@@ -45,7 +71,11 @@ function UserNewFolderModal({ state, setState }) {
           <section className="flex flex-row">
             <h2 className="text-2xl font-semibold mb-4">New Folder</h2>
           </section>
-          <TextInput className="mb-4" placeholder="Enter folder name" ref={folderNameRef} />
+          <TextInput
+            className="mb-4"
+            placeholder="Enter folder name"
+            ref={folderNameRef}
+          />
           <section className="flex flex-row justify-end gap-5 pt-1">
             <Button
               onClick={() => setState(false)}
