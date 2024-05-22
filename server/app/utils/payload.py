@@ -19,6 +19,13 @@ class UserCreateRequest(UserRequest):
     name: str
     password: str
 
+class UserUpdateRequest(UserRequest):
+    name: str
+    password: str
+    country: str
+    phone: str
+    profile_pict: str
+
 class googleAuth(BaseModel):
     auth_code: str
 

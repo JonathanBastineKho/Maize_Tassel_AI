@@ -2,7 +2,7 @@ from fastapi import FastAPI, APIRouter
 from config import Config
 import stripe
 from app.database.utils import create_database
-from app.routers import auth, webhook, service, user, subscription
+from app.routers import auth, webhook, service, user, profile, subscription
 from app.utils.sockets import sio_app
 
 # Initialize stripe
@@ -20,5 +20,6 @@ api_router.include_router(service.router)
 api_router.include_router(webhook.router)
 api_router.include_router(user.router)
 api_router.include_router(subscription.router)
+api_router.include_router(profile.router)
 
 app.include_router(api_router)
