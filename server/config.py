@@ -19,6 +19,8 @@ class Config:
     PRIVATE_BUCKET_NAME = os.environ.get("PRIVATE_BUCKET_NAME") or "corn_sight_private"
     MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
     MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
+    STRIPE_SECRET = os.environ.get("STRIPE_SECRET")
+    STRIPE_WEBHOOK = os.environ.get("STRIPE_WEBHOOK")
 
     # RabbitMQ
     RABBIT_MQ_USERNAME = os.environ.get("RABBIT_MQ_USERNAME")

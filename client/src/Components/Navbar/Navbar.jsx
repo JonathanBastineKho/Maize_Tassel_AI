@@ -77,8 +77,9 @@ import {
                       />}
                 >
                     <DropdownHeader>
-                        <span className="block text-sm">{user.name}</span>
-                        <span className="block truncate text-sm font-medium">{user?.email}</span>
+                        <span className="block text-sm font-medium">{user.name}</span>
+                        <span className="block truncate text-sm mb-2">{user?.email}</span>
+                        <span className="block text-sm text-gray-500">{user.role.charAt(0).toUpperCase() + user.role.slice(1)}</span>
                     </DropdownHeader>
                     <DropdownItem as={Link} to={user.role === 'admin' ? '/admin/dashboard' : '/user/dashboard'}>Dashboard</DropdownItem>
                     <DropdownItem>Settings</DropdownItem>

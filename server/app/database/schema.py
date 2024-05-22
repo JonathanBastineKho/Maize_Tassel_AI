@@ -29,6 +29,19 @@ class User(Base):
     verified = Column(Boolean, default=False)
     role = Column(Enum(TypeOfUser.ADMIN, TypeOfUser.REGULAR, TypeOfUser.PREMIUM), default=TypeOfUser.REGULAR)
 
+class Transaction(Base):
+    __tablename__ = "transactions"
+    transaction_id = Column(String, unique=True, nullable=False)
+    user_email = Column(String, ForeignKey('users.email'), primary_key=True)
+    start_date = Column(DateTime(timezone=True), primary_key=True)
+    end_date = Column(DateTime(timezone=True))
+    amount = Column(Float, nullable=False)
+    currency = Column(String, nullable=False)
+    auto_renew = Column(Boolean, nullable=False, default=True)
+    success = Column(Boolean, nullable=False, default=True)
+
+    user = relationship('User', backref='transactions')
+
 class Suspension(Base):
     __tablename__ = "suspensions"
     user_email = Column(String, ForeignKey('users.email'), primary_key=True)
@@ -61,6 +74,7 @@ class Image(Base):
     height = Column(Integer)
     image_url = Column(String)
     thumbnail_url = Column(String)
+    feedback = Column(Boolean, nullable=True)
     processing_status = Column(Enum(TypeOfImageStatus.IN_QUEUE, TypeOfImageStatus.PROCESSING, TypeOfImageStatus.DONE, TypeOfImageStatus.ERROR), default=TypeOfImageStatus.IN_QUEUE)
     upload_date = Column(DateTime(timezone=True), server_default=func.now(timezone=timezone.utc))
     finish_date = Column(DateTime(timezone=True))
