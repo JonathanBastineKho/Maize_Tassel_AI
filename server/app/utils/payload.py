@@ -24,7 +24,6 @@ class UserUpdateRequest(UserRequest):
     password: str
     country: str
     phone: str
-    profile_pict: str
 
 class googleAuth(BaseModel):
     auth_code: str

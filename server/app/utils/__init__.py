@@ -8,7 +8,8 @@ from .job import JobManager
 session_mgr = SessionManager()
 
 # Initialize storage manager
-storage_mgr = StorageManager(bucket_name=Config.PRIVATE_BUCKET_NAME)
+storage_mgr = StorageManager(bucket_name=Config.PRIVATE_BUCKET_NAME, 
+                             public_bucket=Config.PUBLIC_BUCKET_NAME)
 
 # Initialize Email sender
 email_sender = EmailSender()
