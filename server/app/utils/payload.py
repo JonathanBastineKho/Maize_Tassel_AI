@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from typing import Set, List, Optional
 from . import session_mgr
 from app.database.schema import TypeOfUser
+from datetime import date
 
 # JSON FORMAT
 # Authentication
@@ -19,11 +20,16 @@ class UserCreateRequest(UserRequest):
     name: str
     password: str
 
-class UserUpdateRequest(UserRequest):
-    name: str
-    password: str
-    country: str
-    phone: str
+class UserUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    password: Optional[str] = None
+    country: Optional[str] = None
+    phone: Optional[str] = None
+
+class suspendUserRequest(UserRequest):
+    start_date: date
+    end_date: date
+    reason: str
 
 class googleAuth(BaseModel):
     auth_code: str

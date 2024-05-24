@@ -47,7 +47,7 @@ class Suspension(Base):
     user_email = Column(String, ForeignKey('users.email'), primary_key=True)
     start_date = Column(DateTime(timezone=True), primary_key=True)
     end_date = Column(DateTime(timezone=True))
-    suspension = Column(String)
+    reason = Column(String)
     user = relationship('User', backref='suspensions')
 
 class Folder(Base):
