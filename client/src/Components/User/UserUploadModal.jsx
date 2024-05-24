@@ -69,15 +69,15 @@ function UploadModal({ setImage, folder, open, setOpen }) {
       })
       .then((res) => {
         if (res.status === 200) {
-          setImage(prev => ({
-            ...prev,
-            [res.data.name] : {
+          setImage((prev) => {
+            prev.item.set(res.data.name, {
               size: res.data.size,
               status: "in_queue",
               upload_date : new Date(res.data.upload_date).toLocaleDateString(undefined, {month: 'long', day: 'numeric', year: 'numeric'}),
               thumbnail_url : res.data.thumbnail_url
-            }
-          }));
+            })
+            return {item: prev.item}
+          })
           closeModal();
         }
       })

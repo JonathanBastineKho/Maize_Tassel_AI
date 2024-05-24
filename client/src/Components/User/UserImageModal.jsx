@@ -25,6 +25,39 @@ function UserImageModal({ index, setIndex, imageList }) {
   const [showConfidence, setShowConfidence] = useState(false);
   const [boundingBoxColor, setBoundingBoxColor] = useState("#f43f5e");
   const imgRef = useRef(null);
+  const download = async () => {
+    setDownloadLoading(true);
+    const url = folderId ? `/api/service/download-image?img_name=${imageName}&folder_id=${folderId}&draw_boxes=${showBox}&box_color=${encodeURIComponent(boundingBoxColor)}&show_confidence=${showConfidence}` :
+    `/api/service/download-image?img_name=${imageName}&draw_boxes=${showBox}&box_color=${encodeURIComponent(boundingBoxColor)}&show_confidence=${showConfidence}`;
+    try {
+      const response = await axios.get(url, {responseType: 'blob'});
+      if (response.headers['content-type'] === 'application/json') {
+        const jsonResponse = JSON.parse(await response.data.text());
+        const imageResponse = await fetch(jsonResponse.url);
+        const imageBlob = await imageResponse.blob();
+        const url = window.URL.createObjectURL(imageBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', imageName);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+      } else {
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `${imageName}.zip`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      }
+    } catch (error) {
+      console.error('Error downloading image:', error);
+    }
+    setDownloadLoading(false);
+  };
+
   useEffect(() => {
     if (imageName) {
       setLoading(true);
@@ -46,7 +79,7 @@ function UserImageModal({ index, setIndex, imageList }) {
           setLoading(false);
         });
     }
-  }, [imageName]);
+  }, [imageName, navigate]);
 
   useEffect(() => {
     const updateImgSize = () => {
@@ -93,9 +126,9 @@ function UserImageModal({ index, setIndex, imageList }) {
             }`}
             onClick={() => {
               if (!folderId) {
-                navigate(`/user/images/root/${imageList[index - 1][0]}`);
+                navigate(`/user/images/root/${imageList[index - 1].name}`);
               } else {
-                navigate(`/user/images/${folderId}/${imageList[index - 1][0]}`);
+                navigate(`/user/images/${folderId}/${imageList[index - 1].name}`);
               }
               setIndex(index - 1);
             }}
@@ -114,9 +147,9 @@ function UserImageModal({ index, setIndex, imageList }) {
             }`}
             onClick={() => {
               if (!folderId) {
-                navigate(`/user/images/root/${imageList[index + 1][0]}`);
+                navigate(`/user/images/root/${imageList[index + 1].name}`);
               } else {
-                navigate(`/user/images/${folderId}/${imageList[index + 1][0]}`);
+                navigate(`/user/images/${folderId}/${imageList[index + 1].name}`);
               }
               setIndex(index + 1);
             }}
@@ -241,8 +274,8 @@ function UserImageModal({ index, setIndex, imageList }) {
               </div>
             </div>
             <Button
-              type="submit"
               disabled={downloadLoading}
+              onClick={download}
               className={`bg-green-600 focus:ring-4 focus:ring-green-300 enabled:hover:bg-green-800 ${
                 downloadLoading ? "cursor-not-allowed opacity-50" : ""
               }`}

@@ -1,8 +1,13 @@
 from fastapi import APIRouter, UploadFile, Form, Depends, HTTPException
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from sqlalchemy import event, inspect
 from typing import Optional
-import asyncio
+from io import BytesIO
+from PIL import ImageDraw, ImageFont
+from PIL import Image as PILImage
+import asyncio, os
+import zipfile
 from app.utils import storage_mgr
 from app.database.schema import Folder, TypeOfUser, Image, Prediction, TypeOfImageStatus
 from app.database.utils import get_db
@@ -51,26 +56,54 @@ async def bulk_count():
 
 
 @router.get("/search-item")
-async def search_item(folder_id: Optional[str] = None, db: Session = Depends(get_db), user: dict = Depends(LoginRequired(roles_required={TypeOfUser.REGULAR, TypeOfUser.PREMIUM}))):
+async def search_item(
+    folder_id: Optional[str] = None,
+    page: int = 1,
+    page_size: int = 20,
+    search: Optional[str] = None,
+    db: Session = Depends(get_db),
+    user: dict = Depends(LoginRequired(roles_required={TypeOfUser.REGULAR, TypeOfUser.PREMIUM}))
+):
     # if folder_id is none, then its the parent
     if not folder_id:
         folder_id = db.query(Folder).filter(
-            Folder.user_email == user['email'], Folder.parent_id == None).one_or_none().id
+            Folder.user_email == user['email'],
+            Folder.parent_id == None
+        ).one_or_none().id
 
-    folders = [{"name": folder.name, "create_date": folder.create_date} for folder in db.query(
-        Folder).filter(Folder.parent_id == folder_id, Folder.user_email == user['email']).all()]
-    images = db.query(Image).filter(Image.folder_id == folder_id).all()
-    image_urls = await storage_mgr.get_image([image.thumbnail_url for image in images])
+    offset = (page - 1) * page_size
 
-    image_data = {
-        image.name: {
-            "size": round(image.size / (1024 * 1024), 2),
-            "status": image.processing_status,
-            "upload_date": image.upload_date.strftime('%Y-%m-%dT%H:%M:%S%z'),
-            "thumbnail_url": url
-        }
-        for image, url in zip(images, image_urls)
-    }
+    folder_query = db.query(Folder).filter(
+        Folder.parent_id == folder_id,
+        Folder.user_email == user['email']
+    )
+
+    image_query = db.query(Image).filter(Image.folder_id == folder_id)
+    if search:
+        search_term = f"%{search}%"
+        folder_query = folder_query.filter(Folder.name.ilike(search_term))
+        image_query = image_query.filter(Image.name.ilike(search_term))
+
+    folders = [
+        {"name": folder.name, "create_date": folder.create_date}
+        for folder in folder_query.offset(offset).limit(page_size).all()
+    ]
+
+    remaining_limit = page_size - len(folders)
+    if remaining_limit > 0:
+        images = image_query.offset(offset + len(folders)).limit(remaining_limit).all()
+        image_urls = await storage_mgr.get_image([image.thumbnail_url for image in images])
+        image_data = [
+            [image.name, {
+                "size": round(image.size / (1024 * 1024), 2),
+                "status": image.processing_status,
+                "upload_date": image.upload_date.strftime('%Y-%m-%dT%H:%M:%S%z'),
+                "thumbnail_url": url
+            }]
+            for image, url in zip(images, image_urls)
+        ]
+    else:
+        image_data = []
 
     return {
         "Success": True,
@@ -202,6 +235,96 @@ async def create_folder(folder: CreateFolderBody, db: Session = Depends(get_db),
 @router.delete("/delete-folder")
 async def delete_folder(folder: FolderPayload):
     return
+
+@router.get("/download-image")
+def download_image(
+    img_name: str,
+    folder_id: str = None,
+    draw_boxes: bool = True,
+    box_color: str = "#FF0000",  # Default color is red
+    show_confidence: bool = False,
+    db: Session = Depends(get_db),
+    user: dict = Depends(LoginRequired(roles_required={TypeOfUser.REGULAR, TypeOfUser.PREMIUM}))
+):
+    if not folder_id:
+        folder = db.query(Folder).filter(Folder.parent_id == None, Folder.user_email == user['email']).one_or_none()
+    else:
+        folder = db.query(Folder).filter(Folder.id == folder_id, Folder.user_email == user['email']).one_or_none()
+    if not folder:
+        raise HTTPException(status_code=400, detail="Folder does not exist")
+
+    image = db.query(Image).filter(Image.folder_id == folder.id, Image.name == img_name).one_or_none()
+    if not image:
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    async def download_and_process_image():
+        if image.processing_status == TypeOfImageStatus.DONE:
+            image_data = await storage_mgr.download_image(path=image.image_url)
+            predictions = db.query(Prediction).filter(Prediction.folder_id == folder.id, Prediction.image_name == img_name).all()
+            
+            if draw_boxes:
+                # Open the image using PIL
+                pil_image = PILImage.open(BytesIO(image_data))
+                draw = ImageDraw.Draw(pil_image)
+                font = ImageFont.load_default(size=26)
+
+                # Parse the box color from hexadecimal string
+                box_color_rgb = tuple(int(box_color[i:i+2], 16) for i in (1, 3, 5))
+
+                for prediction in predictions:
+                    x1 = prediction.xCenter - prediction.width / 2
+                    y1 = prediction.yCenter - prediction.height / 2
+                    x2 = prediction.xCenter + prediction.width / 2
+                    y2 = prediction.yCenter + prediction.height / 2
+
+                    # Draw the bounding box
+                    draw.rectangle([(x1, y1), (x2, y2)], outline=box_color_rgb, width=5)
+
+                    if show_confidence:
+                        confidence_text = f"{prediction.confidence:.2f}"
+                        position = (x1, y1 - 20)
+
+                        bbox = draw.textbbox(position, confidence_text, font=font)
+                        draw.rectangle(bbox, fill=(0, 0, 0, 128))
+                        draw.text(position, confidence_text, font=font, fill=(255, 255, 255))
+
+                # Save the modified image to a BytesIO object
+                modified_image_buffer = BytesIO()
+                pil_image.save(modified_image_buffer, format="JPEG")
+                modified_image_buffer.seek(0)
+                image_data = modified_image_buffer.getvalue()
+
+            zip_buffer = BytesIO()
+            try:
+                with zipfile.ZipFile(zip_buffer, "w") as zip_file:
+                    # Add the image to the zip file
+                    zip_file.writestr(os.path.basename(image.image_url), image_data)
+
+                    # Create a text file with prediction information
+                    prediction_info = f"Total Boxes: {len(predictions)}\n\n"
+                    for prediction in predictions:
+                        prediction_info += f"Box ID: {prediction.box_id}\n"
+                        prediction_info += f"Coordinates: ({prediction.xCenter}, {prediction.yCenter})\n"
+                        prediction_info += f"Width: {prediction.width}\n"
+                        prediction_info += f"Height: {prediction.height}\n"
+                        prediction_info += f"Confidence: {prediction.confidence}\n\n"
+                    zip_file.writestr("predictions.txt", prediction_info.encode('utf-8'))
+
+                # Set the file pointer to the beginning of the zip file
+                zip_buffer.seek(0)
+                return Response(zip_buffer.getvalue(), media_type="application/zip", headers={
+                    "Content-Disposition": f"attachment;filename={img_name}.zip",
+                    "Content-Length": str(len(zip_buffer.getvalue())),
+                    "X-Total-Size": str(len(zip_buffer.getvalue()))
+                })
+            except:
+                raise HTTPException(detail='There was an error processing the data', status_code=400)
+        else:
+            # If it's only images, sign the URL and let the client download from CDN (offloading load)
+            url = await storage_mgr.get_image(image.image_url)
+            return {"url": url[0]}
+
+    return asyncio.run(download_and_process_image())
 
 @event.listens_for(Image, 'after_update')
 def receive_after_update(mapper, connection, target):
