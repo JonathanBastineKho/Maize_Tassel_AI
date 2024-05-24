@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
-from app.database.schema import User, TypeOfUser, Folder
+from app.database.schema import User, TypeOfUser, Folder, Suspension
 from app.utils.payload import UserCreateRequest, UserRequest, LoginRequired, UserLoginRequest, ResetPasswordRequest, googleAuth
 from app.database.utils import get_db
+from datetime import datetime
 from app.utils import session_mgr
 from app.utils import email_sender
 from config import Config
@@ -63,6 +64,12 @@ async def login(user : UserLoginRequest, request:Request, db: Session = Depends(
     # Check if password match
     if not checkpw(user.password.encode("utf-8"), db_user.password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    # Check if user is suspended
+    db_user_suspended = db.query(Suspension).filter(Suspension.user_email == user.email).first()
+    if db_user_suspended:
+        if db_user_suspended.start_date < datetime.now() < db_user_suspended.end_date:
+            raise HTTPException(status_code=401, detail="You are suspended")
     
     return session_mgr.login_user(email=user.email, 
                                   name=db_user.name,
