@@ -10,9 +10,36 @@ from app.database.schema import Folder, Image
 class StorageManager:
     ROOT="https://storage.cloud.google.com/"
 
-    def __init__(self, bucket_name:str) -> None:
+    def __init__(self, bucket_name:str, public_bucket:str) -> None:
         self.client = storage.Client()
         self.bucket = self.client.bucket(bucket_name)
+        self.public_bucket = self.client.bucket(public_bucket)
+
+    async def upload_profile_pict(self, file: UploadFile, email: str, thumbnail_size:tuple = (256,256)) -> dict:
+        # Check if image is valid
+        file_extension = os.path.splitext(file.filename)[1].lower()
+        if file_extension not in set({".jpg", ".jpeg", ".png"}):
+            raise HTTPException(status_code=400, detail="Image must be jpg or png")
+        
+        contents = await file.read()
+
+        # Compress image
+        image = PILImage.open(BytesIO(contents))
+        image.thumbnail(thumbnail_size)
+        thumbnail_bytes = BytesIO()
+        image.save(thumbnail_bytes, format='JPEG')
+        thumbnail_bytes.seek(0)
+        thumbnail_bytes_data = thumbnail_bytes.getvalue()
+        # Upload actual image
+        file_extension = os.path.splitext(file.filename)[1].lower()
+        content_type = "image/jpeg" if file_extension in [".jpg", ".jpeg"] else "image/png"
+        image_path = f"profile/{email}{file_extension}"
+        blob = self.public_bucket.blob(image_path)
+        blob.upload_from_string(thumbnail_bytes_data, content_type=content_type)
+
+        return {
+            "image_path" : image_path
+        }
 
     async def upload_image(self, file: UploadFile, name: str, email: str, folder_name: str, db:Session, thumbnail_size:tuple = (128,128)) -> dict:
         """

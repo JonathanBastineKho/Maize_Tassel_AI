@@ -17,6 +17,7 @@ class Config:
     GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
     GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
     PRIVATE_BUCKET_NAME = os.environ.get("PRIVATE_BUCKET_NAME") or "corn_sight_private"
+    PUBLIC_BUCKET_NAME = os.environ.get("PUBLIC_BUCKET_NAME") or "corn_sight_public"
     MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
     MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
     STRIPE_SECRET = os.environ.get("STRIPE_SECRET")
