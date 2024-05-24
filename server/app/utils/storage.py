@@ -99,3 +99,9 @@ class StorageManager:
                 blob.delete()
             except Exception as e:
                 raise HTTPException(status_code=500, detail=f"Failed to delete image: {e}")
+    
+    async def download_image(self, path) -> bytes:
+        blob = self.bucket.blob(path)
+        if not blob.exists():
+            raise HTTPException(status_code=404, detail="Image not found")
+        return blob.download_as_bytes()

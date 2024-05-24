@@ -9,7 +9,7 @@ from app.database.utils import get_db
 router = APIRouter(tags=["User"], prefix="/user")
 
 @router.get("/search-user")
-def search_user(page: int = 1, page_size: int = 5, search: str = None, db: Session = Depends(get_db), user: dict = Depends(LoginRequired(roles_required={TypeOfUser.ADMIN}))):
+def search_user(page: int = 1, page_size: int = 20, search: str = None, db: Session = Depends(get_db), user: dict = Depends(LoginRequired(roles_required={TypeOfUser.ADMIN}))):
     offset = (page - 1) * page_size
     query = db.query(User).filter(User.role != TypeOfUser.ADMIN)
 

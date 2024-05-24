@@ -26,12 +26,11 @@ function DeleteImageModal({
       })
       .then(() => {
         setOpen(false);
-        setImageToDelete(null);
         setImageList((prevImageList) => {
-          const updatedImageList = { ...prevImageList };
-          delete updatedImageList[imageToDelete];
-          return updatedImageList;
+          prevImageList.item.delete(imageToDelete)
+          return {item : prevImageList.item}
         });
+        setImageToDelete(null);
       })
       .catch((error) => console.error("Error deleting image:", error))
       .finally(() => setLoading(false));

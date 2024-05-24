@@ -3,18 +3,59 @@ import { io } from "socket.io-client";
 import { Checkbox, Table, Badge, Avatar, Spinner, Label } from "flowbite-react";
 import { useEffect, useState } from "react";
 import { BsThreeDotsVertical } from "react-icons/bs";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { spinnerTheme, tableTheme } from "../theme";
 import UserImageModal from "./UserImageModal";
 import ActionButton from "./ActionButton";
+import InifiniteScroll from "react-infinite-scroll-component";
 
 function UserImageTable({ setDeleteModalOpen, setImageToAction, image, setImage, folder, setFolder }) {
   const { folderId } = useParams();
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const search = searchParams.get("search") || "";
   const navigate = useNavigate();
+
   const [loading, setLoading] = useState(true);
   const [currImageIdx, setCurrImageIdx] = useState(0);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const fetchItem = () => {
+    let url = `/api/service/search-item?search=${search}&page=${page}&page_size=20`;
+    if (folderId) {
+      url = `/api/service/search-item?folder_id=${folderId}search=${search}&page=${page}&page_size=20`;
+    }
+    axios
+      .get(url)
+      .then((res) => {
+        if (res.status === 200) {
+          if (page === 1){
+            setImage({item : new Map(res.data.images)});
+            setFolder(res.data.folders);
+          } else {
+            setFolder(prev => [...prev, ...res.data.folders]);
+            setImage((prev) => {
+              res.data.images.map(([key, value]) => prev.item.set(key, value));
+              return {item: prev.item}
+            });
+            
+          }
+          setPage((prevPage) => prevPage + 1);
+          setHasMore(res.data.images.length+res.data.folders.length === 20);
+          
+        }
+      })
+      .catch((err) => {
+        if (err.response.status === 401) {
+          navigate("/login");
+        }
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }
+
   useEffect(() => {
-    setLoading(true);
     let socket;
     const connectToWebSocket = () => {
       socket = io("http://localhost:8000", {
@@ -28,49 +69,41 @@ function UserImageTable({ setDeleteModalOpen, setImageToAction, image, setImage,
 
       socket.on("image_status_update", (updatedImage) => {
         setImage((prev) => {
-          if (prev.hasOwnProperty(updatedImage.name)) {
-            return {
-              ...prev,
-              [updatedImage.name]: {
-                ...prev[updatedImage.name],
-                status: updatedImage.status,
-              },
-            };
+          if (prev.item.has(updatedImage.name)){
+            prev.item.set(updatedImage.name, {
+              ...(prev.item.get(updatedImage.name)),
+              status: updatedImage.status,
+            })
           }
-          return prev;
+          return {item: prev.item}
         });
       });
     };
-    let url = "/api/service/search-item";
-    if (folderId) {
-      url = `/api/service/search-item?folder_id=${folderId}`;
+    connectToWebSocket();
+    return () => {
+      socket.disconnect();
+    };
+  }, [])
+
+  useEffect(() => {
+    setLoading(true);
+    setPage(1);
+  }, [search, folderId]);
+
+  useEffect(() => {
+    if (page === 1) {
+      fetchItem();
     }
-    axios
-      .get(url)
-      .then((res) => {
-        if (res.status === 200) {
-          setImage(res.data.images);
-          setFolder(res.data.folders);
-          connectToWebSocket();
-        }
-      })
-      .catch((err) => {
-        if (err.response.status === 401) {
-          navigate("/login");
-        }
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-      return () => {
-        socket.disconnect();
-      };
-  }, [folderId]);
+  }, [page, search, folderId]);
+
 
   return (
     <>
       <UserImageModal
-        imageList={Object.entries(image)}
+        imageList={[...image.item].map(([key, info]) => ({
+          name: key,
+          ...info
+      }))}
         index={currImageIdx}
         setIndex={setCurrImageIdx}
       />
@@ -79,7 +112,19 @@ function UserImageTable({ setDeleteModalOpen, setImageToAction, image, setImage,
           <Spinner className="" theme={spinnerTheme} />
         </div>
       ) : (
-          <Table hoverable theme={tableTheme}>
+        <div className="h-full overflow-y-auto">
+        <InifiniteScroll
+              dataLength={image.item.size}
+              next={fetchItem}
+              hasMore={hasMore}
+              scrollThreshold={0.8}
+              loader={
+                <div className="mt-8 flex items-center justify-center">
+                  <Label className="text-gray-500">Loading...</Label>
+                </div>
+              }
+            >
+<Table hoverable theme={tableTheme}>
             <Table.Head className="p-4">
               <Table.HeadCell>
                 <Checkbox />
@@ -115,7 +160,7 @@ function UserImageTable({ setDeleteModalOpen, setImageToAction, image, setImage,
                     </Table.Cell>
                   </Table.Row>
               ))}
-              {Object.entries(image).map(([key, img], index) => (
+              {[...image.item].map(([key, img], index) => (
                 <Table.Row key={index} className="cursor-pointer" onClick={()=>{
                   setCurrImageIdx(index);
                   if (folderId){
@@ -165,6 +210,8 @@ function UserImageTable({ setDeleteModalOpen, setImageToAction, image, setImage,
               ))}
             </Table.Body>
           </Table>
+            </InifiniteScroll>
+          </div>
       )}
     </>
   );
