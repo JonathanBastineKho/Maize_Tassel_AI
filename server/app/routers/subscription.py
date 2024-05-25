@@ -57,7 +57,7 @@ async def manage_subscription(user: dict = Depends(LoginRequired(roles_required=
 async def view_subscription(user: dict = Depends(LoginRequired(roles_required={TypeOfUser.PREMIUM, TypeOfUser.REGULAR})), db: Session = Depends(get_db)):
     data = {}
 
-    transactions = db.query(Transaction).filter(Transaction.user_email == user['email']).order_by(Transaction.start_date.desc()).all()
+    transactions = Transaction.retrieve(db, user_email=user['email'])
     data["transactions"] = [{"start_date" : tr.start_date, "end_date" : tr.end_date, "amount" : tr.amount, "status" : tr.success} for tr in transactions]
     
     last_transaction = transactions[0] if transactions else None

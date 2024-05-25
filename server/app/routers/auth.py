@@ -20,6 +20,7 @@ async def test():
 @router.post("/register")
 async def register(user : UserCreateRequest, request: Request, db: Session = Depends(get_db)):
 
+    # Checking input
     email_regex = r'^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$'
     if not user.email or not re.match(email_regex, user.email):
         raise HTTPException(status_code=400, detail="Invalid email format")
@@ -28,7 +29,7 @@ async def register(user : UserCreateRequest, request: Request, db: Session = Dep
         raise HTTPException(status_code=400, detail="Password must be at least 8 characters long")
     
     # Check if email already exists
-    db_user = db.query(User).filter(User.email == user.email).first()
+    db_user = User.retrieve(db, email=user.email)
     if db_user != None:
         if db_user.password != None:
             raise HTTPException(status_code=400, detail="Email already registered")
@@ -36,12 +37,10 @@ async def register(user : UserCreateRequest, request: Request, db: Session = Dep
             raise HTTPException(status_code=400, detail="Email already registered with Google")
     # Adding new user
     password_hash = hashpw(user.password.encode('utf-8'), gensalt())
-    db_user = User(email=user.email, name=user.name, password=password_hash)
-    db.add(db_user)
+    db_user = User.create(db, email=user.email, name=user.name, password=password_hash)
+
     # Adding default root folder for new user
-    root_folder = Folder(name="Home", user_email=user.email)
-    db.add(root_folder)
-    db.commit()
+    Folder.create(db, name="Home", user_email=user.email)
 
     # Generating confirmation token
     await email_sender.send_confirm_email(user.email)
@@ -54,10 +53,9 @@ async def register(user : UserCreateRequest, request: Request, db: Session = Dep
 @router.post("/login")
 async def login(user : UserLoginRequest, request:Request, db: Session = Depends(get_db)):
     # Check if user exist
-    db_user = db.query(User).filter(User.email == user.email).first()
+    db_user = User.retrieve(db, email=user.email)
     if not db_user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    
     if db_user.password == None:
         raise HTTPException(status_code=409, detail="Email is registered using Google")
 
@@ -66,10 +64,9 @@ async def login(user : UserLoginRequest, request:Request, db: Session = Depends(
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
     # Check if user is suspended
-    db_user_suspended = db.query(Suspension).filter(Suspension.user_email == user.email).first()
-    if db_user_suspended:
-        if db_user_suspended.start_date < datetime.now() < db_user_suspended.end_date:
-            raise HTTPException(status_code=401, detail="You are suspended")
+    suspension = Suspension.retrieve(db, email=user.email, date=datetime.now())
+    if suspension:
+        raise HTTPException(status_code=401, detail="You are suspended")
     
     return session_mgr.login_user(email=user.email, 
                                   name=db_user.name,
@@ -95,20 +92,13 @@ async def google_login(request:Request, token:googleAuth, db: Session = Depends(
     }
     user = requests.get('https://www.googleapis.com/oauth2/v3/userinfo', headers=headers).json()
 
-    db_user = db.query(User).filter(User.email == user["email"]).first()
-    # Check if email already registered with regular login
+    db_user = User.retrieve(db, email=user['email'])
     if db_user != None and db_user.password != None:
         raise HTTPException(status_code=400, detail="Email is already registered without google")
-    
-    # If email doesn't exist in the database
+    # If user hasn't been registered
     if db_user == None:
-        new_user = User(email=user["email"], role=TypeOfUser.REGULAR, name=user["name"], verified=True, profile_pict=user["picture"])
-        db_user = new_user
-        db.add(new_user)
-        # Adding default root folder for new user
-        root_folder = Folder(name="Home", user_email=user["email"])
-        db.add(root_folder)
-        db.commit()
+        db_user = User.create(db, email=user["email"], name=user["name"], verified=True, profile_pict=user["picture"])
+        Folder.create(db, name="Home", user_email=user["email"])
     
     return session_mgr.login_user(email=user["email"], 
                                   name=user["name"],
@@ -129,15 +119,8 @@ async def verify_email(token: str,
     # Check if token valid
     valid_token = email_sender.check_token(token, "email", 7200)
 
-    # check if user already confirmed
-    db_user = db.query(User).filter(User.email == valid_token["email"]).first()
-    if db_user == None:
-        raise HTTPException(status_code=400, detail="User does not exist")
-    if db_user.verified:
-        raise HTTPException(status_code=409, detail="User already verified")
-    
-    db_user.verified = True
-    db.commit()
+    # verify user
+    db_user = User.update(db, email=valid_token["email"], verified=True)
     session_mgr.logout_user(request)
     return session_mgr.login_user(db_user.email, name=db_user.name, verified=True, role=db_user.role, request=request)
 
@@ -148,7 +131,7 @@ async def request_verification(user:dict = Depends(LoginRequired(verified=False)
 
 @router.post("/reset-password/request")
 async def request_reset_password(user: UserRequest, db: Session = Depends(get_db)):
-    db_user = db.query(User).filter(User.email == user.email).first()
+    db_user = User.retrieve(db, email=user.email)
     if db_user == None or db_user.password == None:
         raise HTTPException(status_code=401, detail="Email is not valid")
     sent_token = await email_sender.send_reset_password(user.email)
@@ -171,10 +154,11 @@ async def confirm_reset_password(token:str, new_password:ResetPasswordRequest, r
     
     session_mgr.check_if_already_logged_in(request)
     valid_token = email_sender.check_token(token, "reset_password", 900)
-    db_user = db.query(User).filter(User.email == valid_token["email"]).first()
 
-    db_user.password = hashpw(new_password.password.encode('utf-8'), gensalt())
-    db.commit()
+    # Update the user
+    hashed_password = hashpw(new_password.password.encode('utf-8'), gensalt())
+    User.update(db, email=valid_token["email"], password=hashed_password)
+
     session_mgr.r.delete(token)
     return {"Success" : True}
 

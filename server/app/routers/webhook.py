@@ -28,13 +28,7 @@ async def update_job_status(job_status: JobStatus, signature: str = Header(...),
     if not verify_signature(job_status.model_dump(), signature):
         raise HTTPException(403, detail="Invalid signature")
     
-    # Check if image name and folder id is valid
-    image = db.query(Image).filter(Image.folder_id == job_status.folder_id, Image.name == job_status.name).one_or_none()
-    if not image:
-        raise HTTPException(400, detail="Invalid image name or folder")
-    
-    image.processing_status = job_status.job_status
-    db.commit()
+    Image.update(db, name=job_status.name, folder_id=job_status.folder_id, processing_status=job_status.job_status)
     return {"Success" : True}
 
 @router.post("/finish-prediction")
@@ -42,31 +36,20 @@ async def prediction(prediction:JobPrediction, signature: str = Header(...), db:
     if not verify_signature(prediction.model_dump(), signature):
         raise HTTPException(403, detail="Invalid signature")
     
-    # Check if image name and folder id is valid
-    image = db.query(Image).filter(Image.folder_id == prediction.folder_id, Image.name == prediction.name).one_or_none()
-    if not image:
-        raise HTTPException(400, detail="Invalid image name or folder")
-    
     # Inserting to database
     counter = 1
     for pred_box in prediction.box:
-        db.add(
-            Prediction(
-                image_name=prediction.name,
+        Prediction.create(db, image_name=prediction.name,
                 folder_id=prediction.folder_id,
                 box_id=counter,
                 xCenter=pred_box.get('xCenter'),
                 yCenter=pred_box.get('yCenter'),
                 width=pred_box.get('width'),
                 height=pred_box.get('height'),
-                confidence=pred_box.get('confidence'),
-            )
-        )
+                confidence=pred_box.get('confidence'))
         counter += 1
     # Change the status of the processing
-    image.processing_status = TypeOfImageStatus.DONE
-    image.finish_date = func.now(timezone=timezone.utc)
-    db.commit()
+    Image.update(db, name=prediction.name, folder_id=prediction.folder_id, processing_status=TypeOfImageStatus.DONE, finish_date=func.now(timezone=timezone.utc))
     
     return {"Success" : True}
 
@@ -92,28 +75,22 @@ async def stripe_hook(request: Request, db: Session = Depends(get_db)):
         cancel_at_period_end = session.get("cancel_at_period_end", False)
         # When user cancel their subscription
         if cancel_at_period_end:
-            latest_transaction = db.query(Transaction).\
-                filter(Transaction.user_email == email).\
-                order_by(Transaction.start_date.desc()).\
-                first()
+            latest_transaction = Transaction.retrieve_latest(db, user_email=email)
+
             if latest_transaction:
-                latest_transaction.auto_renew = False
-                db.commit()
+                Transaction.update(db, latest_transaction, False)
 
         # When user subscribes or renews the subscription
         elif not cancel_at_period_end and session.get("status") == "active":
-            latest_transaction = db.query(Transaction).\
-                filter(Transaction.user_email == email).\
-                order_by(Transaction.start_date.desc()).\
-                first()
+            latest_transaction = Transaction.retrieve_latest(db, user_email=email)
 
             if latest_transaction:
                 # Renewal
-                latest_transaction.auto_renew = True
-                db.commit()
+                Transaction.update(db, latest_transaction, True)
             else:
                 # New subscription
-                new_transaction = Transaction(
+                Transaction.create(
+                    db=db,
                     transaction_id=session["id"],
                     user_email=email,
                     start_date=datetime.fromtimestamp(session["current_period_start"], tz=timezone.utc),
@@ -121,10 +98,7 @@ async def stripe_hook(request: Request, db: Session = Depends(get_db)):
                     currency=session["plan"]["currency"],
                     amount=session["plan"]["amount"] / 100
                 )
-                db.add(new_transaction)
-                user = db.query(User).filter(User.email == email).one_or_none()
-                user.role = TypeOfUser.PREMIUM
-                db.commit()
+                User.update(db, email=email, role=TypeOfUser.PREMIUM)
                 session_mgr.upgrade_user(email)
 
     # When the subscription ends
