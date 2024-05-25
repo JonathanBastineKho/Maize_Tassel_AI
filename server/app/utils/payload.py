@@ -85,3 +85,9 @@ class LoginRequired:
 class CreateFolderBody(BaseModel):
     folder_name : str
     parent_id : Optional[str] = None
+    
+class SuspendAccountRequest(BaseModel):
+    email: str 
+    category: str
+    detail : str
+    duration: Optional[int] = None
