@@ -19,8 +19,12 @@ sio_app = socketio.ASGIApp(
 async def connect(sid, env):
     try:
         sio_server.environ.setdefault(sid, {})
-        cookies = http.cookies.SimpleCookie(env.get('HTTP_COOKIE', ''))
-        user = await LoginRequired(roles_required={TypeOfUser.REGULAR, TypeOfUser.PREMIUM}).verify_session_id(cookies.get('session').value)
+        cookies = http.cookies.SimpleCookie(env.get('HTTP_COOKIE', '')).get('session')
+        if cookies:
+            session_id = cookies.value
+        else:
+            session_id = None
+        user = await LoginRequired(roles_required={TypeOfUser.REGULAR, TypeOfUser.PREMIUM}).verify_session_id(session_id)
         print(f"Client {sid} connected: {user['email']}")
 
         # Store the authenticated user information in the Socket.IO session

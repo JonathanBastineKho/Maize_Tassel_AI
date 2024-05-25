@@ -1,6 +1,7 @@
 from fastapi import APIRouter, UploadFile, Form, Depends, HTTPException
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy import event, inspect
 from typing import Optional
 from io import BytesIO
@@ -27,18 +28,14 @@ async def count(file: UploadFile, folder_uuid: str = Form(...),  # Change to UUI
     metadata = await storage_mgr.upload_image(file, name, email=user["email"], folder_name=folder_uuid, db=db)
     try:
         # Add image to database
-        new_img = Image(
-            name=name,
+        new_img = Image.create(db=db, name=name,
             description=description,
             folder_id=folder_uuid,
             size=metadata["size"],
             width=metadata["width"],
             height=metadata["height"],
             image_url=metadata["image_path"],
-            thumbnail_url=metadata["thumbnail_path"]
-        )
-        db.add(new_img)
-        db.commit()
+            thumbnail_url=metadata["thumbnail_path"])
         # Submit job
         job_mgr.submit_inference_job(
             email=user["email"], folder_id=folder_uuid, image_name=name, path=metadata['image_path'])
@@ -66,32 +63,18 @@ async def search_item(
 ):
     # if folder_id is none, then its the parent
     if not folder_id:
-        folder_id = db.query(Folder).filter(
-            Folder.user_email == user['email'],
-            Folder.parent_id == None
-        ).one_or_none().id
+        folder_id = Folder.retrieve_root(db, user['email']).id
 
     offset = (page - 1) * page_size
-
-    folder_query = db.query(Folder).filter(
-        Folder.parent_id == folder_id,
-        Folder.user_email == user['email']
-    )
-
-    image_query = db.query(Image).filter(Image.folder_id == folder_id)
-    if search:
-        search_term = f"%{search}%"
-        folder_query = folder_query.filter(Folder.name.ilike(search_term))
-        image_query = image_query.filter(Image.name.ilike(search_term))
-
     folders = [
         {"name": folder.name, "create_date": folder.create_date}
-        for folder in folder_query.offset(offset).limit(page_size).all()
+        for folder in Folder.search(db, folder_id=folder_id, user_email=user['email'], 
+                                    offset=offset, page_size=page_size, search=search)
     ]
 
     remaining_limit = page_size - len(folders)
     if remaining_limit > 0:
-        images = image_query.offset(offset + len(folders)).limit(remaining_limit).all()
+        images = Image.search(db, folder_id=folder_id, offset=offset+len(folders), page_size=page_size, search=search)
         image_urls = await storage_mgr.get_image([image.thumbnail_url for image in images])
         image_data = [
             [image.name, {
@@ -117,16 +100,15 @@ async def view_image(img_name: str, folder_id: Optional[str] = None, db: Session
     image_data = {}
     # Check if folder ID belongs to the user
     if not folder_id:
-        fldr = db.query(Folder).filter(Folder.user_email == user['email'], Folder.parent_id == None).one_or_none()
-        folder_id = fldr.id
-    if not fldr and not db.query(Folder).filter(Folder.id == folder_id, Folder.user_email == user["email"]).one_or_none():
-        raise HTTPException(401, detail="Invalid Image")
+        fldr = Folder.retrieve_root(db, user_email=user['email'])
+    else:
+        fldr = Folder.retrieve(db, folder_id=folder_id)
+        if fldr.user_email != user['email']:
+            raise HTTPException(401, detail="Unauthorized")
 
     # Get image URL
-    img = db.query(Image).filter(Image.name == img_name,
-                                 Image.folder_id == folder_id).one_or_none()
-    if not img:
-        raise HTTPException(400, detail="Invalid image")
+    img = Image.retrieve(db, name=img_name, folder_id=fldr.id)
+
     image_data['name'] = img.name
     image_data['description'] = img.description
     image_data['size'] = round(img.size / (1024*1024), 2)
@@ -160,34 +142,26 @@ async def view_image(img_name: str, folder_id: Optional[str] = None, db: Session
                 "confidence" : box.confidence
             }
             for box in
-            db.query(Prediction).filter(Prediction.folder_id ==
-                                        folder_id, Prediction.image_name == img_name).all()
+            Prediction.retrieve(db, folder_id=fldr.id, image_name=img_name)
         ]
 
     return image_data
 
 @router.delete("/delete-image")
 async def delete_image(image: ImagePayload, db: Session = Depends(get_db), user: dict = Depends(LoginRequired(roles_required={TypeOfUser.REGULAR, TypeOfUser.PREMIUM}))):
-    # Folder is parent folder
+    # get the folder object
     if not image.folder_id:
-        fldr = db.query(Folder).filter(Folder.user_email == user['email'], Folder.parent_id == None).one_or_none()
-        image.folder_id = fldr.id
+        fldr = Folder.retrieve_root(db, user_email=user['email'])
+    else:
+        fldr = Folder.retrieve(db, folder_id=image.folder_id)
+        if fldr.user_email != user['email']:
+            raise HTTPException(401, detail="Unauthorized")
 
-    img = db.query(Image).filter(Image.folder_id == image.folder_id, Image.name == image.name).one_or_none()
-    if not img:
-        raise HTTPException(400, detail="Invalid image")
-    
-    # Check if user owned that image
-    if not fldr and not db.query(Folder).filter(Folder.id == image.folder_id, Folder.user_email == user["email"]).one_or_none():
-        raise HTTPException(401, detail="Invalid Image")
-    
     # deleting the image
     try:
-        await storage_mgr.delete_image(img.image_url)
-        db.delete(img)
-        db.commit()
+        img_url = Image.delete(db, name=image.name, folder_id=fldr.id)
+        await storage_mgr.delete_image(img_url)
     except Exception as e:
-        print(e)
         db.rollback()
         raise HTTPException(500, detail="An error occurred while deleting the image")
     return {"Success" : True}
@@ -198,21 +172,15 @@ async def get_parent_folders(folder_id: Optional[str] = None, db: Session = Depe
 
     # return only parent folder
     if folder_id == None:
-        folder = db.query(Folder).filter(
-            Folder.user_email == user['email'], Folder.parent_id == None).one_or_none()
+        folder = Folder.retrieve_root(db, user_email=user['email'])
         parent_folders.append({"name": folder.name, "id": folder.id})
         return {"Success": True, "parent_folders": parent_folders}
 
-    curr_folder = db.query(Folder).filter(Folder.id == folder_id).one_or_none()
-
-    # Check for current folder
-    if curr_folder == None:
-        raise HTTPException(status_code=400, detail="Folder invalid")
+    curr_folder = Folder.retrieve(db, folder_id=folder_id)
 
     # Recursive search
     while curr_folder.parent_id != None:
-        parent = db.query(Folder).filter(
-            Folder.id == curr_folder.parent_id).one_or_none()
+        parent = Folder.retrieve(db, folder_id=curr_folder.parent_id)
         parent_folders.append({"name": parent.name, "id": parent.id})
         curr_folder = parent
     parent_folders.append({"name": curr_folder.name, "id": curr_folder.id})
@@ -221,16 +189,14 @@ async def get_parent_folders(folder_id: Optional[str] = None, db: Session = Depe
 
 @router.post("/create-folder")
 async def create_folder(folder: CreateFolderBody, db: Session = Depends(get_db), user:dict = Depends(LoginRequired(roles_required={TypeOfUser.REGULAR, TypeOfUser.PREMIUM}))): 
-    
-    new_Folder = Folder(
-        name = folder.folder_name,
+    try:
+        Folder.create(db, name = folder.folder_name,
         parent_id = folder.parent_id,
-        user_email = user['email']
-    )
-    db.add(new_Folder)
-    db.commit()
+        user_email = user['email'])
+    except IntegrityError as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Folder with the same name already exists")
     return {"Success" : True}
-
 
 @router.delete("/delete-folder")
 async def delete_folder(folder: FolderPayload):
@@ -247,20 +213,19 @@ def download_image(
     user: dict = Depends(LoginRequired(roles_required={TypeOfUser.REGULAR, TypeOfUser.PREMIUM}))
 ):
     if not folder_id:
-        folder = db.query(Folder).filter(Folder.parent_id == None, Folder.user_email == user['email']).one_or_none()
+        folder = Folder.retrieve_root(db, user_email=user['email'])
     else:
         folder = db.query(Folder).filter(Folder.id == folder_id, Folder.user_email == user['email']).one_or_none()
-    if not folder:
-        raise HTTPException(status_code=400, detail="Folder does not exist")
+        folder = Folder.retrieve(db, folder_id=folder_id)
+        if folder.user_email != user['email']:
+            raise HTTPException(status_code=400, detail="Unauthorized")
 
-    image = db.query(Image).filter(Image.folder_id == folder.id, Image.name == img_name).one_or_none()
-    if not image:
-        raise HTTPException(status_code=404, detail="Image not found")
+    image = Image.retrieve(db, folder_id=folder.id, name=img_name)
 
     async def download_and_process_image():
         if image.processing_status == TypeOfImageStatus.DONE:
             image_data = await storage_mgr.download_image(path=image.image_url)
-            predictions = db.query(Prediction).filter(Prediction.folder_id == folder.id, Prediction.image_name == img_name).all()
+            predictions = Prediction.retrieve(db, folder_id=folder.id, image_name=img_name)
             
             if draw_boxes:
                 # Open the image using PIL

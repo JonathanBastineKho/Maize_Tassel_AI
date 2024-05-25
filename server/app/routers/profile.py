@@ -16,30 +16,15 @@ def update_account(
     user:dict = Depends(LoginRequired(roles_required={TypeOfUser.REGULAR, TypeOfUser.PREMIUM})), 
     db: Session = Depends(get_db)
     ):
-    #check for same email in the database
-    db_user = db.query(User).filter(User.email == user['email']).first()
-    #checks whether password is below 8 characters long
-    if updated_user.password and len(updated_user.password) < 8:
-        raise HTTPException(status_code=400, detail="Password must be at least 8 characters long")
-    #prevent password change if the user logged in via Google
-    if db_user.password is None and updated_user.password:
-        raise HTTPException(status_code=400, detail="Cannot change password for Google authenticated users")
-    #mapping of fields to be updated
-    fields_to_update = {
-        'name': updated_user.name,
-        'country': updated_user.country,
-        'phone': updated_user.phone,
-    }
-    #loop through the dictionary
-    for field, value in fields_to_update.items():
-        if value:
-            setattr(db_user, field, value)
 
-    #only update the password if it's provided
-    if updated_user.password:
-        db_user.password = hashpw(updated_user.password.encode('utf-8'), gensalt())
-            
-    db.commit()
+    update_data = updated_user.model_dump(exclude_unset=True)
+    # check if password being updated
+    if 'password' in update_data:
+        if len(update_data['password']) < 8:
+            raise HTTPException(status_code=400, detail="Password must be at least 8 characters long")
+        update_data['password'] = hashpw(update_data['password'].encode('utf-8'), gensalt())
+
+    User.update(db, email=user['email'], **update_data)
     return {"Success" : True}
 
 @router.patch("/update-profile-pict")
@@ -48,15 +33,7 @@ def update_profile_pict(
     user:dict = Depends(LoginRequired(roles_required={TypeOfUser.REGULAR, TypeOfUser.PREMIUM})), 
     db: Session = Depends(get_db)
     ):
-    #check for same email in the database
-    db_user = db.query(User).filter(User.email == user['email']).first()    
-    #handle profile_pict upload
-    if file:
-        #upload profile_pict and generate signed url
-        response = storage_mgr.upload_profile_pict(file, user['email'])
-        path = response["image_path"]
-        db_user.profile_pict = f"https://storage.googleapis.com/corn_sight_public/{path}"
-    elif not db_user.profile_pict:
-        db_user.profile_pict = 'https://storage.googleapis.com/corn_sight_public/default_profile.jpg'
-    db.commit()
+    response = storage_mgr.upload_profile_pict(file, user['email'])
+    path = response["image_path"]
+    User.update(db, email=user['email'], profile_pict=f"https://storage.googleapis.com/corn_sight_public/{path}")
     return {"Success" : True}
