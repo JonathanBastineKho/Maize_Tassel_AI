@@ -13,12 +13,13 @@ import { BsStars } from "react-icons/bs";
 import { FaTrash } from "react-icons/fa";
 import { spinnerTheme } from "../../Components/theme";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { AuthContext } from "../Authentication/AuthContext";
 
-function UploadModal({ setImage, folder, open, setOpen }) {
+function UploadModal({ setImage, open, setOpen }) {
   const navigate = useNavigate();
   const { setUser } = useContext(AuthContext);
+  const { folderId } = useParams();
   const [file, setFile] = useState(null);
   const [name, setName] = useState("");
   const [nameError, setNameError] = useState('');
@@ -54,7 +55,9 @@ function UploadModal({ setImage, folder, open, setOpen }) {
 
     const formData = new FormData(e.target);
     formData.append("file", file);
-    formData.append("folder_uuid", folder.id);
+    if (folderId){
+      formData.append("folder_uuid", folderId);
+    }
     axios
       .post("/api/service/count", formData, {
         headers: {

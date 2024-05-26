@@ -3,6 +3,7 @@ import { io } from "socket.io-client";
 import { Checkbox, Table, Badge, Avatar, Spinner, Label } from "flowbite-react";
 import { useEffect, useState } from "react";
 import { BsThreeDotsVertical } from "react-icons/bs";
+import { FaFolder } from "react-icons/fa";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { spinnerTheme, tableTheme } from "../theme";
 import UserImageModal from "./UserImageModal";
@@ -23,7 +24,7 @@ function UserImageTable({ setDeleteModalOpen, setImageToAction, image, setImage,
   const fetchItem = () => {
     let url = `/api/service/search-item?search=${search}&page=${page}&page_size=20`;
     if (folderId) {
-      url = `/api/service/search-item?folder_id=${folderId}search=${search}&page=${page}&page_size=20`;
+      url = `/api/service/search-item?folder_id=${folderId}&search=${search}&page=${page}&page_size=20`;
     }
     axios
       .get(url)
@@ -114,7 +115,7 @@ function UserImageTable({ setDeleteModalOpen, setImageToAction, image, setImage,
       ) : (
         <div className="h-full overflow-y-auto">
         <InifiniteScroll
-              dataLength={image.item.size}
+              dataLength={image.item.size+folder.length}
               next={fetchItem}
               hasMore={hasMore}
               scrollThreshold={0.8}
@@ -124,7 +125,7 @@ function UserImageTable({ setDeleteModalOpen, setImageToAction, image, setImage,
                 </div>
               }
             >
-<Table hoverable theme={tableTheme}>
+          <Table hoverable theme={tableTheme}>
             <Table.Head className="p-4">
               <Table.HeadCell>
                 <Checkbox />
@@ -139,21 +140,28 @@ function UserImageTable({ setDeleteModalOpen, setImageToAction, image, setImage,
             </Table.Head>
             <Table.Body className="divide-y">
               {folder.map((fldr, index) => (
-                  <Table.Row>
+                  <Table.Row className="cursor-pointer" key={index} onClick={() => {
+                    navigate(`/user/images/${fldr.id}`)
+                  }}>
                     <Table.Cell className="">
                       <Checkbox />
                     </Table.Cell>
-                    <Table.Cell>
-                      <Label>{fldr.name}</Label>
+                    <Table.Cell className="whitespace-nowrap font-medium text-gray-900 flex flex-row gap-2 items-center">
+                      <FaFolder className="text-gray-500 w-6 h-6" />
+                      <Label className="truncate max-w-72">{fldr.name}</Label>
                     </Table.Cell>
                     <Table.Cell>
-                      <Label>-</Label>
+                      -
                     </Table.Cell>
                     <Table.Cell>
-                      <Label>-</Label>
+                      -
                     </Table.Cell>
                     <Table.Cell>
-                      <Label>{fldr.create_date}</Label>
+                      {new Date(fldr.create_date).toLocaleDateString(undefined, {
+                      month: "long",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
                     </Table.Cell>
                     <Table.Cell>
                       <BsThreeDotsVertical />
@@ -210,7 +218,7 @@ function UserImageTable({ setDeleteModalOpen, setImageToAction, image, setImage,
               ))}
             </Table.Body>
           </Table>
-            </InifiniteScroll>
+        </InifiniteScroll>
           </div>
       )}
     </>

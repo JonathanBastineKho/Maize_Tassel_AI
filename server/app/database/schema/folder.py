@@ -47,5 +47,15 @@ class Folder(Base):
         )
         if search:
             fldr_query = fldr_query.filter(cls.name.ilike(f"%{search}%"))
-
+        
         return fldr_query.offset(offset).limit(page_size).all()
+    
+    @classmethod
+    def count(cls, db: Session, folder_id: str, user_email: str, search: Optional[str] = None):
+        fldr_query = db.query(cls).filter(
+            cls.parent_id == folder_id,
+            cls.user_email == user_email
+        )
+        if search:
+            fldr_query = fldr_query.filter(cls.name.ilike(f"%{search}%"))
+        return fldr_query.count()
