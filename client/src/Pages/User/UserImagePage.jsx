@@ -14,6 +14,7 @@ import DeleteImageModal from "../../Components/User/DeleteImageModal";
 import ToastMsg from "../../Components/Other/ToastMsg";
 import { AuthContext } from "../../Components/Authentication/AuthContext";
 import UserNewFolderModal from "../../Components/User/UserNewFolderModal";
+import BulkUploadModal from "../../Components/User/BulkUploadModal";
 
 function UserImagePage() {
   const { user } = useContext(AuthContext);
@@ -87,12 +88,21 @@ function UserImagePage() {
         open={deleteModalOpen}
         setOpen={setDeleteModalOpen}
       />
+      {user.role === "regular" ? (
       <UploadModal
         className="w-screen h-screen"
         setImage={setImage}
         open={uploadModalOpen}
         setOpen={setUploadModalOpen}
       />
+    ) : (
+      <BulkUploadModal 
+      className="w-screen h-screen"
+      setImage={setImage}
+      open={uploadModalOpen}
+      setOpen={setUploadModalOpen} />
+    )}
+      
       <BreadcrumbFolder />
       <h2 className="font-bold text-2xl">Your Images</h2>
       <div className="flex flex-wrap flex-row justify-between">

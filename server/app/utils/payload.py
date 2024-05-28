@@ -43,9 +43,13 @@ class ImagePayload(FolderPayload):
 
 class JobStatus(ImagePayload):
     job_status: str
+    job_id: Optional[str] = None
+    email: str
 
 class JobPrediction(ImagePayload):
     box: List[dict]
+    job_id: Optional[str] = None
+    email: str
 
 class CheckoutSessionRequest(BaseModel):
     is_monthly: bool = True

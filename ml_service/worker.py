@@ -63,11 +63,13 @@ class Worker:
                              'folder_id': payload['folder_id']})
         return hmac.new(Config.SECRET_KEY.encode('utf-8'), signature_payload.encode('utf-8'), hashlib.sha256).hexdigest()
 
-    def update_job_status(self, image_name: str, folder_id: str, status: str):
+    def update_job_status(self, email: str, image_name: str, folder_id: str, status: str, job_id: str):
         data = {
+            'email' : email,
             'name': image_name,
             'folder_id': folder_id,
-            'job_status': status
+            'job_status': status,
+            'job_id' : job_id
         }
         headers = {'signature': self.generate_signature(data)}
         requests.patch(self.update_status_url, json=data, headers=headers)
@@ -77,7 +79,7 @@ class Worker:
         print(f"Received inference job for image {job['image_name']} in folder {job['folder_id']}")
 
         # change the status of the job
-        self.update_job_status(job["image_name"], job["folder_id"], "processing")
+        self.update_job_status(job['email'], job["image_name"], job["folder_id"], "processing", job['job_id'])
 
         # Perform inference tasks
         try:
@@ -100,12 +102,14 @@ class Worker:
             data = {
                 'name': job["image_name"],
                 'folder_id': job["folder_id"],
-                'box' : bounding_boxes
+                'box' : bounding_boxes,
+                'job_id' : job["job_id"],
+                'email' : job['email']
             }
             headers = {'signature': self.generate_signature(data)}
             requests.post(self.finish_predict_url, json=data, headers=headers)
         except:
-            self.update_job_status(job["image_name"], job["folder_id"], "error")
+            self.update_job_status(job["image_name"], job["folder_id"], "error", job['job_id'])
 
     def start_consuming(self):
         print(' [*] Waiting for inference jobs. To exit press CTRL+C')

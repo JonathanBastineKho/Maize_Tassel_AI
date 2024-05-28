@@ -113,7 +113,6 @@ function UserImageTable({ setDeleteModalOpen, setImageToAction, image, setImage,
           <Spinner className="" theme={spinnerTheme} />
         </div>
       ) : (
-        <div className="h-full overflow-y-auto">
         <InifiniteScroll
               dataLength={image.item.size+folder.length}
               next={fetchItem}
@@ -172,9 +171,9 @@ function UserImageTable({ setDeleteModalOpen, setImageToAction, image, setImage,
                 <Table.Row key={index} className="cursor-pointer" onClick={()=>{
                   setCurrImageIdx(index);
                   if (folderId){
-                    navigate(`/user/images/${folderId}/${key}`);
+                    navigate(`/user/images/${folderId}/${encodeURIComponent(key)}`);
                   } else {
-                    navigate(`/user/images/root/${key}`);
+                    navigate(`/user/images/root/${encodeURIComponent(key)}`);
                   }
                   }}>
                   <Table.Cell>
@@ -219,7 +218,6 @@ function UserImageTable({ setDeleteModalOpen, setImageToAction, image, setImage,
             </Table.Body>
           </Table>
         </InifiniteScroll>
-          </div>
       )}
     </>
   );
