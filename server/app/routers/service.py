@@ -1,9 +1,10 @@
-from fastapi import APIRouter, UploadFile, Form, Depends, HTTPException
+from fastapi import APIRouter, UploadFile, Form, Depends, HTTPException, BackgroundTasks
 from fastapi.responses import Response
+from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import event, inspect
-from typing import Optional
+from typing import Optional, List
 from io import BytesIO
 from PIL import ImageDraw, ImageFont
 from PIL import Image as PILImage
@@ -20,11 +21,13 @@ router = APIRouter(tags=["Regular Service"], prefix="/service")
 
 
 @router.post("/count")
-async def count(file: UploadFile, folder_uuid: str = Form(...),  # Change to UUID type in production
+async def count(file: UploadFile, folder_uuid: str = Form(None),  # Change to UUID type in production
                 name: str = Form(...), description: Optional[str] = Form(None),
                 user: dict = Depends(LoginRequired(
                     roles_required={TypeOfUser.REGULAR, TypeOfUser.PREMIUM})),
                 db: Session = Depends(get_db)):
+    if not folder_uuid:
+        folder_uuid = Folder.retrieve_root(db, user['email']).id
     metadata = await storage_mgr.upload_image(file, name, email=user["email"], folder_name=folder_uuid, db=db)
     try:
         # Add image to database
@@ -41,15 +44,122 @@ async def count(file: UploadFile, folder_uuid: str = Form(...),  # Change to UUI
             email=user["email"], folder_id=folder_uuid, image_name=name, path=metadata['image_path'])
         thumbnail_url = await storage_mgr.get_image(new_img.thumbnail_url)
         return {"Success": True,
-                "name": name, "size": round(new_img.size / (1024 * 1024), 2), "thumbnail_url": thumbnail_url[0], "upload_date": new_img.upload_date}
+                "name": name, "size": round(new_img.size / (1024 * 1024), 2), 
+                "thumbnail_url": thumbnail_url[0], 
+                "upload_date": new_img.upload_date}
     except Exception as e:
         raise HTTPException(
             status_code=500, detail="Some error occured, please retry")
 
+def process_zip_file(file: UploadFile, folder_uuid: str, user: dict, db: Session):
+    # Extract zip file and process each image
+    zip_results = []
+    with zipfile.ZipFile(BytesIO(file.file.read()), 'r') as zip_ref:
+        for zip_info in zip_ref.infolist():
+            if not zip_info.is_dir() and zip_info.filename.lower().endswith(('.png', '.jpg', '.jpeg')):
+                with zip_ref.open(zip_info) as image_file:
+                    image_bytes = image_file.read()
+                    image_file = UploadFile(filename=zip_info.filename, file=BytesIO(image_bytes))
+                    metadata = asyncio.run(storage_mgr.upload_image(image_file, zip_info.filename, email=user["email"], folder_name=folder_uuid, db=db))
+                    try:
+                        # Add image to database
+                        Image.create(
+                            db=db,
+                            name=zip_info.filename,
+                            folder_id=folder_uuid,
+                            size=metadata["size"],
+                            width=metadata["width"],
+                            height=metadata["height"],
+                            image_url=metadata["image_path"],
+                            thumbnail_url=metadata["thumbnail_path"]
+                        )
+                        zip_results.append({
+                            "name": zip_info.filename,
+                            "path": metadata['image_path']
+                        })
+                    except Exception as e:
+                        pass
+    return zip_results
+
+def upload_images_background(files: List[UploadFile], folder_uuid: str, user: dict, db: Session):
+    images = []
+    for file in files:
+        if file.filename.endswith('.zip'):
+            # Handle zip files
+            zip_images = process_zip_file(file, folder_uuid, user, db)
+            images.extend(zip_images)
+        else:
+            # Handle individual image file
+            try:
+                metadata = asyncio.run(storage_mgr.upload_image(file, file.filename, email=user["email"], folder_name=folder_uuid, db=db))
+                Image.create(
+                    db=db,
+                    name=file.filename,
+                    folder_id=folder_uuid,
+                    size=metadata["size"],
+                    width=metadata["width"],
+                    height=metadata["height"],
+                    image_url=metadata["image_path"],
+                    thumbnail_url=metadata["thumbnail_path"]
+                )
+                images.append({
+                    "name": file.filename,
+                    "path": metadata['image_path']
+                })
+            except Exception as e:
+                # Will not create the image
+                pass
+
+    # Submitting jobs
+    job_id = session_mgr.store_job_data(len(images))
+    try:
+        for img in images:
+            job_mgr.submit_inference_job(
+                email=user['email'],
+                folder_id=folder_uuid,
+                image_name=img['name'],
+                path=img['path'],
+                job_id=job_id
+            )
+    except Exception as e:
+        raise HTTPException(500, detail=str(e))
 
 @router.post("/bulk-count")
-async def bulk_count():
-    return
+async def bulk_count(
+    files: List[UploadFile],
+    name: str = Form(...),
+    description: str = Form(None),
+    folder_uuid: str = Form(None),
+    user: dict = Depends(LoginRequired(roles_required={TypeOfUser.PREMIUM})),
+    db: Session = Depends(get_db),
+    background_tasks: BackgroundTasks = BackgroundTasks()
+):
+    if not folder_uuid:
+        folder_uuid = Folder.retrieve_root(db, user['email']).id
+
+    # Create new folder
+    try:
+        new_fldr = Folder.create(db, name = name,
+            description=description,
+            parent_id = folder_uuid,
+            user_email = user['email'])
+    except IntegrityError:
+        raise HTTPException(400, detail="folder name already exists.")
+    
+    # Create new UploadFile objects for the background task
+    files_data = []
+    for file in files:
+        file_content = await file.read()
+        files_data.append(UploadFile(BytesIO(file_content), filename=file.filename))
+
+    # Upload images in the background
+    background_tasks.add_task(run_in_threadpool, upload_images_background, files_data, new_fldr.id, user, db)
+    
+    return {"Success" : True, "folder" : {
+                "id": new_fldr.id,
+                "name" : new_fldr.name,
+                "create_date" : new_fldr.create_date
+            }}
 
 
 @router.get("/search-item")
@@ -67,14 +177,15 @@ async def search_item(
 
     offset = (page - 1) * page_size
     folders = [
-        {"name": folder.name, "create_date": folder.create_date}
+        {"id": folder.id,"name": folder.name, "create_date": folder.create_date}
         for folder in Folder.search(db, folder_id=folder_id, user_email=user['email'], 
                                     offset=offset, page_size=page_size, search=search)
     ]
 
     remaining_limit = page_size - len(folders)
     if remaining_limit > 0:
-        images = Image.search(db, folder_id=folder_id, offset=offset+len(folders), page_size=page_size, search=search)
+        image_offset = max(0, offset - Folder.count(db, folder_id=folder_id, user_email=user['email'], search=search))
+        images = Image.search(db, folder_id=folder_id, offset=image_offset, page_size=remaining_limit, search=search)
         image_urls = await storage_mgr.get_image([image.thumbnail_url for image in images])
         image_data = [
             [image.name, {
@@ -177,26 +288,34 @@ async def get_parent_folders(folder_id: Optional[str] = None, db: Session = Depe
         return {"Success": True, "parent_folders": parent_folders}
 
     curr_folder = Folder.retrieve(db, folder_id=folder_id)
+    parent_folders.append({"name": curr_folder.name, "id": curr_folder.id})
 
     # Recursive search
     while curr_folder.parent_id != None:
         parent = Folder.retrieve(db, folder_id=curr_folder.parent_id)
         parent_folders.append({"name": parent.name, "id": parent.id})
         curr_folder = parent
-    parent_folders.append({"name": curr_folder.name, "id": curr_folder.id})
-
-    return {"Success": True, "parent_folders": parent_folders.reverse()}
+    
+    parent_folders.reverse()
+    return {"Success": True, "parent_folders": parent_folders}
 
 @router.post("/create-folder")
 async def create_folder(folder: CreateFolderBody, db: Session = Depends(get_db), user:dict = Depends(LoginRequired(roles_required={TypeOfUser.REGULAR, TypeOfUser.PREMIUM}))): 
+    if not folder.parent_id:
+        folder.parent_id = Folder.retrieve_root(db, user_email=user['email']).id
     try:
-        Folder.create(db, name = folder.folder_name,
+        fldr = Folder.create(db, name = folder.folder_name,
         parent_id = folder.parent_id,
         user_email = user['email'])
     except IntegrityError as e:
         db.rollback()
         raise HTTPException(status_code=400, detail="Folder with the same name already exists")
-    return {"Success" : True}
+    return {"Success" : True,
+            "folder" : {
+                "id": fldr.id,
+                "name" : fldr.name,
+                "create_date" : fldr.create_date
+            }}
 
 @router.delete("/delete-folder")
 async def delete_folder(folder: FolderPayload):
@@ -305,6 +424,7 @@ def receive_after_update(mapper, connection, target):
         if session_ids:
             for session_id in session_ids:
                 asyncio.create_task(sio_server.emit('image_status_update', {
+                    'folder_id' : target.folder.id if target.folder.parent_id else None,
                     'name': target.name,
                     'status': new_status
                 }, room=session_id))

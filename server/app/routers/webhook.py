@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Header, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, BackgroundTasks
 import json
 import hmac
 import hashlib
@@ -10,7 +10,7 @@ from config import Config
 from app.database.utils import get_db
 from app.database.schema import Image, Prediction, Transaction, TypeOfImageStatus, User, TypeOfUser
 from app.utils.payload import JobStatus, JobPrediction
-from app.utils import session_mgr
+from app.utils import session_mgr, email_sender
 
 router = APIRouter(tags=["WebHook"], prefix="/hook")
 
@@ -24,15 +24,32 @@ def verify_signature(data:dict, signature: str):
     return hmac.compare_digest(signature, expected_signature)
 
 @router.patch("/update-job-status")
-async def update_job_status(job_status: JobStatus, signature: str = Header(...), db: Session = Depends(get_db)):
+async def update_job_status(background_tasks: BackgroundTasks, job_status: JobStatus, signature: str = Header(...), db: Session = Depends(get_db)):
     if not verify_signature(job_status.model_dump(), signature):
         raise HTTPException(403, detail="Invalid signature")
     
     Image.update(db, name=job_status.name, folder_id=job_status.folder_id, processing_status=job_status.job_status)
+    if job_status.job_status == TypeOfImageStatus.ERROR:
+        if not job_status.job_id:
+            # send email directly
+            background_tasks.add_task(
+                email_sender.send_prediction_email,
+                email=job_status.email,
+                link=f"http://localhost:5173/user/images/{job_status.folder_id}/{job_status.name}",
+                status=TypeOfImageStatus.ERROR
+            )
+        elif session_mgr.increment_job_current_count(job_status['job_id'], has_error=True)[0]:
+            # send email notifying 
+            background_tasks.add_task(
+                email_sender.send_prediction_email,
+                email=job_status.email,
+                link=f"http://localhost:5173/user/images/{job_status.folder_id}",
+                status=TypeOfImageStatus.ERROR
+            )
     return {"Success" : True}
 
 @router.post("/finish-prediction")
-async def prediction(prediction:JobPrediction, signature: str = Header(...), db: Session = Depends(get_db)):
+async def prediction(background_tasks: BackgroundTasks, prediction:JobPrediction, signature: str = Header(...), db: Session = Depends(get_db)):
     if not verify_signature(prediction.model_dump(), signature):
         raise HTTPException(403, detail="Invalid signature")
     
@@ -50,7 +67,31 @@ async def prediction(prediction:JobPrediction, signature: str = Header(...), db:
         counter += 1
     # Change the status of the processing
     Image.update(db, name=prediction.name, folder_id=prediction.folder_id, processing_status=TypeOfImageStatus.DONE, finish_date=func.now(timezone=timezone.utc))
-    
+    if not prediction.job_id:
+        # send email directly
+        background_tasks.add_task(
+            email_sender.send_prediction_email,
+            email=prediction.email,
+            link=f"http://localhost:5173/user/images/{prediction.folder_id}/{prediction.name}",
+            status=TypeOfImageStatus.DONE
+        )
+    else:
+        res = session_mgr.increment_job_current_count(prediction.job_id, has_error=False)
+        # if done processing and has error
+        if res[0] and res[1]:
+            background_tasks.add_task(
+                email_sender.send_prediction_email,
+                email=prediction.email,
+                link=f"http://localhost:5173/user/images/{prediction.folder_id}",
+                status=TypeOfImageStatus.ERROR
+            )
+        elif res[0] and not res[1]:
+            background_tasks.add_task(
+                email_sender.send_prediction_email,
+                email=prediction.email,
+                link=f"http://localhost:5173/user/images/{prediction.folder_id}",
+                status=TypeOfImageStatus.DONE
+            )
     return {"Success" : True}
 
 @router.post("/stripe")

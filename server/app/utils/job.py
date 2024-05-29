@@ -27,12 +27,13 @@ class JobManager:
         if self.connection and self.connection.is_open:
             self.connection.close()
 
-    def submit_inference_job(self, email, folder_id, image_name, path):
+    def submit_inference_job(self, email, folder_id, image_name, path, job_id = None):
         job_data = {
             'email': email,
             'folder_id': folder_id,
             'image_name': image_name,
             'path' : path,
+            'job_id' : job_id
         }
 
         job_body = json.dumps(job_data)
