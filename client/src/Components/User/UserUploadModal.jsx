@@ -51,6 +51,9 @@ function UploadModal({ setImage, open, setOpen }) {
 
   const handleUpload = async (e) => {
     e.preventDefault();
+    if (file === null){
+      return
+    }
     setLoading(true);
 
     const formData = new FormData(e.target);
@@ -99,7 +102,7 @@ function UploadModal({ setImage, open, setOpen }) {
     <Modal
       show={open}
       onClose={closeModal}
-      size="lg"
+      size="xl"
     >
       <Modal.Header>Upload Maize Image</Modal.Header>
       <Modal.Body>
@@ -143,11 +146,11 @@ function UploadModal({ setImage, open, setOpen }) {
                         <img
                         src={URL.createObjectURL(file)}
                         alt={file.name}
-                        className="w-11 h-11 object-cover rounded"
+                        className="w-8 h-8 object-cover rounded"
                         />
                         <div className="flex flex-col w-full gap-2">
                             <div className="flex flex-row justify-between items-center w-full">
-                                <Label>{file.name}</Label>
+                                <Label className="max-w-72 truncate">{file.name}</Label>
                                 {!loading &&
                                     <button
                                     onClick={() => setFile(null)}

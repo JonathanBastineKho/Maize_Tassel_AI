@@ -11,6 +11,7 @@ class Folder(Base):
     __tablename__ = "folders"
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4())) # Change to UUID data type during production
     name = Column(String)
+    description = Column(String, nullable=True)
     parent_id = Column(String(36), ForeignKey('folders.id'), nullable=True) # Change to UUID data type during production
     user_email = Column(String, ForeignKey('users.email'), nullable=False)
     create_date = Column(DateTime(timezone=True), server_default=func.now(timezone=timezone.utc))

@@ -1,6 +1,6 @@
 import { Button, TextInput } from "flowbite-react";
 import { HiSearch } from "react-icons/hi";
-import { FaTrashAlt, FaFilter, FaFolderPlus } from "react-icons/fa";
+import { FaTrashAlt, FaFilter, FaFolderPlus, FaCheck } from "react-icons/fa";
 import { HiExclamation } from "react-icons/hi";
 import { FaPlus } from "react-icons/fa6";
 import { useState, useRef, useContext } from "react";
@@ -28,6 +28,7 @@ function UserImagePage() {
 
   // Toast message
   const [premiumWarning, setpPremiumWarning] = useState(false); // toast for premium
+  const [bulkUploadMsg, setBulkUploadMsg] = useState(false); // successful bulk upload msg
 
   const location = useLocation();
   const { folderId } = useParams();
@@ -79,7 +80,8 @@ function UserImagePage() {
 
   return (
     <div className="px-5 mt-24 flex flex-col gap-5">
-      <ToastMsg icon={<HiExclamation className="h-5 w-5" />} open={premiumWarning} setOpen={setpPremiumWarning} message="Premium feature only" />
+      <ToastMsg color="orange" icon={<HiExclamation className="h-5 w-5" />} open={premiumWarning} setOpen={setpPremiumWarning} message="Premium feature only" />
+      <ToastMsg color="green" icon={<FaCheck className="h-5 w-5" />} open={bulkUploadMsg} setOpen={setBulkUploadMsg} message="Your images will be uploaded progressively" />
       <UserNewFolderModal updateUI={setFolder} state={createFolderOpen} setState={setCreateFolderOpen} />
       <DeleteImageModal
         setImageList={setImage}
@@ -99,8 +101,10 @@ function UserImagePage() {
       <BulkUploadModal 
       className="w-screen h-screen"
       setImage={setImage}
+      setFolder={setFolder}
       open={uploadModalOpen}
-      setOpen={setUploadModalOpen} />
+      setOpen={setUploadModalOpen}
+      setBulkUploadMsg={setBulkUploadMsg} />
     )}
       
       <BreadcrumbFolder />

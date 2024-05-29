@@ -128,6 +128,7 @@ def upload_images_background(files: List[UploadFile], folder_uuid: str, user: di
 async def bulk_count(
     files: List[UploadFile],
     name: str = Form(...),
+    description: str = Form(None),
     folder_uuid: str = Form(None),
     user: dict = Depends(LoginRequired(roles_required={TypeOfUser.PREMIUM})),
     db: Session = Depends(get_db),
@@ -139,10 +140,11 @@ async def bulk_count(
     # Create new folder
     try:
         new_fldr = Folder.create(db, name = name,
+            description=description,
             parent_id = folder_uuid,
             user_email = user['email'])
     except IntegrityError:
-        raise HTTPException(400, detail="A folder with the same name already exists.")
+        raise HTTPException(400, detail="folder name already exists.")
     
     # Create new UploadFile objects for the background task
     files_data = []
@@ -422,6 +424,7 @@ def receive_after_update(mapper, connection, target):
         if session_ids:
             for session_id in session_ids:
                 asyncio.create_task(sio_server.emit('image_status_update', {
+                    'folder_id' : target.folder.id if target.folder.parent_id else None,
                     'name': target.name,
                     'status': new_status
                 }, room=session_id))

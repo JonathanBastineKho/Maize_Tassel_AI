@@ -70,7 +70,7 @@ function UserImageTable({ setDeleteModalOpen, setImageToAction, image, setImage,
 
       socket.on("image_status_update", (updatedImage) => {
         setImage((prev) => {
-          if (prev.item.has(updatedImage.name)){
+          if (prev.item.has(updatedImage.name) && (updatedImage.folder_id === null && folderId === undefined || updatedImage.folder_id === folderId)){
             prev.item.set(updatedImage.name, {
               ...(prev.item.get(updatedImage.name)),
               status: updatedImage.status,
@@ -84,7 +84,7 @@ function UserImageTable({ setDeleteModalOpen, setImageToAction, image, setImage,
     return () => {
       socket.disconnect();
     };
-  }, [])
+  }, [folderId])
 
   useEffect(() => {
     setLoading(true);
