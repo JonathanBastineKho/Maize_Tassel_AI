@@ -90,3 +90,6 @@ class LoginRequired:
 class CreateFolderBody(BaseModel):
     folder_name : str
     parent_id : Optional[str] = None
+    
+class ViewUserAccountRequest(BaseModel):
+    email : str
