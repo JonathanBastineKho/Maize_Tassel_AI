@@ -2,24 +2,17 @@ from sqlalchemy import DateTime, Column, String, ForeignKey, Enum
 from sqlalchemy.orm import relationship, Session
 from datetime import datetime
 from app.database import Base
-import enum
-
-
-class SuspensionCategory(enum.Enum):
-    VIOLATIONS = "Violations of Terms and Conditions"
-    COPYRIGHT_INFRINGEMENT = "Copyright Infringement"
-    ABUSE_OF_SERVICE = "Abuse of Service"
-    SECURITY_VIOLATIONS = "Security Violations"
-
+from .enum import SuspensionCategory
 
 class Suspension(Base):
     __tablename__ = "suspensions"
     user_email = Column(String, ForeignKey('users.email'), primary_key=True)
     start_date = Column(DateTime(timezone=True), primary_key=True)
     end_date = Column(DateTime(timezone=True))
-    category = Column(Enum(SuspensionCategory))
+    category = Column(Enum(SuspensionCategory.VIOLATIONS, SuspensionCategory.COPYRIGHT_INFRINGEMENT, SuspensionCategory.ABUSE_OF_SERVICE, SuspensionCategory.SECURITY_VIOLATIONS))
     reason = Column(String)
     user = relationship('User', backref='suspensions')
+
 
     @classmethod
     def create(cls, db: Session, **kw):
