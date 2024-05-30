@@ -15,10 +15,12 @@ import { spinnerTheme } from "../../Components/theme";
 import axios from "axios";
 import { useNavigate, useParams } from "react-router-dom";
 import { AuthContext } from "../Authentication/AuthContext";
+import { StorageContext } from "../Navbar/StorageContext";
 
-function UploadModal({ setImage, open, setOpen }) {
+function UploadModal({ setImage, open, setOpen, setFullStorage }) {
   const navigate = useNavigate();
   const { setUser } = useContext(AuthContext);
+  const { setStorage, getStorage } = useContext(StorageContext);
   const { folderId } = useParams();
   const [file, setFile] = useState(null);
   const [name, setName] = useState("");
@@ -75,6 +77,7 @@ function UploadModal({ setImage, open, setOpen }) {
       })
       .then((res) => {
         if (res.status === 200) {
+          // Update UI
           setImage((prev) => {
             prev.item.set(res.data.name, {
               size: res.data.size,
@@ -84,6 +87,7 @@ function UploadModal({ setImage, open, setOpen }) {
             })
             return {item: prev.item}
           })
+          setStorage((prev) => prev+1);
           closeModal();
         }
       })
@@ -93,6 +97,10 @@ function UploadModal({ setImage, open, setOpen }) {
         } else if (err.response.status === 401) {
             setUser(null);
             navigate('/login')
+        } else if (err.response.status === 429) {
+          setFullStorage(true);
+          getStorage();
+          closeModal();
         }
       })
       .then(() => setLoading(false));

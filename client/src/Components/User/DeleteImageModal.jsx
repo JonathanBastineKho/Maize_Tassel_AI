@@ -1,9 +1,10 @@
 import { Modal, Button, Spinner } from "flowbite-react";
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { IoWarningOutline } from "react-icons/io5";
 import axios from "axios";
 import { useParams } from "react-router-dom";
 import { spinnerTheme } from "../theme";
+import { StorageContext } from "../Navbar/StorageContext";
 
 function DeleteImageModal({
   setImageList,
@@ -13,6 +14,7 @@ function DeleteImageModal({
   setOpen,
 }) {
   const { folderId } = useParams();
+  const { setStorage } = useContext(StorageContext);
   const [loading, setLoading] = useState(false);
   const deleteImage = () => {
     setLoading(true);
@@ -30,6 +32,7 @@ function DeleteImageModal({
           prevImageList.item.delete(imageToDelete)
           return {item : prevImageList.item}
         });
+        setStorage((prev)=>(prev-1));
         setImageToDelete(null);
       })
       .catch((error) => console.error("Error deleting image:", error))
@@ -52,7 +55,7 @@ function DeleteImageModal({
             <IoWarningOutline className="mx-auto h-10 w-10 text-red-600" />
           </div>
           <h3 className="mb-3 text-lg font-semibold text-gray-800">
-            Are you sure?
+            Are you sure to delete this image?
           </h3>
           <h3 className=" mx-auto mb-5 text-md w-4/5 text-gray-500 font-normal">
             This action cannot be undone. All data associated with this images

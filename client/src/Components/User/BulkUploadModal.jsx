@@ -8,23 +8,30 @@ import {
   Progress,
 } from "flowbite-react";
 import { inputTheme, textAreaTheme } from "../../Components/theme";
-import { useContext, useState } from "react";
+import { useContext, useState, useRef, useEffect } from "react";
 import { BsStars } from "react-icons/bs";
 import { FaTrash, FaFolder } from "react-icons/fa";
 import { spinnerTheme } from "../../Components/theme";
 import axios from "axios";
 import { useNavigate, useParams } from "react-router-dom";
 import { AuthContext } from "../Authentication/AuthContext";
+import { StorageContext } from "../Navbar/StorageContext";
 
 function BulkUploadModal({ setImage, open, setOpen, setFolder, setBulkUploadMsg }) {
   const navigate = useNavigate();
   const { setUser } = useContext(AuthContext);
+  const { setStorage, getStorage, storage } = useContext(StorageContext);
+  const storageRef = useRef(storage);
   const { folderId } = useParams();
   const [files, setFiles] = useState({});
   const [name, setName] = useState("");
   const [nameError, setNameError] = useState("");
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    storageRef.current = storage;
+  }, [storage]);
 
   const handleDrop = (e) => {
     e.preventDefault();
@@ -48,6 +55,17 @@ function BulkUploadModal({ setImage, open, setOpen, setFolder, setBulkUploadMsg 
       });
       setFiles(newFiles);
     }
+  };
+
+  const startPolling = () => {
+    const interval = setInterval(async () => {
+      const currentStorage = await getStorage();
+      if (currentStorage === storageRef.current) {
+        clearInterval(interval);
+      } else {
+        setStorage(currentStorage);
+      }
+    }, 5000);
   };
 
   const closeModal = () => {
@@ -90,6 +108,7 @@ function BulkUploadModal({ setImage, open, setOpen, setFolder, setBulkUploadMsg 
           if (res.status === 200) {
             setFolder((prev) => [...prev, res.data.folder]);
             setBulkUploadMsg(true);
+            startPolling();
             closeModal();
           }
         })
@@ -133,6 +152,7 @@ function BulkUploadModal({ setImage, open, setOpen, setFolder, setBulkUploadMsg 
             });
             return { item: prev.item };
           });
+          setStorage((prev) => setStorage(prev+1));
           closeModal();
         }
       })
@@ -258,10 +278,7 @@ function BulkUploadModal({ setImage, open, setOpen, setFolder, setBulkUploadMsg 
                         const newFiles = { ...files };
                         selectedFiles.forEach((file) => {
                           if (!newFiles[file.name]) {
-                            newFiles[file.name] = {
-                              file,
-                              progress: 0,
-                            };
+                            newFiles[file.name] = file;
                           }
                         });
                         setFiles(newFiles);
