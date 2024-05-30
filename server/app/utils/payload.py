@@ -27,8 +27,7 @@ class UserUpdateRequest(BaseModel):
     phone: Optional[str] = None
 
 class suspendUserRequest(UserRequest):
-    start_date: date
-    end_date: date
+    duration: int
     reason: str
 
 class googleAuth(BaseModel):
