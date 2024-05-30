@@ -41,15 +41,16 @@ class Folder(Base):
         return folder
     
     @classmethod
-    def search(cls, db: Session, folder_id: str, user_email:str, offset:int, page_size:int = 20, search: Optional[str] = None):
-        fldr_query = db.query(cls).filter(
-            cls.parent_id == folder_id,
-            cls.user_email == user_email
-        )
+    def search(cls, db: Session, user_email:str, offset:int, folder_id: str = None, page_size:int = 20, search: Optional[str] = None):
+        fldr_query = db.query(cls).filter(cls.user_email == user_email)
+        if folder_id:
+            fldr_query = fldr_query.filter(cls.parent_id == folder_id)
         if search:
             fldr_query = fldr_query.filter(cls.name.ilike(f"%{search}%"))
-        
-        return fldr_query.offset(offset).limit(page_size).all()
+        fldr_query = fldr_query.offset(offset)
+        if page_size:
+            fldr_query.limit(page_size)
+        return fldr_query.all()
     
     @classmethod
     def count(cls, db: Session, folder_id: str, user_email: str, search: Optional[str] = None):

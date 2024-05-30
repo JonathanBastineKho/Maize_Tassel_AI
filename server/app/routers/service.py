@@ -28,6 +28,8 @@ async def count(file: UploadFile, folder_uuid: str = Form(None),  # Change to UU
                 db: Session = Depends(get_db)):
     if not folder_uuid:
         folder_uuid = Folder.retrieve_root(db, user['email']).id
+    if user['role'] == TypeOfUser.REGULAR and Image.count(db, email=user['email']) >= 100:
+        raise HTTPException(429, detail="Your storage is full")
     metadata = await storage_mgr.upload_image(file, name, email=user["email"], folder_name=folder_uuid, db=db)
     try:
         # Add image to database
@@ -174,6 +176,10 @@ async def search_item(
     # if folder_id is none, then its the parent
     if not folder_id:
         folder_id = Folder.retrieve_root(db, user['email']).id
+    else:
+        fldr = Folder.retrieve(db, folder_id=folder_id)
+        if fldr.user_email != user['email']:
+            raise HTTPException(401, detail="Unauthorized")
 
     offset = (page - 1) * page_size
     folders = [
@@ -288,6 +294,8 @@ async def get_parent_folders(folder_id: Optional[str] = None, db: Session = Depe
         return {"Success": True, "parent_folders": parent_folders}
 
     curr_folder = Folder.retrieve(db, folder_id=folder_id)
+    if curr_folder.user_email != user['email']:
+        raise HTTPException(401, detail="Unauthorized")
     parent_folders.append({"name": curr_folder.name, "id": curr_folder.id})
 
     # Recursive search
@@ -409,6 +417,10 @@ def download_image(
             return {"url": url[0]}
 
     return asyncio.run(download_and_process_image())
+
+@router.get("/total-storage")
+def total_storage(user: dict = Depends(LoginRequired(roles_required={TypeOfUser.REGULAR, TypeOfUser.PREMIUM})), db: Session = Depends(get_db)):
+    return {"Success" : True, "count" : Image.count(db, email=user['email'])}
 
 @event.listens_for(Image, 'after_update')
 def receive_after_update(mapper, connection, target):

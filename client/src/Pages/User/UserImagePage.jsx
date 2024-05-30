@@ -15,9 +15,11 @@ import ToastMsg from "../../Components/Other/ToastMsg";
 import { AuthContext } from "../../Components/Authentication/AuthContext";
 import UserNewFolderModal from "../../Components/User/UserNewFolderModal";
 import BulkUploadModal from "../../Components/User/BulkUploadModal";
+import { StorageContext } from "../../Components/Navbar/StorageContext";
 
 function UserImagePage() {
   const { user } = useContext(AuthContext);
+  const { storage } = useContext(StorageContext);
 
   const [uploadModalOpen, setUploadModalOpen] = useState(false); // Upload modal
   const [deleteModalOpen, setDeleteModalOpen] = useState(false); // Delete modal
@@ -28,6 +30,7 @@ function UserImagePage() {
 
   // Toast message
   const [premiumWarning, setpPremiumWarning] = useState(false); // toast for premium
+  const [fullStorage, setFullStorage] = useState(false); // toast for full storage
   const [bulkUploadMsg, setBulkUploadMsg] = useState(false); // successful bulk upload msg
 
   const location = useLocation();
@@ -80,7 +83,8 @@ function UserImagePage() {
 
   return (
     <div className="px-5 mt-24 flex flex-col gap-5">
-      <ToastMsg color="orange" icon={<HiExclamation className="h-5 w-5" />} open={premiumWarning} setOpen={setpPremiumWarning} message="Premium feature only" />
+      <ToastMsg color="red" icon={<HiExclamation className="h-5 w-5" />} open={premiumWarning} setOpen={setpPremiumWarning} message="Premium feature only" />
+      <ToastMsg color="red" icon={<HiExclamation className="h-5 w-5" />} open={fullStorage} setOpen={setFullStorage} message="Your storage is full" />
       <ToastMsg color="green" icon={<FaCheck className="h-5 w-5" />} open={bulkUploadMsg} setOpen={setBulkUploadMsg} message="Your images will be uploaded progressively" />
       <UserNewFolderModal updateUI={setFolder} state={createFolderOpen} setState={setCreateFolderOpen} />
       <DeleteImageModal
@@ -96,6 +100,7 @@ function UserImagePage() {
         setImage={setImage}
         open={uploadModalOpen}
         setOpen={setUploadModalOpen}
+        setFullStorage={setFullStorage}
       />
     ) : (
       <BulkUploadModal 
@@ -109,7 +114,7 @@ function UserImagePage() {
       
       <BreadcrumbFolder />
       <h2 className="font-bold text-2xl">Your Images</h2>
-      <div className="flex flex-wrap flex-row justify-between">
+      <div className="flex flex-wrap flex-row justify-between gap-3 w-full">
         <div className="flex flex-row items-center gap-4">
           <TextInput
             className="w-96"
@@ -131,7 +136,13 @@ function UserImagePage() {
         </div>
         <div className="flex flex-row gap-3">
           <Button
-            onClick={() => setUploadModalOpen(true)}
+            onClick={() => {
+              if (user.role === "regular" && storage >= 100) {
+                setFullStorage(true);
+              } else {
+                setUploadModalOpen(true);
+              }
+            }}
             className="bg-green-500 focus:ring-4 focus:ring-green-300 enabled:hover:bg-green-700 items-center flex"
           >
             <span className="flex items-center mr-2">

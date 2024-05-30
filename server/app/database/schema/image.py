@@ -4,6 +4,7 @@ from sqlalchemy.orm import relationship, Session
 from fastapi import HTTPException
 from typing import Optional
 from app.database import Base
+from app.database.schema import Folder
 from .enum import TypeOfImageStatus
 
 class Image(Base):
@@ -62,3 +63,8 @@ class Image(Base):
             setattr(img, key, value)
         db.commit()
         return img
+    
+    @classmethod
+    def count(cls, db: Session, email: str):
+        fldr_list = Folder.search(db, user_email=email, offset=0, page_size=None)
+        return sum([db.query(cls).filter(cls.folder_id == fldr.id).count() for fldr in fldr_list])
