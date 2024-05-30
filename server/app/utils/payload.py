@@ -28,6 +28,7 @@ class UserUpdateRequest(BaseModel):
 
 class suspendUserRequest(UserRequest):
     duration: int
+    category: str
     reason: str
 
 class googleAuth(BaseModel):

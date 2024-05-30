@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from app.utils.payload import LoginRequired, suspendUserRequest, ViewUserAccountRequest
 from app.database.schema import TypeOfUser, User, Suspension, Transaction
 from app.database.utils import get_db
@@ -69,7 +69,8 @@ def suspend_account(request: Request,
     try:
         Suspension.create(db, user_email=suspend_user.email,
         start_date=datetime.now(timezone.utc),
-        end_date=datetime.now(timezone.utc) + suspend_user.duration,
+        end_date=datetime.now(timezone.utc) + timedelta(days=suspend_user.duration),
+        category=suspend_user.category,
         reason=suspend_user.reason)
     except IntegrityError:
         raise HTTPException(400, detail="User already suspended")
