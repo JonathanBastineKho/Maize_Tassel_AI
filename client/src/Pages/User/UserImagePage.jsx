@@ -11,6 +11,7 @@ import BreadcrumbFolder from "../../Components/User/BreadCrumbFolder";
 import UserImageTable from "../../Components/User/UserImageTable";
 import UploadModal from "../../Components/User/UserUploadModal";
 import DeleteImageModal from "../../Components/User/DeleteImageModal";
+import FilterModal from "../../Components/User/FilterModal";
 import ToastMsg from "../../Components/Other/ToastMsg";
 import { AuthContext } from "../../Components/Authentication/AuthContext";
 import UserNewFolderModal from "../../Components/User/UserNewFolderModal";
@@ -27,6 +28,7 @@ function UserImagePage() {
   const [folder, setFolder] = useState([]); // Folder in the search
   const [image, setImage] = useState({ item: new Map() }); // Images in the search
   const [imageToAction, setImageToAction] = useState(null); // Images to view, edit, delete, etc
+  const [filterModalOpen, setFilterModalOpen] = useState(false);
 
   // Toast message
   const [premiumWarning, setpPremiumWarning] = useState(false); // toast for premium
@@ -41,6 +43,11 @@ function UserImagePage() {
 
   const [inputValue, setInputValue] = useState(searchValue);
   const timeoutRef = useRef(null);
+
+  const initial_filter = {
+    processing_status: "all",
+  };
+
   const handleInputChange = (e) => {
     const value = e.target.value;
     setInputValue(value);
@@ -113,6 +120,12 @@ function UserImagePage() {
     )}
       
       <BreadcrumbFolder />
+      <FilterModal
+        className="w-screen h-screen"
+        filter={initial_filter}
+        open={filterModalOpen}
+        setOpen={setFilterModalOpen}
+      />
       <h2 className="font-bold text-2xl">Your Images</h2>
       <div className="flex flex-wrap flex-row justify-between gap-3 w-full">
         <div className="flex flex-row items-center gap-4">
@@ -130,7 +143,7 @@ function UserImagePage() {
               <FaTrashAlt className="w-5 h-5 text-gray-500" />
             </button>
             <button className="hover:bg-gray-100 p-2 rounded-md">
-              <FaFilter className="w-5 h-5 text-gray-500" />
+              <FaFilter className="w-5 h-5 text-gray-500" onClick={() => setFilterModalOpen(true)}/>
             </button>
           </div>
         </div>
