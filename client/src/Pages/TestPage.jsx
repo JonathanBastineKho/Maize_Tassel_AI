@@ -2,6 +2,7 @@ import React from "react";
 import AdminViewUserAccountModal from "../Components/Admin/AdminViewUserAccountModal";
 import { useState } from "react";
 import { Button } from "flowbite-react";
+import SuspendAccountModal from "../Components/Admin/SuspendAccountModal";
 
 function TestPage({}) {
   const [state, setState] = useState(false);
@@ -9,7 +10,7 @@ function TestPage({}) {
   return (
     <>
       <Button onClick={() => setState(true)}>Open Modal</Button>
-      <AdminViewUserAccountModal state={state} setState={setState} email={email}/> 
+      <SuspendAccountModal state={state} setState={setState} email={email} />
     </>
   );
 }

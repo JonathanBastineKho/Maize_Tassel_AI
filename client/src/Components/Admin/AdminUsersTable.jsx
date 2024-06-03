@@ -7,7 +7,7 @@ import { BsThreeDotsVertical } from "react-icons/bs";
 import { useNavigate, useLocation } from "react-router-dom";
 import InifiniteScroll from "react-infinite-scroll-component";
 
-function AdminUsersTable() {
+function AdminUsersTable({handleViewAccountModal}) {
   const navigate = useNavigate();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
@@ -85,7 +85,7 @@ function AdminUsersTable() {
           <Table.Body>
             {users.map((user, idx) => (
               <Table.Row key={idx}>
-                <Table.Cell>
+                <Table.Cell onClick={() => handleViewAccountModal(user.email)}>
                   <div className="flex flex-row gap-8">
                   <Avatar
                     alt="User settings"

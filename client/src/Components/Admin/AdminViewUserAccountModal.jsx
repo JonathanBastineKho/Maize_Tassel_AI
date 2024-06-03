@@ -1,14 +1,10 @@
-import {
-  Button,
-  Modal,
-  Card,
-  Label,
-  Textarea,
-  Checkbox,
-  TextInput,
-  Table,
-} from "flowbite-react";
+// Dependencies
+import { Modal, Card, Label, Table, Spinner } from "flowbite-react";
+import { useState, useContext, useEffect } from "react";
+import axios from "axios";
+import { AuthContext } from "../Authentication/AuthContext";
 
+// Local Imports
 import {
   RenderRegularRoleTag,
   RenderPremiumRoleTag,
@@ -17,12 +13,7 @@ import {
   RenderUnVerifiedRoleTag,
   RenderSuspendedText,
 } from "../tags";
-
-import { FaTimes, FaUser } from "react-icons/fa";
-import { useState, useContext, useEffect } from "react";
-import axios from "axios";
-import { tableTheme } from "../theme";
-import { AuthContext } from "../Authentication/AuthContext";
+import SuspendAccountModal from "./SuspendAccountModal";
 
 function AdminViewUserAccountModal({ state, setState, email }) {
   const { token } = useContext(AuthContext);
@@ -30,11 +21,10 @@ function AdminViewUserAccountModal({ state, setState, email }) {
   const [userSuspension, setUserSuspension] = useState([]);
   const [userSubscription, setUserSubcription] = useState({});
   const [userTags, setUserTags] = useState(null);
+  const [suspendAccountModalOpen, setSuspendAccountModalOpen] = useState(false);
 
-  const handleUserTags = (account) => {
+  const handleUserTags = () => {
     // Check if user is verified
-    console.log("handle user tags");
-    console.log(userAccount);
     let tags = [];
     if (userAccount.verified === true) {
       tags.push(RenderVerifiedRoleTag());
@@ -50,15 +40,15 @@ function AdminViewUserAccountModal({ state, setState, email }) {
     } else if (userAccount.role === "admin") {
       tags.push(RenderAdminRoleTag());
     }
-
     setUserTags(tags);
   };
 
   const handleSuspendButton = () => {
-    console.log("Suspend Button Clicked");
+    setSuspendAccountModalOpen(!suspendAccountModalOpen);
   };
 
-  useEffect(() => {
+  const handleOpenModal = () => {
+
     axios
       .get(`/api/user/view-account/${email}`, {
         headers: {
@@ -67,20 +57,24 @@ function AdminViewUserAccountModal({ state, setState, email }) {
       })
       .then((res) => {
         setUserAccount(res.data.user);
-        console.log(res.data.user);
         handleUserTags(userAccount);
         setUserSuspension(res.data.suspension);
-        console.log(res.data.suspension);
         setUserSubcription(res.data.transaction);
-        console.log(res.data.transaction);
       })
       .catch((err) => {
         console.log(err);
       });
-  }, []);
+  };
+
+  useEffect(() => {
+    if (state) {
+      handleOpenModal();
+    }
+  }, [state]);
 
   return (
     <>
+      <SuspendAccountModal state={suspendAccountModalOpen} setState={setSuspendAccountModalOpen} email={email} />
       <Modal
         className=""
         show={state}
