@@ -27,6 +27,7 @@ class Config:
     RABBIT_MQ_USERNAME = os.environ.get("RABBIT_MQ_USERNAME")
     RABBIT_MQ_PASSWORD = os.environ.get("RABBIT_MQ_PASSWORD")
 
+
 MailConf = ConnectionConfig(
     MAIL_USERNAME = Config.MAIL_USERNAME,
     MAIL_PASSWORD = Config.MAIL_PASSWORD,

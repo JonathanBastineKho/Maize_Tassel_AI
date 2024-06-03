@@ -27,8 +27,8 @@ class UserUpdateRequest(BaseModel):
     phone: Optional[str] = None
 
 class suspendUserRequest(UserRequest):
-    start_date: date
-    end_date: date
+    duration: int
+    category: str
     reason: str
 
 class googleAuth(BaseModel):
@@ -43,9 +43,13 @@ class ImagePayload(FolderPayload):
 
 class JobStatus(ImagePayload):
     job_status: str
+    job_id: Optional[str] = None
+    email: str
 
 class JobPrediction(ImagePayload):
     box: List[dict]
+    job_id: Optional[str] = None
+    email: str
 
 class CheckoutSessionRequest(BaseModel):
     is_monthly: bool = True
@@ -90,3 +94,6 @@ class LoginRequired:
 class CreateFolderBody(BaseModel):
     folder_name : str
     parent_id : Optional[str] = None
+    
+class ViewUserAccountRequest(BaseModel):
+    email : str

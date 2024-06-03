@@ -2,92 +2,97 @@ import {
   Modal,
   Label,
   TextInput,
-  Textarea,
   Button,
   Spinner,
-  Progress,
 } from "flowbite-react";
 
-import { useState, useRef } from "react";
+import { useRef, useState } from "react";
 import { FaTimes } from "react-icons/fa";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
+import { inputTheme, spinnerTheme } from "../theme";
 
-function UserNewFolderModal({ state, setState }) {
+function UserNewFolderModal({ updateUI, state, setState }) {
   const folderNameRef = useRef();
-
+  const navigate = useNavigate();
   const { folderId } = useParams();
+  const [loading, setLoading] = useState(false);
 
-  function onCloseModal() {
+  function closeModal() {
     setState(false);
   }
 
   function handleCreateFolder() {
+    setLoading(true);
     const folderName = folderNameRef.current.value;
-    const parentID = "2";
 
-    // console.log({
-    //   folderName,
-    //   parentID,
-    // })
-    // console.log("Creating folder")
-
-    if (folderId) {
-      axios
-        .post("/api/service/create-folder", {
-          // need to change url
-          folder_name: folderName,
-          parent_id: folderId,
-        })
-        .then((response) => {
+    const payload = {
+      folder_name: folderName,
+      ...(folderId && { parent_id: folderId }),
+    };
+    axios
+      .post("/api/service/create-folder", payload)
+      .then((response) => {
+        if (response.status === 200) {
           console.log(response.data);
-        })
-        .catch((error) => {
-          console.error(error);
-        });
-    } else {
-      axios
-        .post("/api/service/create-folder", {
-          // need to change url
-          folder_name: folderName,
-        })
-        .then((response) => {
-          console.log(response.data);
-        })
-        .catch((error) => {
-          console.error(error);
-        });
-    }
+          updateUI((prev) => [...prev, response.data.folder]);
+          closeModal();
+        }
+      })
+      .catch((error) => {
+        if (error.response.status === 401) {
+          navigate("/login");
+        }
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }
 
   return (
     <>
-      <Modal className="" show={state} onClose={onCloseModal} size="md" popup>
+      <Modal className="" show={state} onClose={closeModal} size="md" popup>
         <FaTimes
-          className="absolute top-0 right-0 m-2 rounded-md w-5 h-5 cursor-pointer"
-          onClick={onCloseModal}
+          className="text-gray-500 absolute top-0 right-0 m-2 rounded-md w-5 h-5 cursor-pointer"
+          onClick={closeModal}
         />
-        <div className="p-4">
-          <section className="flex flex-row">
-            <h2 className="text-2xl font-semibold mb-4">New Folder</h2>
-          </section>
+        <div className="p-8">
+          <h2 className="text-2xl font-semibold mb-6">New Folder</h2>
           <TextInput
-            className="mb-4"
+            required
+            className="mb-6"
+            theme={inputTheme}
             placeholder="Enter folder name"
             ref={folderNameRef}
           />
-          <section className="flex flex-row justify-end gap-5 pt-1">
+          <section className="flex flex-row justify-end gap-3">
             <Button
               onClick={() => setState(false)}
-              className="bg-primary_green enabled:hover:bg-enabled_green"
+              disabled={loading}
+              className="w-full focus:ring-4 focus:ring-green-300"
+              color="light"
             >
               Cancel
             </Button>
             <Button
+              disabled={loading}
               onClick={handleCreateFolder}
-              className="bg-primary_green enabled:hover:bg-enabled_green"
+              className={`w-full bg-green-500 focus:ring-4 focus:ring-green-300 enabled:hover:bg-green-800 ${
+                loading ? "cursor-not-allowed opacity-50" : ""
+              }`}
             >
-              Create
+              {loading ? (
+                <div className="flex items-center">
+                  <Spinner
+                    aria-label="Spinner button example"
+                    size="sm"
+                    theme={spinnerTheme}
+                  />
+                  <span className="pl-3">Loading...</span>
+                </div>
+              ) : (
+                "Create"
+              )}
             </Button>
           </section>
         </div>

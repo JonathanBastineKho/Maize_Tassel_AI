@@ -11,6 +11,7 @@ class Folder(Base):
     __tablename__ = "folders"
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4())) # Change to UUID data type during production
     name = Column(String)
+    description = Column(String, nullable=True)
     parent_id = Column(String(36), ForeignKey('folders.id'), nullable=True) # Change to UUID data type during production
     user_email = Column(String, ForeignKey('users.email'), nullable=False)
     create_date = Column(DateTime(timezone=True), server_default=func.now(timezone=timezone.utc))
@@ -40,12 +41,23 @@ class Folder(Base):
         return folder
     
     @classmethod
-    def search(cls, db: Session, folder_id: str, user_email:str, offset:int, page_size:int = 20, search: Optional[str] = None):
+    def search(cls, db: Session, user_email:str, offset:int, folder_id: str = None, page_size:int = 20, search: Optional[str] = None):
+        fldr_query = db.query(cls).filter(cls.user_email == user_email)
+        if folder_id:
+            fldr_query = fldr_query.filter(cls.parent_id == folder_id)
+        if search:
+            fldr_query = fldr_query.filter(cls.name.ilike(f"%{search}%"))
+        fldr_query = fldr_query.offset(offset)
+        if page_size:
+            fldr_query.limit(page_size)
+        return fldr_query.all()
+    
+    @classmethod
+    def count(cls, db: Session, folder_id: str, user_email: str, search: Optional[str] = None):
         fldr_query = db.query(cls).filter(
             cls.parent_id == folder_id,
             cls.user_email == user_email
         )
         if search:
             fldr_query = fldr_query.filter(cls.name.ilike(f"%{search}%"))
-
-        return fldr_query.offset(offset).limit(page_size).all()
+        return fldr_query.count()

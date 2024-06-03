@@ -63,6 +63,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           <Route path="dashboard" element={<UserDashboardPage />}/>
           <Route path="images" element={<UserImagePage />} index />
           <Route path="images/:folderId/:imageName" element={<UserImagePage />}/>
+          <Route path="images/:folderId/" element={<UserImagePage />}/>
           <Route path="images/root/:imageName" element={<UserImagePage />}/>
           <Route path="subscription" element={<UserSubscriptionPage />}/>
         </Route>

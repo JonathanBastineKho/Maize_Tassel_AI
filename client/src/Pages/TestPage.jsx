@@ -1,15 +1,15 @@
 import React from "react";
-import UserNewFolderModal from "../Components/User/UserNewFolderModal";
+import AdminViewUserAccountModal from "../Components/Admin/AdminViewUserAccountModal";
 import { useState } from "react";
 import { Button } from "flowbite-react";
 
 function TestPage({}) {
   const [state, setState] = useState(false);
-
+  const email = "jovanjoto24@gmail.com";
   return (
     <>
       <Button onClick={() => setState(true)}>Open Modal</Button>
-      <UserNewFolderModal state={state} setState={setState} />
+      <AdminViewUserAccountModal state={state} setState={setState} email={email}/> 
     </>
   );
 }

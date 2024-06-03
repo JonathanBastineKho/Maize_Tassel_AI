@@ -58,10 +58,10 @@ function SubscriptionCard({ cancelled, lastSub }) {
     "Priority Processing",
     "Bulk Upload",
     "Unlimited historical data",
-    "Yield tassel count forecast",
+    "Tassel count forecast",
     "Folder management",
     "Farm Management",
-    "Integrated weather forecast",
+    "Weather forecast",
   ];
 
   return (
@@ -167,7 +167,7 @@ function SubscriptionCard({ cancelled, lastSub }) {
               ))}
             </div>
           </div>
-          <div className="bg-gray-100 p-6 min-w-[27rem] flex flex-col justify-center items-center flex-grow min-h-64">
+          <div className="bg-gray-100 p-6 md:min-w-[27rem] flex flex-col justify-center items-center flex-grow min-h-64">
             <div className="w-full mb-5 text-center">
               <h2 className="text-5xl font-extrabold">
                 {monthly ? "$20" : "$150"}

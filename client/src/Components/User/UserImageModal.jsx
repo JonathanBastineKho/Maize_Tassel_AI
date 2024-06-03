@@ -126,9 +126,9 @@ function UserImageModal({ index, setIndex, imageList }) {
             }`}
             onClick={() => {
               if (!folderId) {
-                navigate(`/user/images/root/${imageList[index - 1].name}`);
+                navigate(`/user/images/root/${encodeURIComponent(imageList[index - 1].name)}`);
               } else {
-                navigate(`/user/images/${folderId}/${imageList[index - 1].name}`);
+                navigate(`/user/images/${folderId}/${encodeURIComponent(imageList[index - 1].name)}`);
               }
               setIndex(index - 1);
             }}
@@ -147,9 +147,9 @@ function UserImageModal({ index, setIndex, imageList }) {
             }`}
             onClick={() => {
               if (!folderId) {
-                navigate(`/user/images/root/${imageList[index + 1].name}`);
+                navigate(`/user/images/root/${encodeURIComponent(imageList[index + 1].name)}`);
               } else {
-                navigate(`/user/images/${folderId}/${imageList[index + 1].name}`);
+                navigate(`/user/images/${folderId}/${encodeURIComponent(imageList[index + 1].name)}`);
               }
               setIndex(index + 1);
             }}

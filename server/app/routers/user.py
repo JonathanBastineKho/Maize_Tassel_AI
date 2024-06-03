@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from datetime import datetime
-from app.utils.payload import LoginRequired, suspendUserRequest
-from app.database.schema import TypeOfUser, User, Suspension
+from datetime import datetime, timezone, timedelta
+from app.utils.payload import LoginRequired, suspendUserRequest, ViewUserAccountRequest
+from app.database.schema import TypeOfUser, User, Suspension, Transaction
 from app.database.utils import get_db
 from app.utils import session_mgr
 
@@ -35,10 +35,30 @@ def search_user(page: int = 1, page_size: int = 20, search: str = None, db: Sess
 
     return {"users": user_data}
 
-@router.get("/view-account")
-def view_account(user:dict = Depends(LoginRequired(roles_required={TypeOfUser.REGULAR, TypeOfUser.PREMIUM})), db: Session = Depends(get_db)):
-    db_user = User.retrieve(db, email=user['email'])
-    return db_user
+@router.get("/view-account/{email}")
+def viewAccount(email: str, user: dict = Depends(LoginRequired(roles_required={TypeOfUser.ADMIN})), db: Session = Depends(get_db)):
+    db_user = User.retrieve(db, email=email)
+ 
+    data = {
+        "email": db_user.email,
+        "name": db_user.name,
+        "phone": db_user.phone,
+        "country": db_user.country,
+        "profile_pict" : db_user.profile_pict,
+        "verified": db_user.verified,
+        "role": db_user.role,
+    }
+    
+    user_suspension = Suspension.retrieve_user_suspension(db=db, email=email)
+    user_transactions = Transaction.retrieve(db, user_email=user['email'])
+    
+    user_transaction = {}
+    user_transaction["transactions"] = [{"start_date" : tr.start_date, "end_date" : tr.end_date, "amount" : tr.amount, "status" : tr.success} for tr in user_transactions]
+    
+    last_transaction = user_transaction[0] if user_transactions else None
+    user_transaction["cancelled"] = last_transaction is not None and not last_transaction.auto_renew
+    
+    return {"user": data, "suspension": user_suspension, 'transaction' : user_transaction}
 
 @router.post("/suspend-account")
 def suspend_account(request: Request, 
@@ -48,8 +68,9 @@ def suspend_account(request: Request,
     #check if email is already suspended
     try:
         Suspension.create(db, user_email=suspend_user.email,
-        start_date=datetime.now(),
-        end_date=suspend_user.end_date,
+        start_date=datetime.now(timezone.utc),
+        end_date=datetime.now(timezone.utc) + timedelta(days=suspend_user.duration),
+        category=suspend_user.category,
         reason=suspend_user.reason)
     except IntegrityError:
         raise HTTPException(400, detail="User already suspended")
