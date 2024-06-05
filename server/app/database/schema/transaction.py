@@ -35,3 +35,7 @@ class Transaction(Base):
         trx.auto_renew = auto_renew
         db.commit()
         return trx
+    
+    @classmethod
+    def search(cls, db: Session):
+        return db.query(cls).order_by(cls.start_date.desc()).all()

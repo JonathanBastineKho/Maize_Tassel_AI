@@ -9,12 +9,10 @@ function AdminLayout() {
         <>
             <AdminNavbar collapsed={collapsed} setCollapsed={setCollapsed} />
             <div className="flex">
-                <AdminSideBar collapsed={collapsed} setCollapsed={setCollapsed} />
-                <div
-                className={`w-screen ${
-                    collapsed ? "ml-16" : "ml-[16.3rem]"
-                } transition-all duration-100 ease-in-out`}
-                >
+                <div className={`hidden md:block ${collapsed ? "md:mr-16" : "md:mr-[16.3rem]"}`}>
+                    <AdminSideBar collapsed={collapsed} setCollapsed={setCollapsed} />
+                </div>
+                <div className={`w-full flex-grow transition-all duration-100 ease-in-out`}>
                     <Outlet />
                 </div>
             </div>

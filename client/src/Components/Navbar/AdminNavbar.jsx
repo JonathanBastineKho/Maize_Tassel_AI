@@ -20,7 +20,6 @@ import {
   
   function AdminNavbar({collapsed, setCollapsed}) {
     const { user, setUser } = useContext(AuthContext);
-    console.log(user);
     const navigate = useNavigate();
   
     const signOut = async () => {
