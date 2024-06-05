@@ -18,7 +18,7 @@ function TransactionChart({ transactions, loading }) {
         style: {
           fontSize: "15px",
           colors: ["#6B7280"],
-          fontWeight: 350,
+          fontWeight: 550,
         },
         datetimeFormatter: {
           year: "yyyy",
@@ -125,7 +125,7 @@ function TransactionChart({ transactions, loading }) {
         <>
           <div className="flex flex-row justify-between w-full items-center">
             <div className="flex flex-col gap-3">
-              <h2 className="leading-none text-3xl font-bold text-gray-900">
+              <h2 className="leading-none text-3xl font-extrabold text-gray-900">
                 {transactions.total.toLocaleString("en-US", {
                   style: "currency",
                   currency: "USD",
