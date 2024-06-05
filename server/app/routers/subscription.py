@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 import stripe
-from app.database.schema import TypeOfUser, Transaction
+from app.database.schema import TypeOfUser, Transaction, User
 from app.database.utils import get_db
 from app.utils.payload import LoginRequired, CheckoutSessionRequest
 
@@ -62,4 +62,19 @@ async def view_subscription(user: dict = Depends(LoginRequired(roles_required={T
     
     last_transaction = transactions[0] if transactions else None
     data["cancelled"] = last_transaction is not None and not last_transaction.auto_renew
+    return data
+
+@router.get("/view-transactions")
+def view_transactions(_ : dict = Depends(LoginRequired(roles_required={TypeOfUser.ADMIN})), db: Session = Depends(get_db)):
+    transaction_list = [trx for trx in Transaction.search(db)]
+    total_transaction = sum([trx.amount for trx in transaction_list])
+    data = {
+        "total" : total_transaction,
+        "transactions" : [{
+            "name" : User.retrieve(db, email=trx.user_email).name,
+            "date" : trx.start_date,
+            "amount" : trx.amount,
+            "success" : trx.success
+        } for trx in transaction_list]
+    }
     return data
