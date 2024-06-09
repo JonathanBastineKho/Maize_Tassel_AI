@@ -17,17 +17,21 @@ import { AuthContext } from "../../Components/Authentication/AuthContext";
 import UserNewFolderModal from "../../Components/User/UserNewFolderModal";
 import BulkUploadModal from "../../Components/User/BulkUploadModal";
 import { StorageContext } from "../../Components/Navbar/StorageContext";
+import DeleteFolderModal from "../../Components/User/DeleteFolderModal";
 
 function UserImagePage() {
   const { user } = useContext(AuthContext);
   const { storage } = useContext(StorageContext);
 
   const [uploadModalOpen, setUploadModalOpen] = useState(false); // Upload modal
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false); // Delete modal
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false); // Delete modal image
+  const [deleteFolderOpen, setDeleteFolderOpen] = useState(false); // Delete folder modal 
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
+
   const [folder, setFolder] = useState([]); // Folder in the search
   const [image, setImage] = useState({ item: new Map() }); // Images in the search
   const [imageToAction, setImageToAction] = useState(null); // Images to view, edit, delete, etc
+  const [folderToAction, setFolderToAction] = useState(null); // Folder to edit, delete, etc
   const [filterModalOpen, setFilterModalOpen] = useState(false);
 
   // Toast message
@@ -101,6 +105,12 @@ function UserImagePage() {
         open={deleteModalOpen}
         setOpen={setDeleteModalOpen}
       />
+      <DeleteFolderModal
+      open={deleteFolderOpen}
+      setOpen={setDeleteFolderOpen}
+      setFolderList={setFolder}
+      folderToDelete={folderToAction}
+      setFolderToDelete={setFolderToAction} />
       {user.role === "regular" ? (
       <UploadModal
         className="w-screen h-screen"
@@ -173,11 +183,14 @@ function UserImagePage() {
       </div>
       <UserImageTable
         setDeleteModalOpen={setDeleteModalOpen}
+        setDeleteFolderOpen={setDeleteFolderOpen}
+        setFolderToAction={setFolderToAction}
         setImageToAction={setImageToAction}
         image={image}
         setImage={setImage}
         folder={folder}
         setFolder={setFolder}
+        setpPremiumWarning={setpPremiumWarning}
       />
     </div>
   );

@@ -69,7 +69,7 @@ import {
                           <img
                             {...avatarProps}
                             referrerPolicy="no-referrer"
-                            src={user.profile_pict}
+                            src={`${user.profile_pict}?${Date.now()}`}
                             alt={avatarProps.alt}
                           />
                         )}

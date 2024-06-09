@@ -17,7 +17,7 @@ function ToastMsg({ icon, message, open, setOpen, duration = 3000, color }) {
   }, [open, setOpen, duration]);
   return (
     <div
-      className={`fixed bottom-8 right-16 z-50 transition-opacity duration-300 ${
+      className={`fixed bottom-8 right-16 transition-opacity duration-300 ${
         open ? "opacity-100 ease-out" : "opacity-0 ease-in"
       }`}
     >

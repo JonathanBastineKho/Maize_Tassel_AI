@@ -4,7 +4,7 @@ from typing import Optional
 from fastapi import HTTPException
 from sqlalchemy import func, DateTime, Column, String, UniqueConstraint, ForeignKey
 from sqlalchemy.orm import Session
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from app.database import Base
 
 class Folder(Base):
@@ -15,7 +15,7 @@ class Folder(Base):
     parent_id = Column(String(36), ForeignKey('folders.id'), nullable=True) # Change to UUID data type during production
     user_email = Column(String, ForeignKey('users.email'), nullable=False)
     create_date = Column(DateTime(timezone=True), server_default=func.now(timezone=timezone.utc))
-    parent = relationship('Folder', remote_side=[id], backref='children')
+    parent = relationship('Folder', remote_side=[id], backref=backref('children', cascade='all, delete-orphan'))
     user = relationship('User', backref='folders')
 
     __table_args__ = (
@@ -61,3 +61,10 @@ class Folder(Base):
         if search:
             fldr_query = fldr_query.filter(cls.name.ilike(f"%{search}%"))
         return fldr_query.count()
+    
+    @classmethod
+    def delete(cls, db: Session, folder_id: str):
+        fldr = cls.retrieve(db, folder_id)
+        db.delete(fldr)
+        db.commit()
+        return folder_id

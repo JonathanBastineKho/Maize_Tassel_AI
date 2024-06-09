@@ -22,7 +22,6 @@ class UserCreateRequest(UserRequest):
 
 class UserUpdateRequest(BaseModel):
     name: Optional[str] = None
-    password: Optional[str] = None
     country: Optional[str] = None
     phone: Optional[str] = None
 
