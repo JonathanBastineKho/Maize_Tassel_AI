@@ -5,6 +5,7 @@ import {
   Avatar,
   Textarea,
   ToggleSwitch,
+  Tooltip
 } from "flowbite-react";
 import { useEffect, useRef, useState } from "react";
 import axios from "axios";
@@ -12,6 +13,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { spinnerTheme, textAreaTheme, toggleSwitchTheme } from "../theme";
 import { HiMenuAlt1 } from "react-icons/hi";
 import { MdClose } from "react-icons/md";
+import { FaRegThumbsUp, FaRegThumbsDown, FaThumbsDown, FaThumbsUp } from "react-icons/fa6";
 import { IoMdArrowRoundBack, IoMdArrowRoundForward } from "react-icons/io";
 
 function UserImageModal({ index, setIndex, imageList }) {
@@ -103,6 +105,27 @@ function UserImageModal({ index, setIndex, imageList }) {
     setImgSize({ width: e.target.width, height: e.target.height });
   };
 
+  const clickFeedback = (feedback) => {
+    axios.patch("/api/service/give-feedback", {
+      name: imageName,
+      good: feedback,
+      folder_id: folderId ?? undefined,
+    })
+    .then((res) => {
+      if (res.status === 200) {
+        setImg(prevImg => ({
+          ...prevImg,
+          feedback: feedback
+        }));
+      }
+    })
+    .catch((err) => {
+      if (err.response.status === 401) {
+        navigate("/login")
+      }
+    })
+  }
+
   return (
     <div
       className={`fixed z-50 inset-0 bg-black bg-opacity-40 backdrop-blur-md ${
@@ -172,11 +195,11 @@ function UserImageModal({ index, setIndex, imageList }) {
       </div>
       <div className="flex h-screen">
         {/* Sidebar */}
-        <div className="w-[20rem] bg-white border-r-2">
+        <div className="w-[20rem] bg-white border-r-2 overflow-y-auto">
           <div className="pt-24 p-5 flex flex-col justify-between h-full">
             <div>
               <h2 className="text-xl font-bold mb-4">Prediction Results</h2>
-              <div className="flex flex-col gap-2 flex-wrap mr-2">
+              <div className="flex flex-col gap-1.5 flex-wrap mr-2">
                 <div className="flex flex-row flex-wrap justify-between">
                   <Label className="text-gray-600">Number of Tassels:</Label>
                   <div className="w-28">
@@ -219,7 +242,50 @@ function UserImageModal({ index, setIndex, imageList }) {
                   </div>
                 </div>
               </div>
-              <hr className="h-px my-8 bg-gray-200 border-0" />
+              <div className="mt-3 flex flex-row gap-1 items-center w-full">
+              {img?.feedback === null ? (
+                <>
+                  <Tooltip content="Good Prediction">
+                    <button className="rounded rounded-lg p-2 hover:bg-gray-100" onClick={()=>{clickFeedback(true)}}>
+                      <FaRegThumbsUp className="text-gray-500 w-4 h-4" />
+                    </button>
+                  </Tooltip>
+                  <Tooltip content="Bad Prediction">
+                    <button className="rounded rounded-lg p-2 hover:bg-gray-100" onClick={()=>{clickFeedback(false)}}>
+                      <FaRegThumbsDown className="text-gray-500 w-4 h-4" />
+                    </button>
+                  </Tooltip>
+                </>
+              ) : img?.feedback ? (
+                <>
+                  <Tooltip content="Good Prediction">
+                    <button className="rounded rounded-lg p-2 hover:bg-gray-100">
+                      <FaThumbsUp className="text-gray-500 w-4 h-4" />
+                    </button>
+                  </Tooltip>
+                  <Tooltip content="Bad Prediction">
+                    <button className="rounded rounded-lg p-2 hover:bg-gray-100" onClick={()=>{clickFeedback(false)}}>
+                      <FaRegThumbsDown className="text-gray-500 w-4 h-4" />
+                    </button>
+                  </Tooltip>
+                </>
+              ) : (
+                <>
+                  <Tooltip content="Good Prediction">
+                    <button className="rounded rounded-lg p-2 hover:bg-gray-100" onClick={()=>{clickFeedback(true)}}>
+                      <FaRegThumbsUp className="text-gray-500 w-4 h-4" />
+                    </button>
+                  </Tooltip>
+                  <Tooltip content="Bad Prediction">
+                    <button className="rounded rounded-lg p-2 hover:bg-gray-100">
+                      <FaThumbsDown className="text-gray-500 w-4 h-4" />
+                    </button>
+                  </Tooltip>
+                </>
+              )}
+              </div>
+
+              <hr className="h-px mt-3 mb-6 bg-gray-200 border-0" />
               <div className="mt-8">
                 <h2 className="text-xl font-bold mb-4">Image Description</h2>
                 <Textarea
@@ -276,7 +342,7 @@ function UserImageModal({ index, setIndex, imageList }) {
             <Button
               disabled={downloadLoading}
               onClick={download}
-              className={`bg-green-600 focus:ring-4 focus:ring-green-300 enabled:hover:bg-green-800 ${
+              className={`mt-4 bg-green-600 focus:ring-4 focus:ring-green-300 enabled:hover:bg-green-800 ${
                 downloadLoading ? "cursor-not-allowed opacity-50" : ""
               }`}
             >

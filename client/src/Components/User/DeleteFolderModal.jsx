@@ -16,7 +16,7 @@ function DeleteFolderModal({
   const { setStorage, getStorage } = useContext(StorageContext);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const deleteImage = () => {
+  const confirm = () => {
     setLoading(true);
     axios
         .delete("/api/service/delete-folder", {
@@ -67,7 +67,7 @@ function DeleteFolderModal({
             will be lost.
           </h3>
           <div className="flex flex-col justify-center gap-4">
-            <Button color="failure" onClick={deleteImage} disabled={loading}>
+            <Button color="failure" onClick={confirm} disabled={loading}>
               {loading ? (
                 <div className="flex items-center">
                   <Spinner
