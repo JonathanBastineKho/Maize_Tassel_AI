@@ -326,8 +326,13 @@ async def create_folder(folder: CreateFolderBody, db: Session = Depends(get_db),
             }}
 
 @router.delete("/delete-folder")
-async def delete_folder(folder: FolderPayload):
-    return
+def delete_folder(folder: FolderPayload, background_tasks: BackgroundTasks, db: Session = Depends(get_db), user:dict = Depends(LoginRequired(roles_required={TypeOfUser.PREMIUM}))):
+    fldr = Folder.retrieve(db, folder_id=folder.folder_id)
+    if not fldr or fldr.user_email != user['email']:
+        raise HTTPException(401, detail="Unauthorized")
+    Folder.delete(db, folder_id=folder.folder_id)
+    background_tasks.add_task(storage_mgr.delete_folder, folder_path=f"{user['email']}/{folder.folder_id}")
+    return {"Success" : True}
 
 @router.get("/download-image")
 def download_image(

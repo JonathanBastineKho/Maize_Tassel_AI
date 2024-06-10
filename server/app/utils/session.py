@@ -72,6 +72,12 @@ class SessionManager:
         self.r.srem(f"{self.email_key}:{email}", session_token)
         return response
     
+    def revoke_user(self, email: str):
+        session_tokens = self.r.smembers(f"{self.email_key}:{email}")
+        for session_token in session_tokens:
+            self.r.delete(session_token)
+        self.r.delete(f"{self.email_key}:{email}")
+    
     # Subscription
     def upgrade_user(self, email: str):
         session_tokens = self.r.smembers(f"{self.email_key}:{email}")

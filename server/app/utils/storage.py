@@ -22,20 +22,24 @@ class StorageManager:
             raise HTTPException(status_code=400, detail="Image must be jpg or png")
         
         contents = await file.read()
-
+        
         # Compress image
         image = PILImage.open(BytesIO(contents))
         image.thumbnail(thumbnail_size)
+        if image.mode == "RGBA":
+            background = PILImage.new("RGB", image.size, (255, 255, 255))
+            background.paste(image, mask=image.split()[3])
+            image = background
+
         thumbnail_bytes = BytesIO()
         image.save(thumbnail_bytes, format='JPEG')
         thumbnail_bytes.seek(0)
         thumbnail_bytes_data = thumbnail_bytes.getvalue()
         # Upload actual image
         file_extension = os.path.splitext(file.filename)[1].lower()
-        content_type = "image/jpeg" if file_extension in [".jpg", ".jpeg"] else "image/png"
-        image_path = f"profile/{email}{file_extension}"
+        image_path = f"profile/{email}.jpg"
         blob = self.public_bucket.blob(image_path)
-        blob.upload_from_string(thumbnail_bytes_data, content_type=content_type)
+        blob.upload_from_string(thumbnail_bytes_data, content_type="image/jpeg")
 
         return {
             "image_path" : image_path
@@ -82,6 +86,11 @@ class StorageManager:
         # Upload thumbnail
         image = PILImage.open(BytesIO(contents))
         image.thumbnail(thumbnail_size)
+        if image.mode == "RGBA":
+            background = PILImage.new("RGB", image.size, (255, 255, 255))
+            background.paste(image, mask=image.split()[3])
+            image = background
+
         thumbnail_bytes = BytesIO()
         image.save(thumbnail_bytes, format='JPEG')
         thumbnail_bytes.seek(0)
@@ -132,3 +141,11 @@ class StorageManager:
         if not blob.exists():
             raise HTTPException(status_code=404, detail="Image not found")
         return blob.download_as_bytes()
+    
+    def delete_folder(self, folder_path: str):
+        blobs = list(self.bucket.list_blobs(prefix=folder_path))
+        try:
+            self.bucket.delete_blobs(blobs)
+        except Exception as e:
+            print(e)
+            pass

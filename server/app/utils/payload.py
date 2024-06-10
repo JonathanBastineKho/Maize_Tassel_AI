@@ -3,7 +3,6 @@ from pydantic import BaseModel
 from typing import Set, List, Optional
 from . import session_mgr
 from app.database.schema import TypeOfUser
-from datetime import date
 
 # JSON FORMAT
 # Authentication
@@ -22,7 +21,6 @@ class UserCreateRequest(UserRequest):
 
 class UserUpdateRequest(BaseModel):
     name: Optional[str] = None
-    password: Optional[str] = None
     country: Optional[str] = None
     phone: Optional[str] = None
 
@@ -95,5 +93,3 @@ class CreateFolderBody(BaseModel):
     folder_name : str
     parent_id : Optional[str] = None
     
-class ViewUserAccountRequest(BaseModel):
-    email : str

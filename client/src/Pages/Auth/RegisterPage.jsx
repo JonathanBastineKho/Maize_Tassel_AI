@@ -11,11 +11,16 @@ import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 
 import GoogleLoginButton from "../../Components/Authentication/GoogleLoginButton";
+import ToastMsg from "../../Components/Other/ToastMsg";
+import { HiExclamation } from "react-icons/hi";
 import { inputTheme, checkBoxTheme } from "../../Components/theme";
+import { format } from "date-fns";
 
 function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [invalidEmailmsg, setInvalidEmailmsg] = useState("");
+  const [suspended, setSuspended] = useState(false);
+  const [suspensionDuration, setSuspensionDuration] = useState("");
   const [invalidPasswordmsg, setInvalidPasswordmsg] = useState("");
   const navigate = useNavigate();
   const handleSubmit = async (e) => {
@@ -51,6 +56,8 @@ function RegisterPage() {
   };
   return (
     <div className="flex justify-center items-center h-screen">
+      <ToastMsg color="red" icon={<HiExclamation className="h-5 w-5" />} open={suspended} setOpen={setSuspended} 
+      message={suspensionDuration.length > 0 ? `You are suspended until ${format(new Date(suspensionDuration), "MMMM d, yyyy")}` : ''} duration={5000} />
       <Card className="p-4 md:w-[32rem]">
         <h1 className="text-2xl font-semibold mb-4">Create New Account</h1>
         <form className="flex flex-col gap-2" onSubmit={handleSubmit}>
@@ -114,6 +121,8 @@ function RegisterPage() {
           </div>
           <div className="flex flex-col gap-4">
           <GoogleLoginButton
+            setSuspensionDuration={setSuspensionDuration}
+            setSuspended={setSuspended}
             setLoading={setLoading}
             setInvalidEmailmsg={setInvalidEmailmsg}
           />

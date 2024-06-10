@@ -9,8 +9,17 @@ import { spinnerTheme, tableTheme } from "../theme";
 import UserImageModal from "./UserImageModal";
 import ActionButton from "./ActionButton";
 import InifiniteScroll from "react-infinite-scroll-component";
+import FolderActionButton from "./FolderActionButton";
 
-function UserImageTable({ setDeleteModalOpen, setImageToAction, image, setImage, folder, setFolder }) {
+function UserImageTable({ 
+  setpPremiumWarning,
+  setDeleteModalOpen, 
+  setImageToAction,
+  setFolderToAction,
+  setDeleteFolderOpen,
+  image, setImage, 
+  folder, 
+  setFolder }) {
   const { folderId } = useParams();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
@@ -114,17 +123,19 @@ function UserImageTable({ setDeleteModalOpen, setImageToAction, image, setImage,
         </div>
       ) : (
         <InifiniteScroll
+        className="mb-48"
               dataLength={image.item.size+folder.length}
               next={fetchItem}
               hasMore={hasMore}
               scrollThreshold={0.8}
+              style={{ overflow: 'visible' }}
               loader={
                 <div className="mt-8 flex items-center justify-center">
                   <Label className="text-gray-500">Loading...</Label>
                 </div>
               }
             >
-          <Table hoverable theme={tableTheme}>
+          <Table hoverable theme={tableTheme} className="z-50">
             <Table.Head className="p-4">
               <Table.HeadCell>
                 <Checkbox />
@@ -163,7 +174,7 @@ function UserImageTable({ setDeleteModalOpen, setImageToAction, image, setImage,
                     })}
                     </Table.Cell>
                     <Table.Cell>
-                      <BsThreeDotsVertical />
+                      <FolderActionButton setPremiumWarning={setpPremiumWarning} idx={index} setDeleteModalOpen={setDeleteFolderOpen} folderID={fldr.id} setFoldeToAction={setFolderToAction} />
                     </Table.Cell>
                   </Table.Row>
               ))}

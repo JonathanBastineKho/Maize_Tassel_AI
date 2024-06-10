@@ -1,6 +1,6 @@
 from datetime import timezone
 from sqlalchemy import func, DateTime, Column, String, Boolean, Integer, Enum, UniqueConstraint, ForeignKey
-from sqlalchemy.orm import relationship, Session
+from sqlalchemy.orm import relationship, Session, backref
 from fastapi import HTTPException
 from typing import Optional
 from app.database import Base
@@ -21,7 +21,7 @@ class Image(Base):
     processing_status = Column(Enum(TypeOfImageStatus.IN_QUEUE, TypeOfImageStatus.PROCESSING, TypeOfImageStatus.DONE, TypeOfImageStatus.ERROR), default=TypeOfImageStatus.IN_QUEUE)
     upload_date = Column(DateTime(timezone=True), server_default=func.now(timezone=timezone.utc))
     finish_date = Column(DateTime(timezone=True))
-    folder = relationship('Folder', backref='images')
+    folder = relationship('Folder', backref=backref('images', cascade='all, delete-orphan'))
     __table_args__ = (
         UniqueConstraint('name', 'folder_id'),
     )

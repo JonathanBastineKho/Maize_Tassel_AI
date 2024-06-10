@@ -4,10 +4,15 @@ import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import GoogleLoginButton from "../../Components/Authentication/GoogleLoginButton";
 import { inputTheme, spinnerTheme } from "../../Components/theme";
+import ToastMsg from "../../Components/Other/ToastMsg";
+import { HiExclamation } from "react-icons/hi";
+import { format } from "date-fns";
 
 function LoginPage() {
     const [loading, setLoading] = useState(false);
     const [invalidEmailmsg, setInvalidEmailmsg] = useState('');
+    const [suspended, setSuspended] = useState(false);
+    const [suspensionDuration, setSuspensionDuration] = useState("");
     const [invalidPasswordlmsg, setInvalidPasswordmsg] = useState('');
     const navigate = useNavigate();
 
@@ -30,8 +35,12 @@ function LoginPage() {
             }
         })
         .catch((err) => {
+          console.log(err.response.status);
             if (err.response.status === 409) {
                 setInvalidEmailmsg(err.response.data.detail);
+            } else if (err.response.status === 423) {
+              setSuspensionDuration(err.response.data.detail);
+              setSuspended(true);
             } else {
                 setInvalidEmailmsg(err.response.data.detail);
                 setInvalidPasswordmsg(err.response.data.detail);
@@ -44,6 +53,8 @@ function LoginPage() {
       };
       return (
         <div className="flex justify-center items-center h-screen">
+        <ToastMsg color="red" icon={<HiExclamation className="h-5 w-5" />} open={suspended} setOpen={setSuspended} 
+        message={suspensionDuration.length > 0 ? `You are suspended until ${format(new Date(suspensionDuration), "MMMM d, yyyy")}` : ''}  />
             <Card className="p-4 md:w-[32rem]">
             <h1 className="text-2xl font-semibold mb-4">Sign in to your Account</h1>
         <form className="flex max-w-md flex-col gap-4" onSubmit={handleSubmit}>
@@ -84,7 +95,7 @@ function LoginPage() {
               or
             </span>
           </div>
-          <GoogleLoginButton setLoading={setLoading} setInvalidEmailmsg={setInvalidEmailmsg} />
+          <GoogleLoginButton setSuspensionDuration={setSuspensionDuration} setSuspended={setSuspended} setLoading={setLoading} setInvalidEmailmsg={setInvalidEmailmsg} duration={5000} />
           <Button
           type="submit"
           disabled={loading}

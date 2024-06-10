@@ -65,8 +65,8 @@ async def login(user : UserLoginRequest, request:Request, db: Session = Depends(
     
     # Check if user is suspended
     suspension = Suspension.retrieve(db, email=user.email, date=datetime.now(timezone.utc))
-    if suspension:
-        raise HTTPException(status_code=401, detail="You are suspended")
+    if len(suspension) > 0:
+        raise HTTPException(status_code=423, detail=f"{suspension[0].end_date}")
     
     return session_mgr.login_user(email=user.email, 
                                   name=db_user.name,
@@ -99,6 +99,10 @@ async def google_login(request:Request, token:googleAuth, db: Session = Depends(
     if db_user == None:
         db_user = User.create(db, email=user["email"], name=user["name"], verified=True, profile_pict=user["picture"])
         Folder.create(db, name="Home", user_email=user["email"])
+    else:
+        suspension = Suspension.retrieve(db, email=db_user.email, date=datetime.now(timezone.utc))
+        if len(suspension) > 0:
+            raise HTTPException(status_code=423, detail=f"{suspension[0].end_date}")
     
     return session_mgr.login_user(email=user["email"], 
                                   name=user["name"],

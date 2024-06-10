@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException
+import stripe
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime, timezone, timedelta
-from app.utils.payload import LoginRequired, suspendUserRequest, ViewUserAccountRequest
+from app.utils.payload import LoginRequired, suspendUserRequest
 from app.database.schema import TypeOfUser, User, Suspension, Transaction
 from app.database.utils import get_db
 from app.utils import session_mgr
@@ -35,37 +36,37 @@ def search_user(page: int = 1, page_size: int = 20, search: str = None, db: Sess
 
     return {"users": user_data}
 
-@router.get("/view-account/{email}")
+@router.get("/view-account")
 def viewAccount(email: str, user: dict = Depends(LoginRequired(roles_required={TypeOfUser.ADMIN})), db: Session = Depends(get_db)):
     db_user = User.retrieve(db, email=email)
- 
+    if db_user == None:
+        raise HTTPException(400, detail="User not found")
     data = {
         "email": db_user.email,
         "name": db_user.name,
         "phone": db_user.phone,
         "country": db_user.country,
         "profile_pict" : db_user.profile_pict,
-        "verified": db_user.verified,
+        "verified": db_user.verified or db_user.password == None,
         "role": db_user.role,
     }
     
     user_suspension = Suspension.retrieve_user_suspension(db=db, email=email)
-    user_transactions = Transaction.retrieve(db, user_email=user['email'])
-    
-    user_transaction = {}
-    user_transaction["transactions"] = [{"start_date" : tr.start_date, "end_date" : tr.end_date, "amount" : tr.amount, "status" : tr.success} for tr in user_transactions]
-    
-    last_transaction = user_transaction[0] if user_transactions else None
-    user_transaction["cancelled"] = last_transaction is not None and not last_transaction.auto_renew
-    
-    return {"user": data, "suspension": user_suspension, 'transaction' : user_transaction}
+    trx = Transaction.retrieve_latest(db, user_email=email)
+    return {"user": data, 
+            "suspension": user_suspension,
+            "suspended" : len(Suspension.retrieve(db, email=email, date=datetime.now())) > 0,
+            "next_date" : None if not trx else trx.end_date, 
+            "cancelled" : None if not trx else not trx.auto_renew}
 
 @router.post("/suspend-account")
-def suspend_account(request: Request, 
+def suspend_account(
                     suspend_user: suspendUserRequest, 
                     db: Session = Depends(get_db),
                     _: dict = Depends(LoginRequired(roles_required={TypeOfUser.ADMIN}))):
     #check if email is already suspended
+    if len(Suspension.retrieve(db, email=suspend_user.email, date=datetime.now())) > 0:
+        raise HTTPException(400, detail="User already suspended")
     try:
         Suspension.create(db, user_email=suspend_user.email,
         start_date=datetime.now(timezone.utc),
@@ -75,4 +76,11 @@ def suspend_account(request: Request,
     except IntegrityError:
         raise HTTPException(400, detail="User already suspended")
     
-    return session_mgr.logout_user(request)
+    trx = Transaction.retrieve_latest(db, user_email=suspend_user.email)
+    if trx and trx.auto_renew:
+        stripe.Subscription.modify(
+            trx.transaction_id,
+            cancel_at_period_end=True
+        )
+    session_mgr.revoke_user(email=suspend_user.email)
+    return {"Success" : True}

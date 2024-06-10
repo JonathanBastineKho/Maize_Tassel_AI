@@ -46,7 +46,7 @@ function UserSideBar({setCollapsed, collapsed}) {
                         </Sidebar.Item>
                     </Sidebar.ItemGroup>
                     <Sidebar.ItemGroup>
-                        <Sidebar.Item icon={IoMdPerson}>
+                        <Sidebar.Item as={Link} to="/user/profile" icon={IoMdPerson}>
                             Profile
                         </Sidebar.Item>
                         <Sidebar.Item icon={IoIosHelpCircle}>
