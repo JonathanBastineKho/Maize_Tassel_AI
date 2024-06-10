@@ -13,7 +13,7 @@ import zipfile
 from app.utils import storage_mgr
 from app.database.schema import Folder, TypeOfUser, Image, Prediction, TypeOfImageStatus
 from app.database.utils import get_db
-from app.utils.payload import LoginRequired, FolderPayload, ImagePayload, CreateFolderBody
+from app.utils.payload import LoginRequired, FolderPayload, ImagePayload, CreateFolderBody, ImageFeedback
 from app.utils.sockets import sio_server
 from app.utils import job_mgr, session_mgr
 
@@ -233,6 +233,7 @@ async def view_image(img_name: str, folder_id: Optional[str] = None, db: Session
     image_data['height'] = img.height
     image_data['status'] = img.processing_status
     image_data['upload_date'] = img.upload_date
+    image_data['feedback'] = img.feedback
     if img.finish_date and img.upload_date:
         processing_time = img.finish_date - img.upload_date
         hours, remainder = divmod(processing_time.seconds, 3600)
@@ -426,6 +427,23 @@ def download_image(
 @router.get("/total-storage")
 def total_storage(user: dict = Depends(LoginRequired(roles_required={TypeOfUser.REGULAR, TypeOfUser.PREMIUM})), db: Session = Depends(get_db)):
     return {"Success" : True, "count" : Image.count(db, email=user['email'])}
+
+@router.patch("/give-feedback")
+def give_feedback(image: ImageFeedback, user: dict = Depends(LoginRequired(roles_required={TypeOfUser.REGULAR, TypeOfUser.PREMIUM})), db: Session = Depends(get_db)):
+    # Preliminary check
+    if not image.folder_id:
+        fldr = Folder.retrieve_root(db, user_email=user['email'])
+        image.folder_id = fldr.id
+    else:
+        fldr = Folder.retrieve(db, folder_id=image.folder_id)
+        if fldr and fldr.user_email != user['email']:
+            raise HTTPException(401, detail="You are not the owner of the image")
+    # Give prediction
+    img = Image.retrieve(db, name=image.name, folder_id=image.folder_id)
+    if img and img.processing_status != TypeOfImageStatus.DONE:
+        raise HTTPException(400, detail="image has not yet finish processing")
+    img.update_self(db, feedback=image.good)
+    return {"Success" : True}
 
 @event.listens_for(Image, 'after_update')
 def receive_after_update(mapper, connection, target):

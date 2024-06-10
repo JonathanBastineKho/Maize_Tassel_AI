@@ -39,6 +39,9 @@ class FolderPayload(BaseModel):
 class ImagePayload(FolderPayload):
     name: str
 
+class ImageFeedback(ImagePayload):
+    good: bool
+
 class JobStatus(ImagePayload):
     job_status: str
     job_id: Optional[str] = None
