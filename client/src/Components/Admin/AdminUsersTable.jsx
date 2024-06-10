@@ -3,11 +3,19 @@ import { tableTheme } from "../theme";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { spinnerTheme } from "../theme";
-import { BsThreeDotsVertical } from "react-icons/bs";
 import { useNavigate, useLocation } from "react-router-dom";
 import InifiniteScroll from "react-infinite-scroll-component";
+import SuspendAccountModal from "./SuspendAccountModal";
+import UserActionButton from "./UserActionButton";
 
-function AdminUsersTable({handleViewAccountModal}) {
+function AdminUsersTable({
+  userToAction, 
+  setUserToAction,
+  setViewAccountModalOpen,
+  setCancelSubAccountModalOpen, 
+  setSuspendAccountModalOpen,
+  suspendAccountModalOpen,
+  setSuccessSuspend}) {
   const navigate = useNavigate();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
@@ -55,17 +63,24 @@ function AdminUsersTable({handleViewAccountModal}) {
 
   return (
     <>
+      <SuspendAccountModal
+        state={suspendAccountModalOpen}
+        setState={setSuspendAccountModalOpen}
+        userToSuspend={userToAction}
+        setUserList={setUsers}
+        setSuccessSuspend={setSuccessSuspend}
+      />
       {loading ? (
         <div className="mt-8 flex items-center justify-center">
           <Spinner className="" theme={spinnerTheme} />
         </div>
       ) : (
-        <div className="h-full overflow-y-auto">
         <InifiniteScroll
               dataLength={users.length}
               next={fetchUsers}
               hasMore={hasMore}
               scrollThreshold={0.8}
+              style={{ overflow: 'visible' }}
               loader={
                 <div className="mt-8 flex items-center justify-center">
                   <Label className="text-gray-500">Loading...</Label>
@@ -84,8 +99,9 @@ function AdminUsersTable({handleViewAccountModal}) {
           </Table.Head>
           <Table.Body>
             {users.map((user, idx) => (
-              <Table.Row key={idx}>
-                <Table.Cell onClick={() => handleViewAccountModal(user.email)}>
+              <Table.Row key={idx} className="cursor-pointer" 
+               onClick={() => {setUserToAction({name: user.name, email: user.email, idx: idx}); setViewAccountModalOpen(true);}}>
+                <Table.Cell>
                   <div className="flex flex-row gap-8">
                   <Avatar
                     alt="User settings"
@@ -111,7 +127,7 @@ function AdminUsersTable({handleViewAccountModal}) {
                 <Table.Cell>
                   {user.suspended ? (
                     <div className="flex flex-row gap-2 items-center">
-                      <div className="rounded-full bg-red w-2.5 h-2.5"> </div>
+                      <div className="rounded-full bg-red-500 w-2.5 h-2.5"> </div>
                       <Label className="text-gray-500">Suspended</Label>
                     </div>
                   ) : (
@@ -123,16 +139,17 @@ function AdminUsersTable({handleViewAccountModal}) {
                 </Table.Cell>
                 <Table.Cell>{user.country ? user.country : "-"}</Table.Cell>
                 <Table.Cell>
-                  <div className="w-fit p-2 rounded-md hover:bg-gray-100">
-                    <BsThreeDotsVertical />
-                  </div>
+                  <UserActionButton 
+                  user={{name: user.name, email: user.email, idx: idx}}
+                  setUserToAction={setUserToAction}
+                  setSuspendModalOpen={setSuspendAccountModalOpen}
+                  setCancelModalOpen={setCancelSubAccountModalOpen} />
                 </Table.Cell>
               </Table.Row>
             ))}
           </Table.Body>
         </Table>
         </InifiniteScroll>
-        </div>
       )}
     </>
   );

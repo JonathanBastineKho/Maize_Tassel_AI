@@ -124,7 +124,7 @@ function UserProfilePage() {
             message="Your profile has been updated"
           />
           <div className="flex flex-col md:flex-row md:flex-nowrap gap-6">
-            <Card className="p-6 w-full md:w-fit min-w-60" theme={cardTheme}>
+            <Card className="p-6 w-full md:w-fit min-w-64" theme={cardTheme}>
               <Avatar img={`${user.profile_pict}?${Date.now()}`} size="xl" />
               <div className="flex flex-col gap-1 mt-2">
                 <span className="text-xl font-bold">{user.name}</span>

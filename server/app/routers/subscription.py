@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 import stripe
 from app.database.schema import TypeOfUser, Transaction, User
 from app.database.utils import get_db
-from app.utils.payload import LoginRequired, CheckoutSessionRequest
+from app.utils.payload import LoginRequired, CheckoutSessionRequest, UserRequest
 
 router = APIRouter(tags=["Subscription"], prefix="/subscription")
 
@@ -52,6 +52,18 @@ async def manage_subscription(user: dict = Depends(LoginRequired(roles_required=
     
     except stripe.error.StripeError as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+@router.patch("/cancel-subscription")
+async def cancel_subscription(user: UserRequest, _: dict = Depends(LoginRequired(roles_required={TypeOfUser.ADMIN})), db: Session = Depends(get_db)):
+    trx = Transaction.retrieve_latest(db, user_email=user.email)
+    if trx and trx.auto_renew:
+        stripe.Subscription.modify(
+            trx.transaction_id,
+            cancel_at_period_end=True
+        )
+    else:
+        raise HTTPException(400, detail="User is not subscribed or already cancelled")
+    return {"Success" : True}
     
 @router.get("/view-subscription")
 async def view_subscription(user: dict = Depends(LoginRequired(roles_required={TypeOfUser.PREMIUM, TypeOfUser.REGULAR})), db: Session = Depends(get_db)):

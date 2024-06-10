@@ -3,7 +3,7 @@ import axios from "axios";
 import { Button } from 'flowbite-react';
 import { useNavigate } from 'react-router-dom';
 
-function GoogleLoginButton({setLoading, setInvalidEmailmsg}) {
+function GoogleLoginButton({setSuspensionDuration, setSuspended, setLoading, setInvalidEmailmsg}) {
     const navigate = useNavigate();
     const loginGoogle = useGoogleLogin({
         onSuccess: async (codeResponse) => {
@@ -17,7 +17,12 @@ function GoogleLoginButton({setLoading, setInvalidEmailmsg}) {
                 }
             })
             .catch((err) => {
-                setInvalidEmailmsg(err.response.data.detail);
+                if (err.response.status === 423) {
+                    setSuspensionDuration(err.response.data.detail);
+                    setSuspended(true);
+                } else {
+                    setInvalidEmailmsg(err.response.data.detail);
+                }
             })
             .then(() => {
                 setLoading(false);
