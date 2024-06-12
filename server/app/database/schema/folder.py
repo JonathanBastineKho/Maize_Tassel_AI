@@ -68,3 +68,9 @@ class Folder(Base):
         db.delete(fldr)
         db.commit()
         return folder_id
+    
+    def update_self(self, db: Session, folder_name : str):
+        self.name = folder_name
+        db.commit()
+        return self
+    

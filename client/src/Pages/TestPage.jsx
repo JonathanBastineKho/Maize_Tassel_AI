@@ -3,6 +3,8 @@ import AdminViewUserAccountModal from "../Components/Admin/AdminViewUserAccountM
 import { useState } from "react";
 import { Button } from "flowbite-react";
 import SuspendAccountModal from "../Components/Admin/SuspendAccountModal";
+import RenameFolderModal from "../Components/User/RenameFolderModal";
+import RenameImageModal from "../Components/User/RenameImageModal";
 
 function TestPage({}) {
   const [state, setState] = useState(false);
@@ -10,7 +12,7 @@ function TestPage({}) {
   return (
     <>
       <Button onClick={() => setState(true)}>Open Modal</Button>
-      <SuspendAccountModal state={state} setState={setState} email={email} />
+      <RenameImageModal state={state} setState={setState} folderName={email} folderId={1} imageName={"abc"} imageDescription={"abc"}/>
     </>
   );
 }

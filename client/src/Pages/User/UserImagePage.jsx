@@ -18,6 +18,8 @@ import UserNewFolderModal from "../../Components/User/UserNewFolderModal";
 import BulkUploadModal from "../../Components/User/BulkUploadModal";
 import { StorageContext } from "../../Components/Navbar/StorageContext";
 import DeleteFolderModal from "../../Components/User/DeleteFolderModal";
+import RenameFolderModal from "../../Components/User/RenameFolderModal";
+import RenameImageModal from "../../Components/User/RenameImageModal";
 
 function UserImagePage() {
   const { user } = useContext(AuthContext);
@@ -27,6 +29,13 @@ function UserImagePage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false); // Delete modal image
   const [deleteFolderOpen, setDeleteFolderOpen] = useState(false); // Delete folder modal 
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
+  const [renameFolderModalOpen, setRenameFolderModalOpen] = useState(false); // Rename folder modal
+  const [selectedFolderName, setSelectedFolderName] = useState(null); // Selected folder name
+  const [selectedFolderId, setSelectedFolderId] = useState(null); // Selected folder id
+  const [renameImageModalOpen, setRenameImageModalOpen] = useState(false); // Rename image modal
+  const [selectedImageName, setSelectedImageName] = useState(null); // Selected image name
+  const [selectedImageDescription, setSelectedImageDescription] = useState(null); // Selected image description
+
 
   const [folder, setFolder] = useState([]); // Folder in the search
   const [image, setImage] = useState({ item: new Map() }); // Images in the search
@@ -91,7 +100,7 @@ function UserImagePage() {
       setpPremiumWarning(true);
     }
   }
-
+  console.log(renameFolderModalOpen)
   return (
     <div className="px-5 mt-24 flex flex-col gap-5">
       <ToastMsg color="red" icon={<HiExclamation className="h-5 w-5" />} open={premiumWarning} setOpen={setpPremiumWarning} message="Premium feature only" />
@@ -128,6 +137,19 @@ function UserImagePage() {
       setOpen={setUploadModalOpen}
       setBulkUploadMsg={setBulkUploadMsg} />
     )}
+      <RenameFolderModal
+        state={renameFolderModalOpen}
+        setState={setRenameFolderModalOpen}
+        folderName={selectedFolderName}
+        folderId={selectedFolderId}
+      />
+      <RenameImageModal
+        state={renameImageModalOpen}
+        setState={setRenameImageModalOpen}
+        imageName={selectedImageName}
+        imageDescription={selectedImageDescription}
+        folderId={folderId}
+      />
       
       <BreadcrumbFolder />
       <FilterModal
@@ -184,6 +206,8 @@ function UserImagePage() {
       <UserImageTable
         setDeleteModalOpen={setDeleteModalOpen}
         setDeleteFolderOpen={setDeleteFolderOpen}
+        setRenameFolderModalOpen={setRenameFolderModalOpen}
+        setRenameImageModalOpen={setRenameImageModalOpen}
         setFolderToAction={setFolderToAction}
         setImageToAction={setImageToAction}
         image={image}
@@ -191,6 +215,9 @@ function UserImagePage() {
         folder={folder}
         setFolder={setFolder}
         setpPremiumWarning={setpPremiumWarning}
+        setSelectedFolderName={setSelectedFolderName}
+        setSelectedFolderId={setSelectedFolderId}
+        setSelectedImageName={setSelectedImageName}
       />
     </div>
   );

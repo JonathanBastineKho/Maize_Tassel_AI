@@ -13,7 +13,7 @@ const ThreeDotsVerticalIcon = React.forwardRef((props, ref) => (
   </div>
 ));
 
-function ActionButton({ setDeleteModalOpen, setImageToAction, imgName }) {
+function ActionButton({ setDeleteModalOpen, setImageToAction, imgName, setRenameImageModalOpen, setSelectedImageName }) {
   const dropdownRef = useRef(null);
 
   const handleDropdownClick = (event) => {
@@ -31,7 +31,7 @@ function ActionButton({ setDeleteModalOpen, setImageToAction, imgName }) {
         className="absolute right-0"
       >
         <div className="min-w-36">
-          <Dropdown.Item>
+          <Dropdown.Item onClick={() => {setRenameImageModalOpen(true); setSelectedImageName(imgName)}}>
             <div className="flex flex-row items-center gap-3">
               <RiPencilFill className="text-gray-500 w-5 h-5" />
               Edit
