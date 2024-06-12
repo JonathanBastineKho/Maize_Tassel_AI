@@ -66,7 +66,7 @@ async def prediction(background_tasks: BackgroundTasks, prediction:JobPrediction
                 confidence=pred_box.get('confidence'))
         counter += 1
     # Change the status of the processing
-    Image.update(db, name=prediction.name, folder_id=prediction.folder_id, processing_status=TypeOfImageStatus.DONE, finish_date=func.now(timezone=timezone.utc))
+    Image.update(db, name=prediction.name, folder_id=prediction.folder_id, processing_status=TypeOfImageStatus.DONE, finish_date=func.now(timezone=timezone.utc), tassel_count=counter-1)
     if not prediction.job_id:
         # send email directly
         background_tasks.add_task(

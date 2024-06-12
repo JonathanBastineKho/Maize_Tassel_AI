@@ -1,8 +1,8 @@
-from datetime import timezone
-from sqlalchemy import func, DateTime, Column, String, Boolean, Integer, Enum, UniqueConstraint, ForeignKey
+from datetime import timezone, datetime
+from sqlalchemy import func, DateTime, Column, String, Boolean, Integer, Enum, UniqueConstraint, ForeignKey, cast, Date
 from sqlalchemy.orm import relationship, Session, backref
 from fastapi import HTTPException
-from typing import Optional
+from typing import Optional, List
 from app.database import Base
 from app.database.schema import Folder
 from .enum import TypeOfImageStatus
@@ -21,6 +21,7 @@ class Image(Base):
     processing_status = Column(Enum(TypeOfImageStatus.IN_QUEUE, TypeOfImageStatus.PROCESSING, TypeOfImageStatus.DONE, TypeOfImageStatus.ERROR), default=TypeOfImageStatus.IN_QUEUE)
     upload_date = Column(DateTime(timezone=True), server_default=func.now(timezone=timezone.utc))
     finish_date = Column(DateTime(timezone=True))
+    tassel_count = Column(Integer, nullable=True)
     folder = relationship('Folder', backref=backref('images', cascade='all, delete-orphan'))
     __table_args__ = (
         UniqueConstraint('name', 'folder_id'),
@@ -74,3 +75,18 @@ class Image(Base):
     def count(cls, db: Session, email: str):
         fldr_list = Folder.search(db, user_email=email, offset=0, page_size=None)
         return sum([db.query(cls).filter(cls.folder_id == fldr.id).count() for fldr in fldr_list])
+    
+    @classmethod
+    def get_tassel_count_by_date(cls, db: Session, folder_ids: List[str], start_date: Optional[datetime] = None, end_date: Optional[datetime] = None):
+        query = db.query(
+            func.date(cls.upload_date).label('date'),
+            func.sum(cls.tassel_count).label('total_tassel_count')
+        ).filter(cls.folder_id.in_(folder_ids))
+
+        if start_date:
+            query = query.filter(cls.upload_date >= start_date)
+        if end_date:
+            query = query.filter(cls.upload_date <= end_date)
+
+        tassel_counts = query.group_by(func.date(cls.upload_date)).all()
+        return tassel_counts

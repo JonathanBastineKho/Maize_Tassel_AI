@@ -1,6 +1,7 @@
 from fastapi import APIRouter, UploadFile, Form, Depends, HTTPException, BackgroundTasks
 from fastapi.responses import Response
 from fastapi.concurrency import run_in_threadpool
+from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import event, inspect
@@ -16,6 +17,7 @@ from app.database.utils import get_db
 from app.utils.payload import LoginRequired, FolderPayload, ImagePayload, CreateFolderBody, ImageFeedback
 from app.utils.sockets import sio_server
 from app.utils import job_mgr, session_mgr
+from math import isfinite
 
 router = APIRouter(tags=["Regular Service"], prefix="/service")
 
@@ -444,6 +446,78 @@ def give_feedback(image: ImageFeedback, user: dict = Depends(LoginRequired(roles
         raise HTTPException(400, detail="image has not yet finish processing")
     img.update_self(db, feedback=image.good)
     return {"Success" : True}
+
+@router.get("/view-historical-count")
+def view_historical_count(
+    folder_id: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    user: dict = Depends(LoginRequired(roles_required={TypeOfUser.REGULAR, TypeOfUser.PREMIUM})),
+    db: Session = Depends(get_db)
+):
+    if not folder_id:
+        fldr = Folder.retrieve_root(db, user_email=user['email'])
+    else:
+        fldr = Folder.retrieve(db, folder_id=folder_id)
+    if fldr.user_email != user['email']:
+        raise HTTPException(401, detail="The folder is not yours")
+    
+    # parsing start and end dates
+    try:
+        start_date_obj = datetime.strptime(start_date, "%Y-%m-%d") if start_date else None
+        end_date_obj = datetime.strptime(end_date, "%Y-%m-%d") if end_date else None
+    except ValueError:
+        raise HTTPException(400, detail="Date time invalid")
+
+    # retrieving folders
+    all_folders = []
+    def collect_folders(folder):
+        all_folders.append(folder)
+        child_folders = folder.retrieve_child(db, start_date=start_date_obj, end_date=end_date_obj)
+        for child_folder in child_folders:
+            collect_folders(child_folder)
+    collect_folders(fldr)
+
+    # retrieving tassel_count by date for all folders
+    folder_ids = [folder.id for folder in all_folders]
+    tassel_counts = Image.get_tassel_count_by_date(db, folder_ids, start_date=start_date_obj, end_date=end_date_obj)
+
+    counts_by_date = []
+    total = 0
+    highest = 0
+    lowest = float('inf')
+    for tassel_count in tassel_counts:
+        counts_by_date.append({
+            "date": tassel_count.date,
+            "total_tassel_count": tassel_count.total_tassel_count
+        })
+        total += tassel_count.total_tassel_count
+        if tassel_count.total_tassel_count > highest:
+            highest = tassel_count.total_tassel_count
+        if tassel_count.total_tassel_count < lowest:
+            lowest = tassel_count.total_tassel_count
+
+    percentage_change = 0
+    if len(counts_by_date) > 1:
+        first_count = counts_by_date[0]["total_tassel_count"]
+        last_count = counts_by_date[-1]["total_tassel_count"]
+        percentage_change = ((last_count - first_count) / first_count) * 100
+
+    return {
+        "date_count": counts_by_date,
+        "total" : total,
+        "average_per_day" : 0 if len(counts_by_date) == 0 else round(total / len(counts_by_date), 2),
+        "highest" : highest,
+        "lowest" : lowest if isfinite(lowest) else 0,
+        "percentage_change": round(percentage_change, 2)
+    }
+
+@router.get("/search-all-folders")
+def search_all_folders(user: dict = Depends(LoginRequired(roles_required={TypeOfUser.REGULAR, TypeOfUser.PREMIUM})), db: Session = Depends(get_db)):
+    fldrs = Folder.search_all(db, email=user['email'])
+    return {
+        "folder_list" : [{"name" : fldr.name, "id" : fldr.id} for fldr in fldrs]
+    }
 
 @event.listens_for(Image, 'after_update')
 def receive_after_update(mapper, connection, target):
