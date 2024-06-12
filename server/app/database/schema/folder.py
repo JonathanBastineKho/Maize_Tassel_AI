@@ -1,5 +1,5 @@
 import uuid
-from datetime import timezone
+from datetime import timezone, datetime
 from typing import Optional
 from fastapi import HTTPException
 from sqlalchemy import func, DateTime, Column, String, UniqueConstraint, ForeignKey
@@ -68,9 +68,24 @@ class Folder(Base):
         db.delete(fldr)
         db.commit()
         return folder_id
-    
+   
     def update_self(self, db: Session, folder_name : str):
         self.name = folder_name
         db.commit()
         return self
+   
+    def retrieve_child(self, db: Session, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None):
+        query = db.query(Folder).filter(Folder.parent_id == self.id)
+        if start_date:
+            query = query.filter(Folder.create_date >= start_date)
+        if end_date:
+            query = query.filter(Folder.create_date <= end_date)
+        return query.all()
     
+    @classmethod
+    def search_all(cls, db: Session, email: str):
+        return db.query(cls).filter(
+            cls.user_email == email,
+            cls.parent_id != None
+        ).all()
+
