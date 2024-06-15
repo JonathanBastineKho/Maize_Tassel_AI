@@ -151,6 +151,7 @@ function UserProfilePage() {
                       onChange={() => setChanged(true)}
                       theme={inputTheme}
                       id="first_name"
+                      pattern="^[a-zA-Z]*$"
                       name="first_name"
                       type="text"
                       required
@@ -165,6 +166,7 @@ function UserProfilePage() {
                       onChange={() => setChanged(true)}
                       theme={inputTheme}
                       id="last_name"
+                      pattern="^[a-zA-Z]*$"
                       name="last_name"
                       type="text"
                       defaultValue={data.last_name}
@@ -196,11 +198,13 @@ function UserProfilePage() {
                     </div>
                     <TextInput
                       onChange={() => setChanged(true)}
-                      placeholder="+1 1234 5678"
+                      placeholder="+112345678"
                       name="phone"
                       theme={inputTheme}
                       id="phone"
-                      type="text"
+                      type="tel"
+                      pattern="^\+?[0-9]*$"
+                      maxLength={20}
                       defaultValue={data.phone}
                     />
                   </div>
