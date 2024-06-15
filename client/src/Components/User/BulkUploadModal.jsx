@@ -194,18 +194,22 @@ function BulkUploadModal({ setImage, open, setOpen, setFolder, setBulkUploadMsg 
               required
             />
           </div>
-          <div>
-            <div className="mb-2 block">
-              <Label htmlFor="description" value={isSingleFile ? "Image Description" : "Folder Description"}/>
-            </div>
-            <Textarea
-              theme={textAreaTheme}
-              id="description"
-              name="description"
-              className="mb-2"
-              placeholder={isSingleFile ? "Image Description" : "Folder Description"}
-            />
-          </div>
+          {isSingleFile && (
+             <div>
+              <div className="mb-2 block">
+                <Label htmlFor="description" value="Image description" />
+              </div>
+              <Textarea
+                theme={textAreaTheme}
+                id="description"
+                name="description"
+                className="mb-2"
+                placeholder="Image description"
+              />
+           </div>
+           )
+          }
+         
           <div className="flex flex-col gap-2">
             <Label htmlFor="imageFile" value="Image File" />
             <div className="flex w-full">

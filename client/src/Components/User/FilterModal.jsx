@@ -1,166 +1,67 @@
-import { Modal, Label, Button, Datepicker, TextInput } from "flowbite-react";
+import { Modal, Label, Button, Datepicker, TextInput, Checkbox } from "flowbite-react";
 import { useState } from "react";
 import { format } from "date-fns";
 
-function FilterModal({ filter, open, setOpen }) {
-    const [loading, setLoading] = useState(false);
+// Date upload, processing status, maize tassel count, prediction feedback (optional)
 
-    const closeModal = () => {
-        setLoading(false);
-        setOpen(false);
-    };
-
-    const [dateStart, setDateStart] = useState(new Date());
-    const [dateEnd, setDateEnd] = useState(new Date());
-    const handleChangeStartDate = (date) => {
-        setDateStart(date);
-        if (dateEnd < date) {
-            setDateEnd(date);
-        };
-    };
-
-    const handleChangeEndDate = (date) => {
-        setDateEnd(date);
-        if (dateStart > date) {
-            setDateStart(date);
-        };
-    };
-
-    const formatDate = (date) => {
-        return date ? format(date, 'EEE MMM dd yyyy') : '';
-    };
-
+function FilterModal({ open, setOpen }) {
     return (
-        <Modal
-            show={open}
-            onClose={closeModal}
-            size="md"
-        >
-            <Modal.Header>Filter Images</Modal.Header>
+        <Modal size="2xl" show={open} onClose={() => setOpen(false)}>
+            <Modal.Header>Filter</Modal.Header>
             <Modal.Body>
-            <form id="image_filter" className="flex flex-col gap-2">
-                <Label className="items-center flex">
-                    Processing Status:
-                </Label>
-                <Button.Group id="processing_status">
-                    <Button
-                    value="all"
-                    color={"blue"}
-                    className={
-                        filter.processing_status === "all"
-                        ? "hover:text-white bg-black outline outline-1"
-                        : "text-black bg-white outline outline-1"
-                    }
-                    // onClick={() =>
-                    //     handleChange("processing_status", "all")
-                    // }
-                    >
-                    All
-                    </Button>
-                    <Button
-                    value="in_queue"
-                    color={"blue"}
-                    className={
-                        filter.processing_status === "in_queue"
-                        ? "hover:text-white bg-black outline outline-1"
-                        : "text-black bg-white outline outline-1"
-                    }
-                    // onClick={() =>
-                    //     handleChange("processing_status", "in_queue")
-                    // }
-                    >
-                    In Queue
-                    </Button>
-                    <Button
-                    value="processing"
-                    color={"blue"}
-                    className={
-                        filter.processing_status === "processing"
-                        ? "hover:text-white bg-black outline outline-1"
-                        : "text-black bg-white outline outline-1"
-                    }
-                    // onClick={() =>
-                    //     handleChange("processing_status", "processing")
-                    // }
-                    >
-                    Processing
-                    </Button>
-                    <Button
-                    value="processed"
-                    color={"blue"}
-                    className={
-                        filter.processing_status === "processed"
-                        ? "hover:text-white bg-black outline outline-1"
-                        : "text-black bg-white outline outline-1"
-                    }
-                    // onClick={() =>
-                    //     handleChange("processing_status", "processed")
-                    // }
-                    >
-                    Processed
-                    </Button>
-                </Button.Group>
-                <Label className="items-center flex">
-                    Upload Date:
-                </Label>
-                <div className="flex">
-                    <Datepicker
-                        value={formatDate(dateStart)}
-                        defaultDate={new Date()}
-                        selectedDate={dateStart}
-                        onSelectedDateChanged={handleChangeStartDate}
-                        minDate={new Date(2000, 0, 1)}
-                        maxDate={new Date()}
-                    />
-                    <Label className="p-2">to</Label>
-                    <Datepicker
-                        value={formatDate(dateEnd)}
-                        defaultDate={new Date()}
-                        selectedDate={dateEnd}
-                        onSelectedDateChanged={handleChangeEndDate}
-                        minDate={new Date(2000, 0, 1)}
-                        maxDate={new Date()}
-                    />
+                <div className="flex flex-col gap-6">
+                    <div>
+                        <Label>Upload Date</Label>
+                        <div className="flex flex-row w-full gap-4 md:gap-6">
+                            <div className="w-full">
+                                <Label className="text-gray-800 text-xs">Start Date</Label>
+                                <Datepicker />
+                            </div>
+                            <div className="w-full">
+                                <Label className="text-gray-800 text-xs">End Date</Label>
+                                <Datepicker />
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <Label>Tassel Count</Label>
+                        <div className="flex flex-row w-full gap-4 md:gap-6">
+                            <div className="w-full">
+                                <Label className="text-gray-800 text-xs">Minimum</Label>
+                                <TextInput min={0} type="number" placeholder="Minimum tassel count" />
+                            </div>
+                            <div className="w-full">
+                                <Label className="text-gray-800 text-xs">Maximum</Label>
+                                <TextInput type="number" placeholder="Maximum tassel count" />
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-3">
+                        <Label>Processing Status</Label>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                            <div className="flex flex-row gap-2 items-center">
+                                <Checkbox />
+                                <Label>All</Label>
+                            </div>
+                            <div className="flex flex-row gap-2 items-center">
+                                <Checkbox />
+                                <Label>In queue</Label>
+                            </div>
+                            <div className="flex flex-row gap-2 items-center">
+                                <Checkbox />
+                                <Label>Processing</Label>
+                            </div>
+                            <div className="flex flex-row gap-2 items-center">
+                                <Checkbox />
+                                <Label>Done</Label>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <Label className="items-center flex">
-                    Size (in MB)
-                </Label>
-                <div className="flex">
-                    <TextInput placeholder="Minimum size"></TextInput>
-                    <Label className="p-2">to</Label>
-                    <TextInput placeholder="Maximum size"></TextInput>
+                <div className="flex flex-row gap-3 justify-end mt-8">
+                    <Button className="bg-green-500">Apply filter</Button>
+                    <Button color="light">Reset</Button>
                 </div>
-                <Label className="items-center flex">
-                    Width (in pixels)
-                </Label>
-                <div className="flex">
-                    <TextInput placeholder="Minimum width"></TextInput>
-                    <Label className="p-2">to</Label>
-                    <TextInput placeholder="Maximum width"></TextInput>
-                </div>
-                <Label className="items-center flex">
-                    Height (in pixels)
-                </Label>
-                <div className="flex mb-3">
-                    <TextInput placeholder="Minimum height"></TextInput>
-                    <Label className="p-2">to</Label>
-                    <TextInput placeholder="Maximum height"></TextInput>
-                </div>
-                <div className="flex flex-row gap-3">
-                    <Button
-                        className="bg-gray-500 focus:ring-4 focus:ring-gray-500 enabled:hover:bg-gray-700 items-center flex"
-                        onClick={closeModal}
-                    >
-                        Cancel
-                    </Button>
-                    <Button
-                        className="bg-green-500 focus:ring-4 focus:ring-green-300 enabled:hover:bg-green-700 items-center flex"
-                        style={{ marginLeft: "auto" }}
-                    >
-                        Confirm
-                    </Button>
-                </div>
-            </form>
             </Modal.Body>
         </Modal>
     );

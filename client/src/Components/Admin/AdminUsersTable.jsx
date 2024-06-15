@@ -20,6 +20,10 @@ function AdminUsersTable({
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const search = searchParams.get("search") || "";
+  const premiumAccount = searchParams.get("premium_account")
+  const suspension = searchParams.get("suspension")
+  const googleAccount = searchParams.get("google_account")
+  const country = searchParams.get("country")
 
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState([]);
@@ -27,8 +31,19 @@ function AdminUsersTable({
   const [hasMore, setHasMore] = useState(true);
 
   const fetchUsers = () => {
+
+    const params = {
+      page,
+      page_size: 20,
+      search,
+      ...(premiumAccount !== null && { premium_account: premiumAccount }),
+      ...(suspension !== null && { suspension }),
+      ...(googleAccount !== null && { google_account: googleAccount }),
+      ...(country && { country }),
+    };
+
     axios
-      .get(`/api/user/search-user?page=${page}&page_size=20&search=${search || ""}`)
+      .get("/api/user/search-user", { params })
       .then((res) => {
         if (res.status === 200) {
             if (page === 1) {
@@ -53,13 +68,13 @@ function AdminUsersTable({
   useEffect(() => {
     setLoading(true);
     setPage(1);
-  }, [search]);
+  }, [search, premiumAccount, suspension, googleAccount, country]);
 
   useEffect(() => {
     if (page === 1) {
       fetchUsers();
     }
-  }, [page, search]);
+  }, [page, search, premiumAccount, suspension, googleAccount, country]);
 
   return (
     <>
@@ -98,6 +113,13 @@ function AdminUsersTable({
             </Table.HeadCell>
           </Table.Head>
           <Table.Body>
+            {users.length === 0 && 
+            <Table.Row>
+              <Table.Cell colSpan={5} className="text-center">
+                  <span className="text-gray-500 text-center">No users available</span>
+              </Table.Cell>
+            </Table.Row>
+            }
             {users.map((user, idx) => (
               <Table.Row key={idx} className="cursor-pointer" 
                onClick={() => {setUserToAction({name: user.name, email: user.email, idx: idx}); setViewAccountModalOpen(true);}}>

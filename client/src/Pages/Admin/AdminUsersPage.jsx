@@ -12,12 +12,14 @@ import AdminUsersTable from "../../Components/Admin/AdminUsersTable";
 import AdminViewUserAccountModal from "../../Components/Admin/AdminViewUserAccountModal";
 import ToastMsg from "../../Components/Other/ToastMsg";
 import CancelSubscriptionModal from "../../Components/Admin/CancelSubscriptionModal";
+import UserFilterModal from "../../Components/Admin/UserFilterModal";
 
 function AdminUsersPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const searchValue = searchParams.get("search") || "";
+  const [filterModalOpen, setFilterModalOpen] = useState(false);
 
   const [viewAccountModalOpen, setViewAccountModalOpen] = useState(false);
   const [suspendAccountModalOpen, setSuspendAccountModalOpen] = useState(false);
@@ -54,6 +56,7 @@ function AdminUsersPage() {
 
   return (
     <div className="px-5 mt-24 flex flex-col gap-5">
+      <UserFilterModal open={filterModalOpen} setOpen={setFilterModalOpen} />
       <ToastMsg color="green" icon={<FaCheck className="h-5 w-5" />} open={successSuspend} setOpen={setSuccessSuspend} message="User Successfully suspended" />
       <ToastMsg color="green" icon={<FaCheck className="h-5 w-5" />} open={successCancelSub} setOpen={setSuccessCancelSub} message="User's subscription successfully cancelled" />
       <AdminViewUserAccountModal
@@ -92,7 +95,7 @@ function AdminUsersPage() {
             >
               <FaTrashAlt className="w-5 h-5 text-gray-500" />
             </button>
-            <button className="hover:bg-gray-100 p-2 rounded-md">
+            <button className="hover:bg-gray-100 p-2 rounded-md" onClick={() => setFilterModalOpen(true)}>
               <FaFilter className="w-5 h-5 text-gray-500" />
             </button>
           </div>

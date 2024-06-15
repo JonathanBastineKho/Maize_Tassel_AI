@@ -1,4 +1,4 @@
-from datetime import timezone, datetime
+from datetime import timezone, datetime, timedelta
 from sqlalchemy import func, DateTime, Column, String, Boolean, Integer, Enum, UniqueConstraint, ForeignKey, cast, Date
 from sqlalchemy.orm import relationship, Session, backref
 from fastapi import HTTPException
@@ -86,7 +86,7 @@ class Image(Base):
         if start_date:
             query = query.filter(cls.upload_date >= start_date)
         if end_date:
-            query = query.filter(cls.upload_date <= end_date)
+            query = query.filter(cls.upload_date < end_date + timedelta(days=1))
 
         tassel_counts = query.group_by(func.date(cls.upload_date)).all()
         return tassel_counts

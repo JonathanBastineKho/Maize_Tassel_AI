@@ -109,7 +109,7 @@ class Worker:
             headers = {'signature': self.generate_signature(data)}
             requests.post(self.finish_predict_url, json=data, headers=headers)
         except:
-            self.update_job_status(job["image_name"], job["folder_id"], "error", job['job_id'])
+            self.update_job_status(job['email'], job["image_name"], job["folder_id"], "error", job['job_id'])
 
     def start_consuming(self):
         print(' [*] Waiting for inference jobs. To exit press CTRL+C')
