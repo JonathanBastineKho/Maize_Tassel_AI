@@ -48,10 +48,6 @@ function UserImagePage() {
   const [inputValue, setInputValue] = useState(searchValue);
   const timeoutRef = useRef(null);
 
-  const initial_filter = {
-    processing_status: "all",
-  };
-
   const handleInputChange = (e) => {
     const value = e.target.value;
     setInputValue(value);
@@ -132,7 +128,6 @@ function UserImagePage() {
       <BreadcrumbFolder />
       <FilterModal
         className="w-screen h-screen"
-        filter={initial_filter}
         open={filterModalOpen}
         setOpen={setFilterModalOpen}
       />
@@ -152,8 +147,8 @@ function UserImagePage() {
             <button className="hover:bg-gray-100 p-2 rounded-md">
               <FaTrashAlt className="w-5 h-5 text-gray-500" />
             </button>
-            <button className="hover:bg-gray-100 p-2 rounded-md">
-              <FaFilter className="w-5 h-5 text-gray-500" onClick={() => setFilterModalOpen(true)}/>
+            <button className="hover:bg-gray-100 p-2 rounded-md" onClick={() => setFilterModalOpen(true)}>
+              <FaFilter className="w-5 h-5 text-gray-500"/>
             </button>
           </div>
         </div>
