@@ -9,7 +9,7 @@ from typing import Optional, List
 from io import BytesIO
 from PIL import ImageDraw, ImageFont
 from PIL import Image as PILImage
-import asyncio, os
+import asyncio, os, re
 import zipfile
 from app.utils import storage_mgr
 from app.database.schema import Folder, TypeOfUser, Image, Prediction, TypeOfImageStatus
@@ -337,13 +337,20 @@ def delete_folder(folder: FolderPayload, background_tasks: BackgroundTasks, db: 
     background_tasks.add_task(storage_mgr.delete_folder, folder_path=f"{user['email']}/{folder.folder_id}")
     return {"Success" : True}
 
-@router.put("/rename-folder")
+@router.patch("/rename-folder")
 def rename_folder(folder: RenameFolderBody, db: Session = Depends(get_db), user:dict = Depends(LoginRequired(roles_required={TypeOfUser.PREMIUM}))):
-    try:
+    if not folder.folder_id:
+        raise HTTPException(400, detail="Invalid folder")
+    else:
         fldr = Folder.retrieve(db, folder_id=folder.folder_id)
         if not fldr or fldr.user_email != user['email']:
             raise HTTPException(401, detail="Unauthorized")
-        fldr.update_self(db, folder_name=folder.folder_name)
+    if folder.new_name == "":
+        raise HTTPException(400, detail="Folder name cannot be empty")
+    if not re.match(r'^[\w\s\.-]+$', folder.new_name):
+        raise HTTPException(400, detail="name cannot contain special character")
+    try:
+        fldr.update_self(db, folder_name=folder.new_name)
     except IntegrityError as e:
         db.rollback()
         raise HTTPException(status_code=400, detail="Folder with the same name already exists")
@@ -439,26 +446,25 @@ def download_image(
     return asyncio.run(download_and_process_image())
 
 
-@router.put("/rename-image")
+@router.patch("/rename-image")
 def rename_image(image : RenameImageBody, db : Session = Depends(get_db), user:dict = Depends(LoginRequired(roles_required={TypeOfUser.REGULAR, TypeOfUser.PREMIUM}))):
+    if not image.folder_id:
+        fldr = Folder.retrieve_root(db, user_email=user['email'])
+    else:
+        fldr = Folder.retrieve(db, folder_id=image.folder_id)
+        if fldr.user_email != user['email']:
+            raise HTTPException(401, detail="Unauthorized")
+    if image.new_name == "":
+        raise HTTPException(400, detail="Image name cannot be empty")
+    if not re.match(r'^[\w\s\.-]+$', image.new_name):
+        raise HTTPException(400, detail="name cannot contain special character")
     try:
-        if not image.folder_id:
-            fldr = Folder.retrieve_root(db, user_email=user['email'])
-        else:
-            fldr = Folder.retrieve(db, folder_id=image.folder_id)
-            if fldr.user_email != user['email']:
-                raise HTTPException(401, detail="Unauthorized")
-
-        img = Image.retrieve(db, name=image.image_name, folder_id=fldr.id)
-        
-        # need to check if the new name already exists
-        
-        img.update_self(db, name=image.new_name)
-        
+        img = Image.update(db, old_name=image.name, folder_id=fldr.id, name=image.new_name)
+        Prediction.update(db, folder_id=fldr.id, old_image_name=image.name, new_image_name=image.new_name)
     except IntegrityError as e:
         db.rollback()
         raise HTTPException(status_code=400, detail="Image with the same name already exists")
-    return {"Success" : True}
+    return {"Success" : True, "new_name" : img.name}
 
 @router.get("/total-storage")
 def total_storage(user: dict = Depends(LoginRequired(roles_required={TypeOfUser.REGULAR, TypeOfUser.PREMIUM})), db: Session = Depends(get_db)):

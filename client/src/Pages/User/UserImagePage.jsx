@@ -33,8 +33,6 @@ function UserImagePage() {
   const [selectedFolderName, setSelectedFolderName] = useState(null); // Selected folder name
   const [selectedFolderId, setSelectedFolderId] = useState(null); // Selected folder id
   const [renameImageModalOpen, setRenameImageModalOpen] = useState(false); // Rename image modal
-  const [selectedImageName, setSelectedImageName] = useState(null); // Selected image name
-  const [selectedImageDescription, setSelectedImageDescription] = useState(null); // Selected image description
 
 
   const [folder, setFolder] = useState([]); // Folder in the search
@@ -96,7 +94,6 @@ function UserImagePage() {
       setpPremiumWarning(true);
     }
   }
-  console.log(renameFolderModalOpen)
   return (
     <div className="px-5 mt-24 flex flex-col gap-5">
       <ToastMsg color="red" icon={<HiExclamation className="h-5 w-5" />} open={premiumWarning} setOpen={setpPremiumWarning} message="Premium feature only" />
@@ -136,17 +133,16 @@ function UserImagePage() {
       <RenameFolderModal
         state={renameFolderModalOpen}
         setState={setRenameFolderModalOpen}
-        folderName={selectedFolderName}
-        folderId={selectedFolderId}
+        folderToAction={folderToAction}
+        folder={folder}
+        setFolder={setFolder}
       />
       <RenameImageModal
         state={renameImageModalOpen}
         setState={setRenameImageModalOpen}
-        imageName={selectedImageName}
-        imageDescription={selectedImageDescription}
-        folderId={folderId}
+        imageName={imageToAction}
+        setImage={setImage}
       />
-      
       <BreadcrumbFolder />
       <FilterModal
         className="w-screen h-screen"
@@ -210,9 +206,6 @@ function UserImagePage() {
         folder={folder}
         setFolder={setFolder}
         setpPremiumWarning={setpPremiumWarning}
-        setSelectedFolderName={setSelectedFolderName}
-        setSelectedFolderId={setSelectedFolderId}
-        setSelectedImageName={setSelectedImageName}
       />
     </div>
   );

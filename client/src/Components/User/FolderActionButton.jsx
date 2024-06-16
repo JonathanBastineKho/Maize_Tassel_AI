@@ -18,10 +18,7 @@ function FolderActionButton({
   setPremiumWarning,
   idx,
   setDeleteModalOpen,
-  setSelectedFolderName,
   setFoldeToAction,
-  folderName,
-  setSelectedFolderId,
   folderID,
   setRenameFolderModalOpen,
 }) {
@@ -50,9 +47,8 @@ function FolderActionButton({
           <Dropdown.Item
             onClick={() => {
               if (user.role === "premium") {
+                setFoldeToAction({ id: folderID, idx: idx });
                 setRenameFolderModalOpen(true);
-                setSelectedFolderId(folderID);
-                setSelectedFolderName(folderName);     
               } else {
                 setPremiumWarning(true);
               }

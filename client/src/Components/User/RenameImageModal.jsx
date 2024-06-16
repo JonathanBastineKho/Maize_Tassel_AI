@@ -3,75 +3,59 @@ import {
   TextInput,
   Button,
   Spinner,
-  Label,
-  Textarea,
 } from "flowbite-react";
-import { useRef, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
-import { inputTheme, spinnerTheme, textAreaTheme } from "../theme";
-import { set } from "date-fns";
+import { inputTheme, spinnerTheme } from "../theme";
 
 function RenameImageModal({
   state,
   setState,
   imageName,
-  imageDescription,
-  folderId,
+  setImage
 }) {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [nameError, setNameError] = useState('');
-  const [imgName, setImgName] = useState(null);
-  
+  const [imgName, setImgName] = useState("");
+  const { folderId } = useParams();
 
   useEffect(() => {
-    setImgName(imageName);
-  }, [imageName]);
+    if (imageName !== null){setImgName(imageName);}
+  }, [imageName])
 
   function handleRenameImage() {
-    console.log(imageName);
-    console.log(imgName);
-    console.log(`folderId: ${folderId}`)
-
-    if (folderId === undefined) {
-      console.log("folderId is undefined")
-      axios.put(`/api/service/rename-image`, {
-        image_name : imageName, 
-        new_name : imgName,
-    })
+    setLoading(true);
+    const payload = {
+      name: imageName,
+      new_name: imgName,
+      ...(folderId && { folder_id: folderId }),
+    };
+    axios.patch("/api/service/rename-image", payload)
     .then((res) => {
-      setNameError(""); 
       if (res.status === 200) {
         setState(false);
+        setImage((prev) => {
+          const old_value = prev.item.get(imageName);
+          prev.item.delete(imageName);
+          prev.item.set(imgName, old_value);
+          return {item: prev.item}
+        })
       }
-      window.location.reload();
     })
     .catch((err) => {
-      console.log(err);
+      if (err.response.status === 401) {
+        navigate("/login")
+      } else if (err.response.status === 400) {
+        setNameError(err.response.data.detail);
+      }
     })
-    } else {
-      console.log("folderId is defined")
-      axios.put(`/api/service/rename-image`, {
-        image_name : imageName,
-        folder_id : folderId,
-        new_name : imgName
-      })
-      .then((res) => {
-        if (res.status === 200) {
-          setState(false);
-        }
-      })
-      .catch((err) => {
-        console.log(err);
-      })
-    }
-
+    .finally(() => {setLoading(false)})
   }
   
   return (
-    <>
-      <Modal className="" show={state} onClose={() => setState(false)} size="md" popup>
+      <Modal className="" show={state} onClose={() => {setState(false); setNameError("")}} size="md" popup>
         <div className="p-8">
           <div className="flex flex-col gap-y-3 mb-6">
             <div className="">
@@ -110,9 +94,6 @@ function RenameImageModal({
                   if (imgName === "") {
                     setNameError("Name cannot be empty");
                   } 
-                  else if (imgName === imageName) {
-                    setNameError("Name cannot be the same as the current name")
-                  }
                   else {
                     handleRenameImage();
                 }
@@ -134,11 +115,9 @@ function RenameImageModal({
                 "Confirm"
               )}
             </Button>
-            {/* {error && <p style={{ color: 'red' }}>{error}</p>} */}
           </section>
         </div>
       </Modal>
-    </>
   );
 }
 export default RenameImageModal;

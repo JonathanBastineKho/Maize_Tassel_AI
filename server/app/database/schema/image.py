@@ -58,18 +58,12 @@ class Image(Base):
         return image_url
     
     @classmethod
-    def update(cls, db: Session, name: str, folder_id: str, **kwargs):
-        img = cls.retrieve(db, name=name, folder_id=folder_id)
+    def update(cls, db: Session, old_name: str, folder_id: str, **kwargs):
+        img = cls.retrieve(db, name=old_name, folder_id=folder_id)
         for key, value in kwargs.items():
             setattr(img, key, value)
         db.commit()
         return img
-    
-    def update_self(self, db: Session, **kwargs):
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-        db.commit()
-        return self
     
     @classmethod
     def count(cls, db: Session, email: str):

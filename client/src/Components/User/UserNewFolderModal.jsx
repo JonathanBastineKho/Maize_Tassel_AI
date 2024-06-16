@@ -34,7 +34,6 @@ function UserNewFolderModal({ updateUI, state, setState }) {
       .post("/api/service/create-folder", payload)
       .then((response) => {
         if (response.status === 200) {
-          console.log(response.data);
           updateUI((prev) => [...prev, response.data.folder]);
           closeModal();
         }

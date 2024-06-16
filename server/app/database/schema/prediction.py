@@ -29,3 +29,13 @@ class Prediction(Base):
     @classmethod
     def retrieve(cls, db: Session, folder_id: str, image_name: str):
         return db.query(cls).filter(cls.folder_id == folder_id, cls.image_name == image_name).all()
+    
+    @classmethod
+    def update(cls, db: Session, folder_id: str, old_image_name: str, new_image_name: str):
+        predictions = db.query(cls).filter(
+            cls.folder_id == folder_id, cls.image_name == old_image_name
+        ).all()
+
+        for prediction in predictions:
+            prediction.image_name = new_image_name
+        db.commit()

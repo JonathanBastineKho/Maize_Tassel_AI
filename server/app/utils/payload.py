@@ -96,12 +96,9 @@ class CreateFolderBody(BaseModel):
     folder_name : str
     parent_id : Optional[str] = None
     
-class RenameFolderBody(BaseModel):
-    folder_id : str
-    folder_name : str 
+class RenameFolderBody(FolderPayload):
+    new_name: str
     
-class RenameImageBody(BaseModel):
-    folder_id : Optional[str] = None
-    image_name : str
+class RenameImageBody(ImagePayload):
     new_name : str  
     
