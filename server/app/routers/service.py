@@ -314,6 +314,8 @@ async def get_parent_folders(folder_id: Optional[str] = None, db: Session = Depe
 async def create_folder(folder: CreateFolderBody, db: Session = Depends(get_db), user:dict = Depends(LoginRequired(roles_required={TypeOfUser.REGULAR, TypeOfUser.PREMIUM}))): 
     if not folder.parent_id:
         folder.parent_id = Folder.retrieve_root(db, user_email=user['email']).id
+    if not re.match(r'^[\w\s\.-]+$', folder.folder_name):
+        raise HTTPException(400, detail="Name cannot contain special character")
     try:
         fldr = Folder.create(db, name = folder.folder_name,
         parent_id = folder.parent_id,

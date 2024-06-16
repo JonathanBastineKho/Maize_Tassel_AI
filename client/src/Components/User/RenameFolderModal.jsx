@@ -66,7 +66,7 @@ function RenameFolderModal({ state, setState, folderToAction, folder, setFolder}
             value = {folderNameState}
             onChange={(e) => (setFolderNameState(e.target.value))}
             color={nameError === "" ? "gray" : "failure"}
-            helperText={<span className="font-medium  ">{nameError}</span>}
+            helperText={<span className="font-medium">{nameError}</span>}
             required
           />
           </div>
