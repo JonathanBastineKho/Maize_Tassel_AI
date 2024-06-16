@@ -1,43 +1,54 @@
 import { Modal, TextInput, Button, Spinner } from "flowbite-react";
-import { useRef, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { inputTheme, spinnerTheme } from "../theme";
-import { set } from "date-fns";
 
-function RenameFolderModal({ state, setState, folderName, folderId}) {
-  const [folderNameState, setFolderNameState] = useState(null);
+function RenameFolderModal({ state, setState, folderToAction, folder, setFolder}) {
   const navigate = useNavigate();
-  // const { folderId } = useParams();
+  const [folderNameState, setFolderNameState] = useState("");
   const [loading, setLoading] = useState(false);
   const [nameError, setNameError] = useState('');
 
-  useEffect ( () => { 
-    setFolderNameState(folderName);
-  }, [folderName])
+  useEffect(() => {
+    if (folderToAction !== null) {
+      setFolderNameState(folder[folderToAction.idx]?.name);
+    }
+  }, [folder, folderToAction])
 
   function closeModal() {
     setState(false);
+    setNameError("");
   }
 
   function handleRenameFolder() {
-    console.log(folderNameState);
-    console.log(`folderId: ${folderId}`);
-    axios.put(`/api/service/rename-folder`, {
-      folder_id : folderId,
-      folder_name : folderNameState
-    })
+    setLoading(true);
+    const payload = {
+      folder_id: folderToAction.id,
+      new_name: folderNameState
+    }
+    axios.patch("/api/service/rename-folder", payload)
     .then((res) => {
-      setNameError("");
       if (res.status === 200) {
         setState(false);
+        setFolder((prev) => {
+          const newFolderState = [...prev];
+          newFolderState[folderToAction.idx] = {
+            ...newFolderState[folderToAction.idx],
+            name: folderNameState,
+          }
+          return newFolderState;
+        })
       }
-      window.location.reload();
     })
     .catch((err) => {
-  
-      console.log(err);
+      if (err.response.status === 400) {
+        setNameError(err.response.data.detail)
+      } else if (err.response.status === 401) {
+        navigate("/login");
+      }
     })
+    .finally(() => {setLoading(false)})
   }
 
   return (
@@ -55,7 +66,7 @@ function RenameFolderModal({ state, setState, folderName, folderId}) {
             value = {folderNameState}
             onChange={(e) => (setFolderNameState(e.target.value))}
             color={nameError === "" ? "gray" : "failure"}
-            helperText={<span className="font-medium  ">{nameError}</span>}
+            helperText={<span className="font-medium">{nameError}</span>}
             required
           />
           </div>
@@ -78,9 +89,6 @@ function RenameFolderModal({ state, setState, folderName, folderId}) {
               onClick={() => {
                 if (folderNameState === "") {
                   setNameError("Folder name cannot be empty");
-                }
-                else if (folderNameState === folderName) {
-                  setNameError("Folder name cannot be the same as the current name");
                 }
                 else {
                   handleRenameFolder();

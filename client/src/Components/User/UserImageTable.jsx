@@ -2,7 +2,6 @@ import axios from "axios";
 import { io } from "socket.io-client";
 import { Checkbox, Table, Badge, Avatar, Spinner, Label } from "flowbite-react";
 import { useEffect, useState } from "react";
-import { BsThreeDotsVertical } from "react-icons/bs";
 import { FaFolder } from "react-icons/fa";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { spinnerTheme, tableTheme } from "../theme";
@@ -22,9 +21,6 @@ function UserImageTable({
   image, setImage, 
   folder, 
   setFolder,
-  setSelectedFolderName,
-  setSelectedFolderId,
-  setSelectedImageName
 }) {
   const { folderId } = useParams();
   const location = useLocation();
@@ -180,7 +176,7 @@ function UserImageTable({
                     })}
                     </Table.Cell>
                     <Table.Cell>
-                      <FolderActionButton setPremiumWarning={setpPremiumWarning} idx={index} setDeleteModalOpen={setDeleteFolderOpen} setSelectedFolderName={setSelectedFolderName}  folderName={fldr.name} setSelectedFolderId={setSelectedFolderId} folderID={fldr.id}  setFoldeToAction={setFolderToAction} setRenameFolderModalOpen={setRenameFolderModalOpen}/>
+                      <FolderActionButton setPremiumWarning={setpPremiumWarning} idx={index} setDeleteModalOpen={setDeleteFolderOpen} folderID={fldr.id}  setFoldeToAction={setFolderToAction} setRenameFolderModalOpen={setRenameFolderModalOpen}/>
                     </Table.Cell>
                   </Table.Row>
               ))}
@@ -228,7 +224,7 @@ function UserImageTable({
                     })}
                   </Table.Cell>
                   <Table.Cell>
-                  <ActionButton imgName={key} setImageToAction={setImageToAction} setDeleteModalOpen={setDeleteModalOpen} setRenameImageModalOpen={setRenameImageModalOpen} imageName={key} setSelectedImageName={setSelectedImageName}/>
+                  <ActionButton imgName={key} setImageToAction={setImageToAction} setDeleteModalOpen={setDeleteModalOpen} setRenameImageModalOpen={setRenameImageModalOpen}/>
                   </Table.Cell>
                 </Table.Row>
               ))}

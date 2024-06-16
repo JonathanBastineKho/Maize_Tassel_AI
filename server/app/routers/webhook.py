@@ -28,7 +28,7 @@ async def update_job_status(background_tasks: BackgroundTasks, job_status: JobSt
     if not verify_signature(job_status.model_dump(), signature):
         raise HTTPException(403, detail="Invalid signature")
     
-    Image.update(db, name=job_status.name, folder_id=job_status.folder_id, processing_status=job_status.job_status)
+    Image.update(db, old_name=job_status.name, folder_id=job_status.folder_id, processing_status=job_status.job_status)
     if job_status.job_status == TypeOfImageStatus.ERROR:
         if not job_status.job_id:
             # send email directly
@@ -66,7 +66,7 @@ async def prediction(background_tasks: BackgroundTasks, prediction:JobPrediction
                 confidence=pred_box.get('confidence'))
         counter += 1
     # Change the status of the processing
-    Image.update(db, name=prediction.name, folder_id=prediction.folder_id, processing_status=TypeOfImageStatus.DONE, finish_date=func.now(timezone=timezone.utc), tassel_count=counter-1)
+    Image.update(db, old_name=prediction.name, folder_id=prediction.folder_id, processing_status=TypeOfImageStatus.DONE, finish_date=func.now(timezone=timezone.utc), tassel_count=counter-1)
     if not prediction.job_id:
         # send email directly
         background_tasks.add_task(

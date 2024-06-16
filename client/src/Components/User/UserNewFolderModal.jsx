@@ -17,9 +17,11 @@ function UserNewFolderModal({ updateUI, state, setState }) {
   const navigate = useNavigate();
   const { folderId } = useParams();
   const [loading, setLoading] = useState(false);
+  const [nameError, setNameError] = useState("");
 
   function closeModal() {
     setState(false);
+    setNameError("");
   }
 
   function handleCreateFolder() {
@@ -34,7 +36,6 @@ function UserNewFolderModal({ updateUI, state, setState }) {
       .post("/api/service/create-folder", payload)
       .then((response) => {
         if (response.status === 200) {
-          console.log(response.data);
           updateUI((prev) => [...prev, response.data.folder]);
           closeModal();
         }
@@ -42,6 +43,8 @@ function UserNewFolderModal({ updateUI, state, setState }) {
       .catch((error) => {
         if (error.response.status === 401) {
           navigate("/login");
+        } else if (error.response.status === 400) {
+          setNameError(error.response.data.detail);
         }
       })
       .finally(() => {
@@ -60,14 +63,16 @@ function UserNewFolderModal({ updateUI, state, setState }) {
           <h2 className="text-2xl font-semibold mb-6">New Folder</h2>
           <TextInput
             required
-            className="mb-6"
+            className=""
             theme={inputTheme}
             placeholder="Enter folder name"
             ref={folderNameRef}
+            color={nameError === "" ? "gray" : "failure"}
+            helperText={<span className="font-medium">{nameError}</span>}
           />
-          <section className="flex flex-row justify-end gap-3">
+          <section className="flex flex-row justify-end gap-3 mt-3">
             <Button
-              onClick={() => setState(false)}
+              onClick={() => closeModal()}
               disabled={loading}
               className="w-full focus:ring-4 focus:ring-green-300"
               color="light"
