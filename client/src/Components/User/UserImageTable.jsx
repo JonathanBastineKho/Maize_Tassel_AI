@@ -17,9 +17,15 @@ function UserImageTable({
   setImageToAction,
   setFolderToAction,
   setDeleteFolderOpen,
+  setRenameFolderModalOpen,
+  setRenameImageModalOpen,
   image, setImage, 
   folder, 
-  setFolder }) {
+  setFolder,
+  setSelectedFolderName,
+  setSelectedFolderId,
+  setSelectedImageName
+}) {
   const { folderId } = useParams();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
@@ -174,7 +180,7 @@ function UserImageTable({
                     })}
                     </Table.Cell>
                     <Table.Cell>
-                      <FolderActionButton setPremiumWarning={setpPremiumWarning} idx={index} setDeleteModalOpen={setDeleteFolderOpen} folderID={fldr.id} setFoldeToAction={setFolderToAction} />
+                      <FolderActionButton setPremiumWarning={setpPremiumWarning} idx={index} setDeleteModalOpen={setDeleteFolderOpen} setSelectedFolderName={setSelectedFolderName}  folderName={fldr.name} setSelectedFolderId={setSelectedFolderId} folderID={fldr.id}  setFoldeToAction={setFolderToAction} setRenameFolderModalOpen={setRenameFolderModalOpen}/>
                     </Table.Cell>
                   </Table.Row>
               ))}
@@ -222,7 +228,7 @@ function UserImageTable({
                     })}
                   </Table.Cell>
                   <Table.Cell>
-                    <ActionButton imgName={key} setImageToAction={setImageToAction} setDeleteModalOpen={setDeleteModalOpen}/>
+                  <ActionButton imgName={key} setImageToAction={setImageToAction} setDeleteModalOpen={setDeleteModalOpen} setRenameImageModalOpen={setRenameImageModalOpen} imageName={key} setSelectedImageName={setSelectedImageName}/>
                   </Table.Cell>
                 </Table.Row>
               ))}

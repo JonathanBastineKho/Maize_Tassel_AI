@@ -14,7 +14,17 @@ const ThreeDotsVerticalIcon = React.forwardRef((props, ref) => (
   </div>
 ));
 
-function FolderActionButton({ setPremiumWarning, idx, setDeleteModalOpen, setFoldeToAction, folderID }) {
+function FolderActionButton({
+  setPremiumWarning,
+  idx,
+  setDeleteModalOpen,
+  setSelectedFolderName,
+  setFoldeToAction,
+  folderName,
+  setSelectedFolderId,
+  folderID,
+  setRenameFolderModalOpen,
+}) {
   const dropdownRef = useRef(null);
   const { user } = useContext(AuthContext);
 
@@ -23,17 +33,31 @@ function FolderActionButton({ setPremiumWarning, idx, setDeleteModalOpen, setFol
       event.stopPropagation();
     }
   };
-  
+
   return (
     <div ref={dropdownRef} onClick={handleDropdownClick} className="relative">
       <Dropdown
-        renderTrigger={() => <div className="w-fit p-2 rounded-md hover:bg-gray-100"><ThreeDotsVerticalIcon /></div>}
+        renderTrigger={() => (
+          <div className="w-fit p-2 rounded-md hover:bg-gray-100">
+            <ThreeDotsVerticalIcon />
+          </div>
+        )}
         arrowIcon={false}
         placement="bottom-end"
         className="absolute right-0"
       >
         <div className="min-w-36">
-          <Dropdown.Item>
+          <Dropdown.Item
+            onClick={() => {
+              if (user.role === "premium") {
+                setRenameFolderModalOpen(true);
+                setSelectedFolderId(folderID);
+                setSelectedFolderName(folderName);     
+              } else {
+                setPremiumWarning(true);
+              }
+            }}
+          >
             <div className="flex flex-row items-center gap-3">
               <RiPencilFill className="text-gray-500 w-5 h-5" />
               Edit
@@ -45,14 +69,16 @@ function FolderActionButton({ setPremiumWarning, idx, setDeleteModalOpen, setFol
               Download
             </div>
           </Dropdown.Item>
-          <Dropdown.Item onClick={()=>{
-            if (user.role === "premium"){
-                setFoldeToAction({id: folderID, idx: idx}); 
+          <Dropdown.Item
+            onClick={() => {
+              if (user.role === "premium") {
+                setFoldeToAction({ id: folderID, idx: idx });
                 setDeleteModalOpen(true);
-            } else {
+              } else {
                 setPremiumWarning(true);
-            }
-            }}>
+              }
+            }}
+          >
             <div className="flex flex-row items-center gap-3">
               <FaTrashCan className="text-gray-500 w-5 h-5" />
               Delete

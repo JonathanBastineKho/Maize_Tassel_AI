@@ -68,7 +68,12 @@ class Folder(Base):
         db.delete(fldr)
         db.commit()
         return folder_id
-    
+   
+    def update_self(self, db: Session, folder_name : str):
+        self.name = folder_name
+        db.commit()
+        return self
+   
     def retrieve_child(self, db: Session, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None):
         query = db.query(Folder).filter(Folder.parent_id == self.id)
         if start_date:
@@ -83,3 +88,4 @@ class Folder(Base):
             cls.user_email == email,
             cls.parent_id != None
         ).all()
+
