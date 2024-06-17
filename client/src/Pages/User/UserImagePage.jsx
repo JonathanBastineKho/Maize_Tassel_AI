@@ -30,10 +30,7 @@ function UserImagePage() {
   const [deleteFolderOpen, setDeleteFolderOpen] = useState(false); // Delete folder modal 
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
   const [renameFolderModalOpen, setRenameFolderModalOpen] = useState(false); // Rename folder modal
-  const [selectedFolderName, setSelectedFolderName] = useState(null); // Selected folder name
-  const [selectedFolderId, setSelectedFolderId] = useState(null); // Selected folder id
   const [renameImageModalOpen, setRenameImageModalOpen] = useState(false); // Rename image modal
-
 
   const [folder, setFolder] = useState([]); // Folder in the search
   const [image, setImage] = useState({ item: new Map() }); // Images in the search

@@ -2,13 +2,14 @@ import axios from "axios";
 import { io } from "socket.io-client";
 import { Checkbox, Table, Badge, Avatar, Spinner, Label } from "flowbite-react";
 import { useEffect, useState } from "react";
-import { FaFolder } from "react-icons/fa";
+import { FaFolder, FaCheck } from "react-icons/fa";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { spinnerTheme, tableTheme, isValidDate, isValidInteger } from "../theme";
 import UserImageModal from "./UserImageModal";
 import ActionButton from "./ActionButton";
 import InifiniteScroll from "react-infinite-scroll-component";
 import FolderActionButton from "./FolderActionButton";
+import ToastMsg from "../Other/ToastMsg";
 
 function UserImageTable({ 
   setpPremiumWarning,
@@ -33,6 +34,7 @@ function UserImageTable({
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
+  const [successFolderDownload, setSuccessFocusDownload] = useState(false);
   const [currImageIdx, setCurrImageIdx] = useState(0);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
@@ -129,6 +131,7 @@ function UserImageTable({
 
   return (
     <>
+    <ToastMsg color="green" icon={<FaCheck className="h-5 w-5" />} open={successFolderDownload} setOpen={setSuccessFocusDownload} message="Your folder will be downloaded in a short moment" />
       <UserImageModal
         imageList={[...image.item].map(([key, info]) => ({
           name: key,
@@ -194,7 +197,7 @@ function UserImageTable({
                     })}
                     </Table.Cell>
                     <Table.Cell>
-                      <FolderActionButton setPremiumWarning={setpPremiumWarning} idx={index} setDeleteModalOpen={setDeleteFolderOpen} folderID={fldr.id}  setFoldeToAction={setFolderToAction} setRenameFolderModalOpen={setRenameFolderModalOpen}/>
+                      <FolderActionButton setSuccessFocusDownload={setSuccessFocusDownload} setPremiumWarning={setpPremiumWarning} idx={index} setDeleteModalOpen={setDeleteFolderOpen} folderID={fldr.id}  setFoldeToAction={setFolderToAction} setRenameFolderModalOpen={setRenameFolderModalOpen}/>
                     </Table.Cell>
                   </Table.Row>
               ))}

@@ -57,7 +57,12 @@ class Image(Base):
         if max_tassel_count is not None:
             img_query = img_query.filter(cls.tassel_count <= max_tassel_count)
             
-        return img_query.offset(offset).limit(page_size).all()
+        if offset is not None:
+            img_query.offset(offset)
+        if page_size is not None:
+            img_query.limit(page_size)
+            
+        return img_query.all()
     
     @classmethod
     def delete(cls, db: Session, name: str, folder_id: str):
