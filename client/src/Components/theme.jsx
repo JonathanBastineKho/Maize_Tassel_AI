@@ -125,5 +125,6 @@ export const isValidDate = (dateString) => {
 
 export const isValidInteger = (value) => {
   if (value === null || value === undefined) return false;
-  return !isNaN(value) && parseInt(value) == value;
+  const parsedValue = parseInt(value);
+  return !isNaN(parsedValue) && parsedValue == value && parsedValue >= 0;
 };

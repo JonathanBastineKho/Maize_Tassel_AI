@@ -40,10 +40,10 @@ function UserImageTable({
     let url = `/api/service/search-item?search=${search}&page=${page}&page_size=20`;
     // Add optional search parameters if they are valid
     if (isValidInteger(tassel_min)) {
-      url += `&tassel_min=${tassel_min}`;
+      url += `&min_tassel_count=${tassel_min}`;
     }
     if (isValidInteger(tassel_max)) {
-      url += `&tassel_max=${tassel_max}`;
+      url += `&max_tassel_count=${tassel_max}`;
     }
     if (isValidDate(start_date)) {
       url += `&start_date=${start_date}`;

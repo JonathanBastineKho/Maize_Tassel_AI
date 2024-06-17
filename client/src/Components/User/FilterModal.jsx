@@ -124,7 +124,7 @@ function FilterModal({ open, setOpen }) {
                                 <Label className="text-gray-800 text-xs">Maximum</Label>
                                 <TextInput theme={inputTheme} type="number" placeholder="Maximum tassel count"
                                  value={filters.tassel_max !== null ? filters.tassel_max : ''}
-                                 min={filters.tassel_min !== null ? filters.tassel_min : undefined}
+                                 min={filters.tassel_min !== null ? filters.tassel_min : 0}
                                  onChange={(e) => {
                                      const value = e.target.value !== '' ? parseInt(e.target.value) : null;
                                      setFilters((prev) => ({
