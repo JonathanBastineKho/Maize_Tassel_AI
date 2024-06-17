@@ -6,6 +6,8 @@ import { RiPencilFill } from "react-icons/ri";
 import { FaTrashCan } from "react-icons/fa6";
 
 import React from "react";
+import axios from "axios";
+import { useParams } from "react-router-dom";
 
 const ThreeDotsVerticalIcon = React.forwardRef((props, ref) => (
   <div ref={ref} {...props}>
@@ -15,12 +17,44 @@ const ThreeDotsVerticalIcon = React.forwardRef((props, ref) => (
 
 function ActionButton({ setDeleteModalOpen, setImageToAction, imgName, setRenameImageModalOpen }) {
   const dropdownRef = useRef(null);
+  const { folderId } = useParams();
 
   const handleDropdownClick = (event) => {
     if (dropdownRef.current && dropdownRef.current.contains(event.target)) {
       event.stopPropagation();
     }
   };
+
+  const downloadImage = async () => {
+    const url = folderId ? `/api/service/download-image?img_name=${imgName}&folder_id=${folderId}&draw_boxes=${true}&box_color=${encodeURIComponent("#f43f5e")}&show_confidence=${false}` :
+    `/api/service/download-image?img_name=${imgName}&draw_boxes=${true}&box_color=${encodeURIComponent("#f43f5e")}&show_confidence=${false}`;
+    try {
+      const response = await axios.get(url, {responseType: 'blob'});
+      if (response.headers['content-type'] === 'application/json') {
+        const jsonResponse = JSON.parse(await response.data.text());
+        const imageResponse = await fetch(jsonResponse.url);
+        const imageBlob = await imageResponse.blob();
+        const url = window.URL.createObjectURL(imageBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', imgName);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+      } else {
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `${imgName}.zip`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      }
+    } catch (error) {
+      console.error('Error downloading image:', error);
+    }
+  }
   
   return (
     <div ref={dropdownRef} onClick={handleDropdownClick} className="relative">
@@ -37,7 +71,7 @@ function ActionButton({ setDeleteModalOpen, setImageToAction, imgName, setRename
               Edit
             </div>
           </Dropdown.Item>
-          <Dropdown.Item>
+          <Dropdown.Item onClick={() => {downloadImage()}}>
             <div className="flex flex-row items-center gap-3">
               <MdCloudDownload className="text-gray-500 w-5 h-5" />
               Download

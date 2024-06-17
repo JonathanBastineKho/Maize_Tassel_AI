@@ -372,6 +372,80 @@ def rename_folder(folder: RenameFolderBody, db: Session = Depends(get_db), user:
         raise HTTPException(status_code=400, detail="Folder with the same name already exists")
     return {"Success" : True}
 
+async def download_and_process_image(db:Session, zip_buffer:BytesIO, image, draw_boxes:bool, show_confidence:bool, box_color:str, subfolder:str = None):
+    image_data = await storage_mgr.download_image(path=image.image_url)
+    if image.processing_status == TypeOfImageStatus.DONE:
+        predictions = Prediction.retrieve(db, folder_id=image.folder_id, image_name=image.name)
+        
+        if draw_boxes:
+            # Open the image using PIL
+            pil_image = PILImage.open(BytesIO(image_data))
+            draw = ImageDraw.Draw(pil_image)
+            font = ImageFont.load_default(size=36)
+
+            # Parse the box color from hexadecimal string
+            box_color_rgb = tuple(int(box_color[i:i+2], 16) for i in (1, 3, 5))
+
+            for prediction in predictions:
+                x1 = prediction.xCenter - prediction.width / 2
+                y1 = prediction.yCenter - prediction.height / 2
+                x2 = prediction.xCenter + prediction.width / 2
+                y2 = prediction.yCenter + prediction.height / 2
+
+                # Draw the bounding box
+                draw.rectangle([(x1, y1), (x2, y2)], outline=box_color_rgb, width=5)
+
+                if show_confidence:
+                    confidence_text = f"{prediction.confidence:.2f}"
+                    position = (x1, y1 - 20)
+
+                    bbox = draw.textbbox(position, confidence_text, font=font)
+                    draw.rectangle(bbox, fill=(0, 0, 0, 128))
+                    draw.text(position, confidence_text, font=font, fill=(255, 255, 255))
+
+            # Save the modified image to a BytesIO object
+            modified_image_buffer = BytesIO()
+            pil_image.save(modified_image_buffer, format="JPEG")
+            modified_image_buffer.seek(0)
+            image_data = modified_image_buffer.getvalue()
+
+        try:
+            with zipfile.ZipFile(zip_buffer, "a") as zip_file:
+                # Add the image to the zip file
+                if subfolder is not None:
+                    zip_file.writestr(os.path.join(subfolder, os.path.basename(image.image_url)), image_data)
+                else:
+                    zip_file.writestr(os.path.basename(image.image_url), image_data)
+
+                # Create a text file with prediction information
+                prediction_info = f"Total Boxes: {len(predictions)}\n\n"
+                for prediction in predictions:
+                    prediction_info += f"Box ID: {prediction.box_id}\n"
+                    prediction_info += f"Coordinates: ({prediction.xCenter}, {prediction.yCenter})\n"
+                    prediction_info += f"Width: {prediction.width}\n"
+                    prediction_info += f"Height: {prediction.height}\n"
+                    prediction_info += f"Confidence: {prediction.confidence}\n\n"
+                if subfolder is not None:
+                    zip_file.writestr(os.path.join(subfolder, f"predictions_{os.path.basename(image.image_url)}.txt"), prediction_info.encode('utf-8'))
+                else:
+                    zip_file.writestr(f"predictions_{os.path.basename(image.image_url)}.txt", prediction_info.encode('utf-8'))
+
+            return zip_buffer
+        except:
+            raise HTTPException(detail='There was an error processing the data', status_code=400)
+    else:
+        try:
+            with zipfile.ZipFile(zip_buffer, "a") as zip_file:
+                # Add the image directly to the zip file without processing
+                if subfolder is not None:
+                    zip_file.writestr(os.path.join(subfolder, os.path.basename(image.image_url)), image_data)
+                else:
+                    zip_file.writestr(os.path.basename(image.image_url), image_data)
+
+            return zip_buffer
+        except:
+            raise HTTPException(detail='There was an error processing the data', status_code=400)
+
 @router.get("/download-image")
 def download_image(
     img_name: str,
@@ -391,76 +465,58 @@ def download_image(
             raise HTTPException(status_code=400, detail="Unauthorized")
 
     image = Image.retrieve(db, folder_id=folder.id, name=img_name)
+    if image.processing_status == TypeOfImageStatus.DONE:
+        zip_buffer = BytesIO()
+        asyncio.run(download_and_process_image(db=db, zip_buffer=zip_buffer, 
+                                               image=image,
+                                               draw_boxes=draw_boxes, show_confidence=show_confidence,
+                                               box_color=box_color))
+        zip_buffer.seek(0)
+        return Response(zip_buffer.getvalue(), media_type="application/zip", headers={
+            "Content-Disposition": f"attachment;filename={image.name}.zip",
+            "Content-Length": str(len(zip_buffer.getvalue())),
+            "X-Total-Size": str(len(zip_buffer.getvalue()))
+        })
+    else:
+        return {"url": asyncio.run(storage_mgr.get_image(image.image_url))[0]}
 
-    async def download_and_process_image():
-        if image.processing_status == TypeOfImageStatus.DONE:
-            image_data = await storage_mgr.download_image(path=image.image_url)
-            predictions = Prediction.retrieve(db, folder_id=folder.id, image_name=img_name)
-            
-            if draw_boxes:
-                # Open the image using PIL
-                pil_image = PILImage.open(BytesIO(image_data))
-                draw = ImageDraw.Draw(pil_image)
-                font = ImageFont.load_default(size=26)
-
-                # Parse the box color from hexadecimal string
-                box_color_rgb = tuple(int(box_color[i:i+2], 16) for i in (1, 3, 5))
-
-                for prediction in predictions:
-                    x1 = prediction.xCenter - prediction.width / 2
-                    y1 = prediction.yCenter - prediction.height / 2
-                    x2 = prediction.xCenter + prediction.width / 2
-                    y2 = prediction.yCenter + prediction.height / 2
-
-                    # Draw the bounding box
-                    draw.rectangle([(x1, y1), (x2, y2)], outline=box_color_rgb, width=5)
-
-                    if show_confidence:
-                        confidence_text = f"{prediction.confidence:.2f}"
-                        position = (x1, y1 - 20)
-
-                        bbox = draw.textbbox(position, confidence_text, font=font)
-                        draw.rectangle(bbox, fill=(0, 0, 0, 128))
-                        draw.text(position, confidence_text, font=font, fill=(255, 255, 255))
-
-                # Save the modified image to a BytesIO object
-                modified_image_buffer = BytesIO()
-                pil_image.save(modified_image_buffer, format="JPEG")
-                modified_image_buffer.seek(0)
-                image_data = modified_image_buffer.getvalue()
-
-            zip_buffer = BytesIO()
-            try:
-                with zipfile.ZipFile(zip_buffer, "w") as zip_file:
-                    # Add the image to the zip file
-                    zip_file.writestr(os.path.basename(image.image_url), image_data)
-
-                    # Create a text file with prediction information
-                    prediction_info = f"Total Boxes: {len(predictions)}\n\n"
-                    for prediction in predictions:
-                        prediction_info += f"Box ID: {prediction.box_id}\n"
-                        prediction_info += f"Coordinates: ({prediction.xCenter}, {prediction.yCenter})\n"
-                        prediction_info += f"Width: {prediction.width}\n"
-                        prediction_info += f"Height: {prediction.height}\n"
-                        prediction_info += f"Confidence: {prediction.confidence}\n\n"
-                    zip_file.writestr("predictions.txt", prediction_info.encode('utf-8'))
-
-                # Set the file pointer to the beginning of the zip file
-                zip_buffer.seek(0)
-                return Response(zip_buffer.getvalue(), media_type="application/zip", headers={
-                    "Content-Disposition": f"attachment;filename={img_name}.zip",
-                    "Content-Length": str(len(zip_buffer.getvalue())),
-                    "X-Total-Size": str(len(zip_buffer.getvalue()))
-                })
-            except:
-                raise HTTPException(detail='There was an error processing the data', status_code=400)
+@router.get("/download-folder")
+def download_folder(
+    folder_id: str,
+    db: Session = Depends(get_db),
+    user: dict = Depends(LoginRequired(roles_required={TypeOfUser.PREMIUM}))):
+    fldr = Folder.retrieve(db, folder_id=folder_id)
+    if fldr.user_email != user['email']:
+        raise HTTPException(401, detail="Unauthorized")
+    
+    # retrieve all images in the folder
+    zip_buffer = BytesIO()
+    def download_images(folder, zip_buffer:BytesIO, sub_folder:str = None):
+        images = Image.search(db, folder.id, offset=None, page_size=None)
+        if len(images) > 0:
+            for img in images:
+                asyncio.run(download_and_process_image(db, zip_buffer=zip_buffer, image=img, draw_boxes=True, show_confidence=False, box_color="#FF0000", subfolder=sub_folder))
         else:
-            # If it's only images, sign the URL and let the client download from CDN (offloading load)
-            url = await storage_mgr.get_image(image.image_url)
-            return {"url": url[0]}
+            # Create an empty folder
+            with zipfile.ZipFile(zip_buffer, "a") as zip_file:
+                empty_folder_path = os.path.join(sub_folder, "") if sub_folder else folder.name + "/"
+                zip_file.writestr(empty_folder_path, b"")
+        # do the same for all the child folders
+        sub_folders = folder.retrieve_child(db)
+        for child_folder in sub_folders:
+            if sub_folder is None:
+                download_images(child_folder, zip_buffer=zip_buffer, sub_folder=child_folder.name)
+            else:
+                download_images(child_folder, zip_buffer=zip_buffer, sub_folder=os.path.join(sub_folder, child_folder.name))
 
-    return asyncio.run(download_and_process_image())
-
+    download_images(folder=fldr, zip_buffer=zip_buffer)
+    
+    zip_buffer.seek(0)
+    return Response(zip_buffer.getvalue(), media_type="application/zip", headers={
+        "Content-Disposition": f"attachment;filename={fldr.name}.zip",
+        "Content-Length": str(len(zip_buffer.getvalue())),
+        "X-Total-Size": str(len(zip_buffer.getvalue()))
+    })
 
 @router.patch("/rename-image")
 def rename_image(image : RenameImageBody, db : Session = Depends(get_db), user:dict = Depends(LoginRequired(roles_required={TypeOfUser.REGULAR, TypeOfUser.PREMIUM}))):

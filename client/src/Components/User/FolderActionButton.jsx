@@ -7,6 +7,7 @@ import { FaTrashCan } from "react-icons/fa6";
 
 import React from "react";
 import { AuthContext } from "../Authentication/AuthContext";
+import axios from "axios";
 
 const ThreeDotsVerticalIcon = React.forwardRef((props, ref) => (
   <div ref={ref} {...props}>
@@ -15,6 +16,7 @@ const ThreeDotsVerticalIcon = React.forwardRef((props, ref) => (
 ));
 
 function FolderActionButton({
+  setSuccessFocusDownload,
   setPremiumWarning,
   idx,
   setDeleteModalOpen,
@@ -30,6 +32,29 @@ function FolderActionButton({
       event.stopPropagation();
     }
   };
+
+  const downloadFolder = async () => {
+    setSuccessFocusDownload(true);
+    try {
+      const response = await axios.get(`/api/service/download-folder?folder_id=${folderID}`, {
+        responseType: 'blob',
+      });
+  
+      const contentDisposition = response.headers['content-disposition'];
+      const match = contentDisposition.match(/filename="?(.+)"?/i);
+      const fileName = match ? match[1] : 'download.zip';
+  
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      console.error('Error downloading folder:', error);
+    }
+  }
 
   return (
     <div ref={dropdownRef} onClick={handleDropdownClick} className="relative">
@@ -59,7 +84,14 @@ function FolderActionButton({
               Edit
             </div>
           </Dropdown.Item>
-          <Dropdown.Item>
+          <Dropdown.Item
+          onClick={() => {
+            if (user.role === "premium") {
+              downloadFolder();
+            } else {
+              setPremiumWarning(true);
+            }
+          }}>
             <div className="flex flex-row items-center gap-3">
               <MdCloudDownload className="text-gray-500 w-5 h-5" />
               Download
