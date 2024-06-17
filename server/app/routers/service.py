@@ -172,6 +172,10 @@ async def search_item(
     page: int = 1,
     page_size: int = 20,
     search: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    min_tassel_count: Optional[int] = None,
+    max_tassel_count: Optional[int] = None,
     db: Session = Depends(get_db),
     user: dict = Depends(LoginRequired(roles_required={TypeOfUser.REGULAR, TypeOfUser.PREMIUM}))
 ):
@@ -182,18 +186,28 @@ async def search_item(
         fldr = Folder.retrieve(db, folder_id=folder_id)
         if fldr.user_email != user['email']:
             raise HTTPException(401, detail="Unauthorized")
+        
+    # parsing start and end dates
+    try:
+        start_date_obj = datetime.strptime(start_date, "%Y-%m-%d") if start_date else None
+        end_date_obj = datetime.strptime(end_date, "%Y-%m-%d") if end_date else None
+    except ValueError:
+        raise HTTPException(400, detail="Date time invalid")
 
     offset = (page - 1) * page_size
     folders = [
         {"id": folder.id,"name": folder.name, "create_date": folder.create_date}
         for folder in Folder.search(db, folder_id=folder_id, user_email=user['email'], 
-                                    offset=offset, page_size=page_size, search=search)
+                                    offset=offset, page_size=page_size, search=search,
+                                    start_date=start_date_obj, end_date=end_date_obj)
     ]
 
     remaining_limit = page_size - len(folders)
     if remaining_limit > 0:
         image_offset = max(0, offset - Folder.count(db, folder_id=folder_id, user_email=user['email'], search=search))
-        images = Image.search(db, folder_id=folder_id, offset=image_offset, page_size=remaining_limit, search=search)
+        images = Image.search(db, folder_id=folder_id, offset=image_offset, page_size=remaining_limit, search=search,
+                              start_date=start_date_obj, end_date=end_date_obj, min_tassel_count=min_tassel_count,
+                              max_tassel_count=max_tassel_count)
         image_urls = await storage_mgr.get_image([image.thumbnail_url for image in images])
         image_data = [
             [image.name, {

@@ -1,6 +1,6 @@
 import { Modal, TextInput, Button, Spinner } from "flowbite-react";
 import { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { inputTheme, spinnerTheme } from "../theme";
 
