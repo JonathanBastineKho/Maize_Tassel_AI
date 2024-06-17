@@ -72,3 +72,58 @@ export const toggleSwitchTheme = {
     },
   },
 }
+
+export const datepickerTheme = {
+  "popup": {
+    "root": {
+      "base": "absolute top-10 z-[100] block pt-2"
+    },
+    "footer": {
+      "button": {
+        "base": "w-full rounded-lg px-5 py-2 text-center text-sm font-medium focus:ring-4 focus:ring-green-300",
+        "today": "bg-green-700 text-white hover:bg-green-800 dark:bg-green-600 dark:hover:bg-green-700"
+      }
+    }
+  },
+  "views": {
+    "days": {
+      "items": {
+        "item": {
+          "selected": "bg-green-700 text-white hover:bg-green-600"
+        }
+      }
+    },
+    "months": {
+      "items": {
+        "item": {
+          "selected": "bg-green-700 text-white hover:bg-green-600"
+        }
+      }
+    },
+    "years": {
+      "items": {
+        "item": {
+          "selected": "bg-green-700 text-white hover:bg-green-600"
+        }
+      }
+    },
+    "decades": {
+      "items": {
+        "item": {
+          "selected": "bg-green-700 text-white hover:bg-green-600"
+        }
+      }
+    }
+  }
+};
+
+export const isValidDate = (dateString) => {
+  if (dateString === null) return false;
+  const date = new Date(dateString);
+  return !isNaN(date.getTime());
+};
+
+export const isValidInteger = (value) => {
+  if (value === null || value === undefined) return false;
+  return !isNaN(value) && parseInt(value) == value;
+};

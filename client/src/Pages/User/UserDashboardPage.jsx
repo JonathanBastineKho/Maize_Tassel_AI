@@ -8,50 +8,7 @@ import CountUp from "react-countup";
 import { format } from "date-fns";
 import HistoricalChart from "../../Components/User/Dashboard/HistoricalChart";
 import FolderPicker from "../../Components/User/Dashboard/FolderPicker";
-
-const datepickerLocalTheme = {
-    "popup": {
-      "root": {
-        "base": "absolute top-10 z-20 block pt-2"
-      },
-      "footer": {
-        "button": {
-          "base": "w-full rounded-lg px-5 py-2 text-center text-sm font-medium focus:ring-4 focus:ring-green-300",
-          "today": "bg-green-700 text-white hover:bg-green-800 dark:bg-green-600 dark:hover:bg-green-700"
-        }
-      }
-    },
-    "views": {
-      "days": {
-        "items": {
-          "item": {
-            "selected": "bg-green-700 text-white hover:bg-green-600"
-          }
-        }
-      },
-      "months": {
-        "items": {
-          "item": {
-            "selected": "bg-green-700 text-white hover:bg-green-600"
-          }
-        }
-      },
-      "years": {
-        "items": {
-          "item": {
-            "selected": "bg-green-700 text-white hover:bg-green-600"
-          }
-        }
-      },
-      "decades": {
-        "items": {
-          "item": {
-            "selected": "bg-green-700 text-white hover:bg-green-600"
-          }
-        }
-      }
-    }
-  };
+import { datepickerTheme } from "../../Components/theme";
 
 function UserDashboardPage() {
     const navigate = useNavigate();
@@ -128,14 +85,14 @@ function UserDashboardPage() {
                     <div>
                         <Label className="text-gray-500">Start date</Label>
                         <Datepicker
-                        theme={datepickerLocalTheme}
+                        theme={datepickerTheme}
                         maxDate={endDate}
                         value={format(startDate, "MMMM d, yyyy")} 
                         onSelectedDateChanged={(date) => {setStartDate(new Date(date))}} />
                     </div>
                     <div>
                         <Label className="text-gray-500">End date</Label>
-                        <Datepicker theme={datepickerLocalTheme}
+                        <Datepicker theme={datepickerTheme}
                         minDate={startDate}
                         value={format(endDate, "MMMM d, yyyy")} 
                         onSelectedDateChanged={(date) => {setEndDate(new Date(date))}} />

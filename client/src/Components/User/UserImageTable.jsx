@@ -4,7 +4,7 @@ import { Checkbox, Table, Badge, Avatar, Spinner, Label } from "flowbite-react";
 import { useEffect, useState } from "react";
 import { FaFolder } from "react-icons/fa";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import { spinnerTheme, tableTheme } from "../theme";
+import { spinnerTheme, tableTheme, isValidDate, isValidInteger } from "../theme";
 import UserImageModal from "./UserImageModal";
 import ActionButton from "./ActionButton";
 import InifiniteScroll from "react-infinite-scroll-component";
@@ -26,6 +26,10 @@ function UserImageTable({
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const search = searchParams.get("search") || "";
+  const tassel_min = searchParams.get("tassel_min");
+  const tassel_max = searchParams.get("tassel_max");
+  const start_date = searchParams.get("start_date");
+  const end_date = searchParams.get("end_date");
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
@@ -34,8 +38,22 @@ function UserImageTable({
   const [hasMore, setHasMore] = useState(true);
   const fetchItem = () => {
     let url = `/api/service/search-item?search=${search}&page=${page}&page_size=20`;
+    // Add optional search parameters if they are valid
+    if (isValidInteger(tassel_min)) {
+      url += `&tassel_min=${tassel_min}`;
+    }
+    if (isValidInteger(tassel_max)) {
+      url += `&tassel_max=${tassel_max}`;
+    }
+    if (isValidDate(start_date)) {
+      url += `&start_date=${start_date}`;
+    }
+    if (isValidDate(end_date)) {
+      url += `&end_date=${end_date}`;
+    }
+    // Add folder_id parameter if it's available
     if (folderId) {
-      url = `/api/service/search-item?folder_id=${folderId}&search=${search}&page=${page}&page_size=20`;
+      url += `&folder_id=${folderId}`;
     }
     axios
       .get(url)
@@ -100,13 +118,13 @@ function UserImageTable({
   useEffect(() => {
     setLoading(true);
     setPage(1);
-  }, [search, folderId]);
+  }, [search, folderId, start_date, end_date, tassel_min, tassel_max]);
 
   useEffect(() => {
     if (page === 1) {
       fetchItem();
     }
-  }, [page, search, folderId]);
+  }, [page, search, folderId, start_date, end_date, tassel_min, tassel_max]);
 
 
   return (
@@ -180,7 +198,25 @@ function UserImageTable({
                     </Table.Cell>
                   </Table.Row>
               ))}
-              {[...image.item].map(([key, img], index) => (
+              {[...image.item]
+              .filter(([key, img]) => {
+                const statusFilters = [];
+                if (searchParams.has("in_queue")) {
+                  statusFilters.push("in_queue");
+                }
+                if (searchParams.has("processing")) {
+                  statusFilters.push("processing");
+                }
+                if (searchParams.has("done")) {
+                  statusFilters.push("done");
+                }
+            
+                if (statusFilters.length === 0 || statusFilters.includes(img.status)) {
+                  return true;
+                }
+                return false;
+              })
+              .map(([key, img], index) => (
                 <Table.Row key={index} className="cursor-pointer" onClick={()=>{
                   setCurrImageIdx(index);
                   if (folderId){

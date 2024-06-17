@@ -1,5 +1,5 @@
 import uuid
-from datetime import timezone, datetime
+from datetime import timezone, datetime, timedelta
 from typing import Optional
 from fastapi import HTTPException
 from sqlalchemy import func, DateTime, Column, String, UniqueConstraint, ForeignKey
@@ -41,12 +41,17 @@ class Folder(Base):
         return folder
     
     @classmethod
-    def search(cls, db: Session, user_email:str, offset:int, folder_id: str = None, page_size:int = 20, search: Optional[str] = None):
+    def search(cls, db: Session, user_email:str, offset:int, folder_id: str = None, page_size:int = 20, search: Optional[str] = None,
+               start_date: Optional[datetime] = None, end_date: Optional[datetime] = None):
         fldr_query = db.query(cls).filter(cls.user_email == user_email)
         if folder_id:
             fldr_query = fldr_query.filter(cls.parent_id == folder_id)
         if search:
             fldr_query = fldr_query.filter(cls.name.ilike(f"%{search}%"))
+        if start_date:
+            fldr_query = fldr_query.filter(cls.create_date >= start_date)
+        if end_date:
+            fldr_query = fldr_query.filter(cls.create_date <= end_date + timedelta(days=1))
         fldr_query = fldr_query.offset(offset)
         if page_size:
             fldr_query.limit(page_size)
