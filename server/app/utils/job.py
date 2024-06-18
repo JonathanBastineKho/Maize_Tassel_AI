@@ -21,13 +21,14 @@ class JobManager:
 
         self.connection = pika.BlockingConnection(parameters)
         self.channel = self.connection.channel()
-        self.channel.queue_declare(queue=self.rabbit_queue, durable=True)
+        self.channel.queue_delete(queue=self.rabbit_queue)
+        self.channel.queue_declare(queue=self.rabbit_queue, durable=True, arguments={'x-max-priority': 10})
 
     def close(self):
         if self.connection and self.connection.is_open:
             self.connection.close()
 
-    def submit_inference_job(self, email, folder_id, image_name, path, job_id = None):
+    def submit_inference_job(self, email, folder_id, image_name, path, job_id = None, priority:int = 0):
         job_data = {
             'email': email,
             'folder_id': folder_id,
@@ -44,5 +45,6 @@ class JobManager:
             body=job_body,
             properties=pika.BasicProperties(
                 delivery_mode=2,  # make the message persistent
+                priority=priority
             )
         )

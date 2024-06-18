@@ -46,7 +46,7 @@ class Worker:
 
         self.connection = pika.BlockingConnection(parameters)
         self.channel = self.connection.channel()
-        self.channel.queue_declare(queue=self.rabbit_queue, durable=True)
+        self.channel.queue_declare(queue=self.rabbit_queue, durable=True, arguments={'x-max-priority': 10})
         self.channel.basic_consume(
             queue=self.rabbit_queue,
             on_message_callback=self.process_inference_job,

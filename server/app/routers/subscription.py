@@ -15,8 +15,10 @@ async def create_checkout_session(request: CheckoutSessionRequest, user: dict = 
         else:
             price_id = "price_1PIW9KRoeifimUyGOtTjhLx9"
 
+        success_url = "http://localhost:5173/subscription/success?session_id={CHECKOUT_SESSION_ID}"
+
         checkout_session = stripe.checkout.Session.create(
-            success_url="https://dashboard.stripe.com/test/billing/starter-guide/checkout-success",
+            success_url=success_url,
             cancel_url="http://localhost:5173/user/subscription",
             payment_method_types=["card"],
             line_items=[{
@@ -90,3 +92,17 @@ def view_transactions(_ : dict = Depends(LoginRequired(roles_required={TypeOfUse
         } for trx in transaction_list]
     }
     return data
+
+@router.get("/verify-session")
+async def verify_session(session_id: str):
+    try:
+        session = stripe.checkout.Session.retrieve(session_id)
+        if session.payment_status == 'paid':
+            # Subscription is successful
+            return {'status': 'success', 'message': 'Subscription verified'}
+        else:
+            # Subscription is not successful
+            raise HTTPException(status_code=401, detail='Subscription not verified')
+    except stripe.error.InvalidRequestError:
+        # Invalid session ID
+        raise HTTPException(status_code=401, detail='Invalid session ID')

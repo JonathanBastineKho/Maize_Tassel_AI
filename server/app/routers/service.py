@@ -44,8 +44,9 @@ async def count(file: UploadFile, folder_uuid: str = Form(None),  # Change to UU
             image_url=metadata["image_path"],
             thumbnail_url=metadata["thumbnail_path"])
         # Submit job
+        priority = 0 if user['role'] == TypeOfUser.REGULAR else 5
         job_mgr.submit_inference_job(
-            email=user["email"], folder_id=folder_uuid, image_name=name, path=metadata['image_path'])
+            email=user["email"], folder_id=folder_uuid, image_name=name, path=metadata['image_path'], priority=priority)
         thumbnail_url = await storage_mgr.get_image(new_img.thumbnail_url)
         return {"Success": True,
                 "name": name, "size": round(new_img.size / (1024 * 1024), 2), 
@@ -123,7 +124,8 @@ def upload_images_background(files: List[UploadFile], folder_uuid: str, user: di
                 folder_id=folder_uuid,
                 image_name=img['name'],
                 path=img['path'],
-                job_id=job_id
+                job_id=job_id,
+                priority=5
             )
     except Exception as e:
         raise HTTPException(500, detail=str(e))
