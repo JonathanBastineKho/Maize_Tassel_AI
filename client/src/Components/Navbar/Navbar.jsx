@@ -24,6 +24,21 @@ import {
   export default function NavigationBar() {
     const { user, setUser } = useContext(AuthContext);
     const [isValidated, setIsValidated] = useState(false);
+
+    const [isScrolled, setIsScrolled] = useState(false);
+
+    useEffect(() => {
+      const handleScroll = () => {
+        const scrollTop = window.scrollY;
+        setIsScrolled(scrollTop > 50);
+      };
+
+      window.addEventListener("scroll", handleScroll);
+
+      return () => {
+        window.removeEventListener("scroll", handleScroll);
+      };
+    }, []);
     
     const signOut = async () => {
         setIsValidated(false);
@@ -54,7 +69,9 @@ import {
         .then(() => setIsValidated(true));
     }, [setUser]);
     return (
-      <Navbar fluid  theme={navbarTheme} className="p-3.5 fixed top-0 left-0 right-0 z-50 shadow-lg shadow-gray-200/20">
+      <Navbar fluid  theme={navbarTheme} className={`p-3.5 sticky top-0 z-50 transition duration-400 ease-in-out ${
+        isScrolled ? "shadow-lg shadow-gray-200/20" : ""
+      }`}>
         <NavbarBrand as={Link} to="/">
           <img src="https://storage.googleapis.com/corn_sight_public/apple-touch-icon.png" className="mr-3 h-6 sm:h-9" alt="logo" />
           <span className="self-center whitespace-nowrap text-xl font-bold text-gray-800">CornSight</span>
@@ -104,10 +121,10 @@ import {
           <NavbarLink href="#" active >
             Home
           </NavbarLink>
-          <NavbarLink href="#">About</NavbarLink>
           <NavbarLink href="#">Features</NavbarLink>
           <NavbarLink href="#">Pricing</NavbarLink>
-          <NavbarLink href="#">Contact</NavbarLink>
+          <NavbarLink href="#">Getting Started</NavbarLink>
+          {/* <NavbarLink href="#">Contact</NavbarLink> */}
         </NavbarCollapse>
       </Navbar>
     );
