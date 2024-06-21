@@ -4,6 +4,7 @@ import requests
 import hashlib
 import hmac
 import io
+import os
 from PIL import Image
 import tempfile
 from google.cloud import storage
@@ -31,10 +32,12 @@ class Worker:
         self.model = self.init_model(model_url=model_url)
 
     def init_model(self, model_url:str):
-        model = self.bucket.blob(model_url).download_as_bytes()
-        with tempfile.NamedTemporaryFile(delete=True, suffix='.pt') as tmp_file:
-            tmp_file.write(model)
-            return YOLO(tmp_file.name)
+        if not os.path.exists(model_url):
+            model = self.bucket.blob(model_url).download_as_bytes()
+            with tempfile.NamedTemporaryFile(delete=True, suffix='.pt') as tmp_file:
+                tmp_file.write(model)
+                return YOLO(tmp_file.name)
+        return YOLO(model_url)
 
     def connect(self):
         credentials = pika.PlainCredentials('worker', 'maizetasselai')
@@ -46,7 +49,7 @@ class Worker:
 
         self.connection = pika.BlockingConnection(parameters)
         self.channel = self.connection.channel()
-        self.channel.queue_declare(queue=self.rabbit_queue, durable=True)
+        self.channel.queue_declare(queue=self.rabbit_queue, durable=True, arguments={'x-max-priority': 10})
         self.channel.basic_consume(
             queue=self.rabbit_queue,
             on_message_callback=self.process_inference_job,

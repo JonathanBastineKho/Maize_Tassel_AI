@@ -29,6 +29,7 @@ import AdminUsersPage from './Pages/Admin/AdminUsersPage';
 import TestPage from './Pages/TestPage';
 import UserSubscriptionPage from './Pages/User/UserSubscriptionPage';
 import UserProfilePage from './Pages/User/UserProfilePage';
+import SuccessSubscriptionPage from './Pages/User/SuccessSubscriptionPage';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <GoogleOAuthProvider clientId={import.meta.env.VITE_REACT_APP_GOOGLE_CLIENT_ID}>
@@ -58,6 +59,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 
           <Route path="/confirm/:token" 
           element={<PrivateRoute requiredRoles={["admin","regular","premium"]} verified={false}><ConfirmPage /></PrivateRoute>}/>
+          
+          <Route path="/subscription/success/" 
+          element={<PrivateRoute requiredRoles={["regular","premium"]} verified={true}><SuccessSubscriptionPage /></PrivateRoute>}/>
         </Route>
     {/* User Path */}
         <Route path="/user" element={<PrivateRoute requiredRoles={["regular","premium"]} verified={true}><UserLayout /></PrivateRoute>}>

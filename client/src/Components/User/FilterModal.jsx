@@ -42,10 +42,13 @@ function FilterModal({ open, setOpen }) {
 
     const applyFilter = () => {
         const newSearchParams = new URLSearchParams();
+        
         if (filters.start_date !== null) {
+            filters.start_date.setDate(filters.start_date.getDate() + 1)
             newSearchParams.set("start_date", filters.start_date.toISOString().slice(0, 10));
           }
           if (filters.end_date !== null) {
+            filters.end_date.setDate(filters.end_date.getDate() + 1)
             newSearchParams.set("end_date", filters.end_date.toISOString().slice(0, 10));
           }
           if (filters.tassel_min !== null) {

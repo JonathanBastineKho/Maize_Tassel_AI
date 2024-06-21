@@ -29,22 +29,42 @@ def search_user(page: int = 1,
 
     user_data = []
     for user in users:
-        suspension_status = False
-        suspension = Suspension.retrieve(db, email=user.email, date=datetime.now())
+        suspension_status = len(Suspension.retrieve(db, email=user.email, date=datetime.now())) > 0
 
         if suspension:
-            suspension_status = True
-
-        user_data.append({
-            "email": user.email,
-            "name": user.name,
-            "role": user.role,
-            "phone": user.phone,
-            "country": user.country,
-            "verified": user.verified,
-            "profile_pict" : user.profile_pict,
-            "suspended": suspension_status
-        })
+            if suspension_status:
+                user_data.append({
+                    "email": user.email,
+                    "name": user.name,
+                    "role": user.role,
+                    "phone": user.phone,
+                    "country": user.country,
+                    "verified": user.verified,
+                    "profile_pict" : user.profile_pict,
+                    "suspended": suspension_status
+                })
+        elif suspension == False and not suspension_status:
+            user_data.append({
+                "email": user.email,
+                "name": user.name,
+                "role": user.role,
+                "phone": user.phone,
+                "country": user.country,
+                "verified": user.verified,
+                "profile_pict" : user.profile_pict,
+                "suspended": suspension_status
+            })
+        elif suspension == None:
+            user_data.append({
+                "email": user.email,
+                "name": user.name,
+                "role": user.role,
+                "phone": user.phone,
+                "country": user.country,
+                "verified": user.verified,
+                "profile_pict" : user.profile_pict,
+                "suspended": suspension_status
+            })
 
     return {"users": user_data}
 

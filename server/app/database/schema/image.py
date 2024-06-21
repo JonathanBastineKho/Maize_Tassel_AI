@@ -80,6 +80,12 @@ class Image(Base):
         db.commit()
         return img
     
+    def update_self(self, db: Session, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+        db.commit()
+        return self
+    
     @classmethod
     def count(cls, db: Session, email: str):
         fldr_list = Folder.search(db, user_email=email, offset=0, page_size=None)
