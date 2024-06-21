@@ -4,6 +4,7 @@ import CountUp from 'react-countup';
 import Spline from "@splinetool/react-spline";
 import { useInView } from "react-intersection-observer";
 import { FaArrowRight, FaCheck, FaChartLine, FaClock, FaLock, FaChartPie, FaCogs, FaDatabase, FaTimes } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
 
 function HomePage() {
 
@@ -19,10 +20,11 @@ function HomePage() {
             triggerOnce: false,
             threshold: 0.2,
     });
+    const navigate = useNavigate();
 
   return (
     <div className="mt-20">
-      <section className="py-10" id="hero">
+      <section className="py-10" id="home">
         <div className="container mx-auto px-8">
           <div className="flex flex-col md:flex-row items-center justify-between">
             <div className="md:w-1/2">
@@ -37,6 +39,7 @@ function HomePage() {
                 <Button
                   size="lg"
                   className="rounded-2xl bg-gradient-to-r from-green-400 to-cyan-600 text-white font-semibold shadow-md hover:from-green-500 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2 focus:ring-offset-gray-800 transition-all duration-800 ease-in-out mr-4"
+                  onClick={() => {navigate("/user/dashboard")}}
                 >
                     <div className="flex flex-row justify-between items-center gap-4">
                         <div>
@@ -69,7 +72,7 @@ function HomePage() {
         </div>
       </section>
 
-      <section id="feature" className="py-16 px-8" ref={countUpRef}>
+      <section id="features" className="py-16 px-8" ref={countUpRef}>
       <div className="py-8 px-4 mx-auto max-w-screen-xl sm:py-16 lg:px-6">
           <div className="max-w-screen-md mb-8 lg:mb-16">
             <h2 className="mb-4 text-4xl tracking-tight font-extrabold text-gray-900 dark:text-white">
@@ -166,7 +169,7 @@ function HomePage() {
         </div>
       </section>
 
-      <section id="Getting started" className="py-16 bg-gray-50">
+      <section id="getting-started" className="py-16 bg-gray-50">
       <div className="container mx-auto">
           <div className="flex flex-col md:flex-row items-center justify-between">
             <div className="md:w-1/2 px-32">

@@ -109,16 +109,16 @@ function UserFilterModal({ open, setOpen }) {
                             <div className="flex flex-col gap-3">
                                 <div className="flex flex-row gap-2">
                                     <Radio
-                                    value="true"
-                                    checked={filters.suspension === true}
+                                    value="false"
+                                    checked={filters.suspension === false}
                                     onChange={handleInputChange}
                                     name="suspension" className="checked:bg-green-500 focus:ring-green-500" />
                                     <Label className="font-light">Active</Label>
                                 </div>
                                 <div className="flex flex-row gap-2">
                                     <Radio
-                                    value="false"
-                                    checked={filters.suspension === false}
+                                    value="true"
+                                    checked={filters.suspension === true}
                                     onChange={handleInputChange} 
                                     name="suspension" className="checked:bg-green-500 focus:ring-green-500" />
                                     <Label className="font-light">Suspended</Label>

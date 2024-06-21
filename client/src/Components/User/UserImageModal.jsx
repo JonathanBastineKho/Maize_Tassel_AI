@@ -35,7 +35,7 @@ export function SideBarContent({
   clickFeedback,
 }) {
   return (
-    <div className="pt-24 p-5 flex flex-col justify-between h-full">
+    <div className="md:pt-24 p-2 md:p-5 flex flex-col justify-between md:h-full">
       <div>
         <h2 className="text-xl font-bold mb-4">Prediction Results</h2>
         <div className="flex flex-col gap-1.5 flex-wrap mr-2">
@@ -196,7 +196,7 @@ export function SideBarContent({
       <Button
         disabled={downloadLoading}
         onClick={download}
-        className={`mt-4 bg-green-600 focus:ring-4 focus:ring-green-300 enabled:hover:bg-green-800 ${
+        className={`mt-8 md:mt-4 bg-green-600 focus:ring-4 focus:ring-green-300 enabled:hover:bg-green-800 ${
           downloadLoading ? "cursor-not-allowed opacity-50" : ""
         }`}
       >
@@ -495,190 +495,18 @@ function UserImageModal({ index, setIndex, imageList }) {
         <div className="md:hidden">
           <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)}>
             <Drawer.Header title="Prediction" />
-            <div className="flex flex-col justify-between px-2">
-              <div>
-                <h2 className="text-xl font-bold mb-4">Prediction Results</h2>
-                <div className="flex flex-col gap-1.5 flex-wrap mr-2">
-                  <div className="flex flex-row flex-wrap justify-between">
-                    <Label className="text-gray-600">Number of Tassels:</Label>
-                    <div className="w-28">
-                      <Label>{img?.prediction?.length || 0}</Label>
-                    </div>
-                  </div>
-                  <div className="flex flex-row flex-wrap justify-between">
-                    <Label className="text-gray-600">Processing time:</Label>
-                    <div className="w-28">
-                      <Label>{img?.processing_time || "N/A"}</Label>
-                    </div>
-                  </div>
-                  <div className="flex flex-row flex-wrap justify-between">
-                    <Label className="text-gray-600">Upload Date:</Label>
-                    <div className="w-28">
-                      <Label>
-                        {new Date(img?.upload_date).toLocaleDateString(
-                          undefined,
-                          {
-                            month: "long",
-                            day: "numeric",
-                            year: "numeric",
-                          }
-                        ) || "N/A"}
-                      </Label>
-                    </div>
-                  </div>
-                  <div className="flex flex-row flex-wrap justify-between">
-                    <Label className="text-gray-600">Size:</Label>
-                    <div className="w-28">
-                      <Label>{img?.size || "N/A"} MB</Label>
-                    </div>
-                  </div>
-                  <div className="flex flex-row flex-wrap justify-between">
-                    <Label className="text-gray-600">Dimension:</Label>
-                    <div className="w-28">
-                      <Label>
-                        {img?.width || "N/A"} x {img?.height || "N/A"}
-                      </Label>
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-3 flex flex-row gap-1 items-center w-full">
-                  {img?.feedback === null ? (
-                    <>
-                      <Tooltip content="Good Prediction">
-                        <button
-                          className="rounded rounded-lg p-2 hover:bg-gray-100"
-                          onClick={() => {
-                            clickFeedback(true);
-                          }}
-                        >
-                          <FaRegThumbsUp className="text-gray-500 w-4 h-4" />
-                        </button>
-                      </Tooltip>
-                      <Tooltip content="Bad Prediction">
-                        <button
-                          className="rounded rounded-lg p-2 hover:bg-gray-100"
-                          onClick={() => {
-                            clickFeedback(false);
-                          }}
-                        >
-                          <FaRegThumbsDown className="text-gray-500 w-4 h-4" />
-                        </button>
-                      </Tooltip>
-                    </>
-                  ) : img?.feedback ? (
-                    <>
-                      <Tooltip content="Good Prediction">
-                        <button className="rounded rounded-lg p-2 hover:bg-gray-100">
-                          <FaThumbsUp className="text-gray-500 w-4 h-4" />
-                        </button>
-                      </Tooltip>
-                      <Tooltip content="Bad Prediction">
-                        <button
-                          className="rounded rounded-lg p-2 hover:bg-gray-100"
-                          onClick={() => {
-                            clickFeedback(false);
-                          }}
-                        >
-                          <FaRegThumbsDown className="text-gray-500 w-4 h-4" />
-                        </button>
-                      </Tooltip>
-                    </>
-                  ) : (
-                    <>
-                      <Tooltip content="Good Prediction">
-                        <button
-                          className="rounded rounded-lg p-2 hover:bg-gray-100"
-                          onClick={() => {
-                            clickFeedback(true);
-                          }}
-                        >
-                          <FaRegThumbsUp className="text-gray-500 w-4 h-4" />
-                        </button>
-                      </Tooltip>
-                      <Tooltip content="Bad Prediction">
-                        <button className="rounded rounded-lg p-2 hover:bg-gray-100">
-                          <FaThumbsDown className="text-gray-500 w-4 h-4" />
-                        </button>
-                      </Tooltip>
-                    </>
-                  )}
-                </div>
-
-                <hr className="h-px mt-3 mb-6 bg-gray-200 border-0" />
-                <div className="mt-8">
-                  <h2 className="text-xl font-bold mb-4">Image Description</h2>
-                  <Textarea
-                    rows={4}
-                    theme={textAreaTheme}
-                    placeholder={`${
-                      img?.description ? "" : "No description here."
-                    }`}
-                  />
-                </div>
-                <div className="mt-8">
-                  <h2 className="text-xl font-bold mb-4">Image Settings</h2>
-                  <div className="flex flex-col gap-4 flex-wrap mr-2">
-                    <div className="flex flex-row flex-wrap justify-between">
-                      <Label className="text-gray-600">Show Confidence:</Label>
-                      <ToggleSwitch
-                        theme={toggleSwitchTheme}
-                        color="green"
-                        checked={showConfidence}
-                        onChange={(checked) => {
-                          if (!showBox) {
-                            setShowBox(checked);
-                          }
-                          setShowConfidence(checked);
-                        }}
-                      />
-                    </div>
-                    <div className="flex flex-row flex-wrap justify-between">
-                      <Label className="text-gray-600">Show Box:</Label>
-                      <ToggleSwitch
-                        theme={toggleSwitchTheme}
-                        color="green"
-                        checked={showBox}
-                        onChange={(checked) => {
-                          if (!checked && showConfidence) {
-                            setShowConfidence(checked);
-                          }
-                          setShowBox(checked);
-                        }}
-                      />
-                    </div>
-                    <div className="flex flex-row flex-wrap justify-between">
-                      <Label className="text-gray-600">Box color:</Label>
-                      <input
-                        value={boundingBoxColor}
-                        className="rounded-lg"
-                        type="color"
-                        onChange={(e) => setBoundingBoxColor(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <Button
-                disabled={downloadLoading}
-                onClick={download}
-                className={`mt-8 bg-green-600 focus:ring-4 focus:ring-green-300 enabled:hover:bg-green-800 ${
-                  downloadLoading ? "cursor-not-allowed opacity-50" : ""
-                }`}
-              >
-                {downloadLoading ? (
-                  <div className="flex items-center">
-                    <Spinner
-                      aria-label="Spinner button example"
-                      size="sm"
-                      theme={spinnerTheme}
-                    />
-                    <span className="pl-3">Loading...</span>
-                  </div>
-                ) : (
-                  "Download Results"
-                )}
-              </Button>
-            </div>
+            <SideBarContent
+              img={img}
+              showConfidence={showConfidence}
+              setShowConfidence={setShowConfidence}
+              showBox={showBox}
+              setShowBox={setShowBox}
+              boundingBoxColor={boundingBoxColor}
+              setBoundingBoxColor={setBoundingBoxColor}
+              downloadLoading={downloadLoading}
+              download={download}
+              clickFeedback={clickFeedback}
+            />
           </Drawer>
         </div>
       </div>

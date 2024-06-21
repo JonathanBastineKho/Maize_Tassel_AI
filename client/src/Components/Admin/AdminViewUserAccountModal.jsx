@@ -12,7 +12,6 @@ function AdminViewUserAccountModal({ state, setState, userToView, setCancelSubAc
   const [account, setAccount] = useState({});
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-
   useEffect(() => {
     if (state) {
       axios
@@ -47,9 +46,10 @@ function AdminViewUserAccountModal({ state, setState, userToView, setCancelSubAc
                     <div className="flex flex-col items-center gap-y-2 border-b pb-3 border-gray mb-3">
                       {/* Profile Picture, Name, and Email */}
                       <img
-                        src={account.user.profile_pict}
                         className="w-20 h-20 rounded-full"
                         alt="profile_picture"
+                        referrerPolicy="no-referrer"
+                        src={`${account.user.profile_pict}?${Date.now()}`}
                       />
                       <section className="text-center flex flex-col  mt-1">
                         <h1 className="text-md font-semi">

@@ -383,8 +383,8 @@ async def download_and_process_image(db:Session, zip_buffer:BytesIO, image, draw
             # Open the image using PIL
             pil_image = PILImage.open(BytesIO(image_data))
             draw = ImageDraw.Draw(pil_image)
-            font = ImageFont.load_default(size=36)
-
+            font = ImageFont.load_default(size=round(max(pil_image.size) * 0.015))
+            print(round(max(pil_image.size) * 0.014))
             # Parse the box color from hexadecimal string
             box_color_rgb = tuple(int(box_color[i:i+2], 16) for i in (1, 3, 5))
 

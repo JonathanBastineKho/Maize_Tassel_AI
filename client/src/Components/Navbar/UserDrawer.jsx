@@ -50,7 +50,7 @@ function UserDrawer({ open, setOpen }) {
                 <Sidebar.Item icon={IoMdPerson}>Profile</Sidebar.Item>
                 <Sidebar.Item icon={IoIosHelpCircle}>Help</Sidebar.Item>
                 <Sidebar.Item icon={MdCloudQueue}>
-                  Storage {user.role === "regular" ? `(${storage/100*100}% full)` : 'Unlimited'}
+                  Storage {user.role === "regular" ? `(${Math.round(storage / 100 * 100)}% full)` : 'Unlimited'}
                 </Sidebar.Item>
                 <div className="p-2 flex flex-col gap-5">
                   <div className="flex flex-col gap-2.5">

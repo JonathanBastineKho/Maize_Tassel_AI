@@ -24,7 +24,7 @@ import {
   export default function NavigationBar() {
     const { user, setUser } = useContext(AuthContext);
     const [isValidated, setIsValidated] = useState(false);
-
+    const [activeSection, setActiveSection] = useState("home");
     const [isScrolled, setIsScrolled] = useState(false);
 
     useEffect(() => {
@@ -35,6 +35,26 @@ import {
 
       window.addEventListener("scroll", handleScroll);
 
+      return () => {
+        window.removeEventListener("scroll", handleScroll);
+      };
+    }, []);
+
+    useEffect(() => {
+      const handleScroll = () => {
+        const sections = ["home", "features", "pricing", "getting-started"];
+        const scrollPosition = window.scrollY;
+  
+        for (let i = sections.length - 1; i >= 0; i--) {
+          const section = document.getElementById(sections[i]);
+          if (section && scrollPosition >= section.offsetTop - 100) {
+            setActiveSection(sections[i]);
+            break;
+          }
+        }
+      };
+  
+      window.addEventListener("scroll", handleScroll);
       return () => {
         window.removeEventListener("scroll", handleScroll);
       };
@@ -118,12 +138,40 @@ import {
           
         </div>
         <NavbarCollapse>
-          <NavbarLink href="#" active >
+          <NavbarLink href="#home"
+            onClick={(e) => {
+              e.preventDefault();
+              document.querySelector("#home").scrollIntoView({
+                behavior: "smooth",
+              });
+            }}
+            active={activeSection === "home"} >
             Home
           </NavbarLink>
-          <NavbarLink href="#">Features</NavbarLink>
-          <NavbarLink href="#">Pricing</NavbarLink>
-          <NavbarLink href="#">Getting Started</NavbarLink>
+          <NavbarLink href="#features"
+            onClick={(e) => {
+              e.preventDefault();
+              document.querySelector("#features").scrollIntoView({
+                behavior: "smooth",
+              });
+            }}
+            active={activeSection === "features"}>Features</NavbarLink>
+          <NavbarLink href="#pricing"
+            onClick={(e) => {
+              e.preventDefault();
+              document.querySelector("#pricing").scrollIntoView({
+                behavior: "smooth",
+              });
+            }}
+            active={activeSection === "pricing"}>Pricing</NavbarLink>
+          <NavbarLink href="#getting-started"
+            onClick={(e) => {
+              e.preventDefault();
+              document.querySelector("#getting-started").scrollIntoView({
+                behavior: "smooth",
+              });
+            }}
+            active={activeSection === "getting-started"}>Getting Started</NavbarLink>
           {/* <NavbarLink href="#">Contact</NavbarLink> */}
         </NavbarCollapse>
       </Navbar>

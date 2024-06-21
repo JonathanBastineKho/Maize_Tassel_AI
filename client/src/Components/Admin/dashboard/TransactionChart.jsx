@@ -30,7 +30,7 @@ function TransactionChart({ transactions, loading }) {
     },
     yaxis: {
       show: true,
-      tickAmount: 3,
+      tickAmount: 4,
       labels: {
         style: {
           fontSize: "15px",
