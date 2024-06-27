@@ -531,7 +531,7 @@ def rename_image(image : RenameImageBody, db : Session = Depends(get_db), user:d
     if image.new_name == "":
         raise HTTPException(400, detail="Image name cannot be empty")
     if not re.match(r'^[\w\s\.-]+$', image.new_name):
-        raise HTTPException(400, detail="name cannot contain special character")
+        raise HTTPException(400, detail="Image name cannot contain special character")
     try:
         img = Image.update(db, old_name=image.name, folder_id=fldr.id, name=image.new_name)
         Prediction.update(db, folder_id=fldr.id, old_image_name=image.name, new_image_name=image.new_name)
