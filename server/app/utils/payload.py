@@ -102,3 +102,17 @@ class RenameFolderBody(FolderPayload):
 class RenameImageBody(ImagePayload):
     new_name : str  
     
+class CreateDataset(BaseModel):
+    name: str
+
+class TrainParams(BaseModel):
+    dataset_names: List[str]
+    base_model_version: int
+    epochs: int
+    patience: int
+    batch: int
+    dropout: float
+    optimizer: str
+    learning_rate: float
+    freeze_layers: int
+    imgsz: int

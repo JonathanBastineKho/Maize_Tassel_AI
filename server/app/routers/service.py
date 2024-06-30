@@ -53,6 +53,7 @@ async def count(file: UploadFile, folder_uuid: str = Form(None),  # Change to UU
                 "thumbnail_url": thumbnail_url[0], 
                 "upload_date": new_img.upload_date}
     except Exception as e:
+        print(e)
         raise HTTPException(
             status_code=500, detail="Some error occured, please retry")
 
@@ -384,7 +385,6 @@ async def download_and_process_image(db:Session, zip_buffer:BytesIO, image, draw
             pil_image = PILImage.open(BytesIO(image_data))
             draw = ImageDraw.Draw(pil_image)
             font = ImageFont.load_default(size=round(max(pil_image.size) * 0.015))
-            print(round(max(pil_image.size) * 0.014))
             # Parse the box color from hexadecimal string
             box_color_rgb = tuple(int(box_color[i:i+2], 16) for i in (1, 3, 5))
 
@@ -407,7 +407,10 @@ async def download_and_process_image(db:Session, zip_buffer:BytesIO, image, draw
 
             # Save the modified image to a BytesIO object
             modified_image_buffer = BytesIO()
-            pil_image.save(modified_image_buffer, format="JPEG")
+            if image.image_url.endswith('.png'):
+                pil_image.save(modified_image_buffer, format="PNG")
+            else:
+                pil_image.save(modified_image_buffer, format="JPEG")
             modified_image_buffer.seek(0)
             image_data = modified_image_buffer.getvalue()
 
@@ -521,7 +524,7 @@ def download_folder(
     })
 
 @router.patch("/rename-image")
-def rename_image(image : RenameImageBody, db : Session = Depends(get_db), user:dict = Depends(LoginRequired(roles_required={TypeOfUser.REGULAR, TypeOfUser.PREMIUM}))):
+async def rename_image(image : RenameImageBody, db : Session = Depends(get_db), user:dict = Depends(LoginRequired(roles_required={TypeOfUser.REGULAR, TypeOfUser.PREMIUM}))):
     if not image.folder_id:
         fldr = Folder.retrieve_root(db, user_email=user['email'])
     else:
@@ -534,7 +537,8 @@ def rename_image(image : RenameImageBody, db : Session = Depends(get_db), user:d
         raise HTTPException(400, detail="name cannot contain special character")
     try:
         img = Image.update(db, old_name=image.name, folder_id=fldr.id, name=image.new_name)
-        Prediction.update(db, folder_id=fldr.id, old_image_name=image.name, new_image_name=image.new_name)
+        new_img_url, new_thumbnail_url = await storage_mgr.rename_image(img.image_url, img.thumbnail_url, image.new_name)
+        img.update_self(db, image_url=new_img_url, thumbnail_url=new_thumbnail_url)
     except IntegrityError as e:
         db.rollback()
         raise HTTPException(status_code=400, detail="Image with the same name already exists")
