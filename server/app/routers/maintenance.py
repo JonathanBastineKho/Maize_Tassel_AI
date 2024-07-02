@@ -98,22 +98,23 @@ def train_model(train_params: TrainParams, db: Session = Depends(get_db), _: dic
     # Label preparation
     label_data = {}
     for dataset_name in train_params.dataset_names:
+        label_data[dataset_name] = {}
         images = Dataset.search_images(db, dataset_name=dataset_name)
         for image in images:
-            labels = Label.retrieve(db, folder_id=image.folder_id, image_name=image.name)
-        label_data[dataset_name][f"{image.folder_id}/{image.name}"] = [
-            {
-                "box_id": label.box_id,
-                "xCenter": label.xCenter,
-                "yCenter": label.yCenter,
-                "width": label.width,
-                "height": label.height
-            }
-            for label in labels
-        ]
+            labels = Label.retrieve(db, folder_id=image.image_folder_id, image_name=image.image_name)
+            label_data[dataset_name][f"{image.image_folder_id}/image/{image.image_name}"] = [
+                {
+                    "box_id": label.box_id,
+                    "xCenter": label.xCenter,
+                    "yCenter": label.yCenter,
+                    "width": label.width,
+                    "height": label.height
+                }
+                for label in labels
+            ]
     
     # Upload labels to the google cloud
-    label_url = storage_mgr.export_label_data(label_data=label_data, export_dir="labels_export.json")
+    label_url = storage_mgr.export_label_data(label_data=label_data, export_dir="temp/labels_export.json")
 
 @router.patch("/deploy-model")
 def deploy_model():

@@ -5,7 +5,7 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import event, inspect
-from typing import Optional, List
+from typing import Optional, List, Tuple
 from io import BytesIO
 from PIL import ImageDraw, ImageFont
 from PIL import Image as PILImage
@@ -21,6 +21,44 @@ from math import isfinite
 
 router = APIRouter(tags=["Regular Service"], prefix="/service")
 
+def sanitize_filename(filename: str) -> Tuple[str, bool]:
+    original_name, ext = os.path.splitext(filename)
+    
+    # Check for potential directory traversal
+    is_malicious = '..' in original_name or '/' in original_name or '\\' in original_name
+    
+    # Remove any directory component
+    name = os.path.basename(original_name)
+    
+    # Check for non-alphanumeric characters (except underscores and hyphens)
+    if re.search(r'[^\w\-_]', name):
+        is_malicious = True
+    
+    # Remove any non-alphanumeric characters except for underscores and hyphens
+    name = re.sub(r'[^\w\-_]', '_', name)
+    
+    # Remove any leading or trailing underscores
+    name = name.strip('_')
+    
+    # Ensure the extension is lowercase and starts with a dot
+    ext = ext.lower()
+    if ext and not ext.startswith('.'):
+        ext = '.' + ext
+    
+    # Limit the length of the name (e.g., to 255 characters minus the length of the extension)
+    max_length = 255 - len(ext)
+    if len(name) > max_length:
+        name = name[:max_length]
+        is_malicious = True
+    
+    # Combine the sanitized name and extension
+    sanitized_filename = name + ext
+    
+    # Check if the sanitization process changed the filename
+    if sanitized_filename != filename:
+        is_malicious = True
+    
+    return sanitized_filename, is_malicious
 
 @router.post("/count")
 async def count(file: UploadFile, folder_uuid: str = Form(None),  # Change to UUID type in production
@@ -32,6 +70,11 @@ async def count(file: UploadFile, folder_uuid: str = Form(None),  # Change to UU
         folder_uuid = Folder.retrieve_root(db, user['email']).id
     if user['role'] == TypeOfUser.REGULAR and Image.count(db, email=user['email']) >= 100:
         raise HTTPException(429, detail="Your storage is full")
+    
+    name, is_malicious = sanitize_filename(name)
+    if is_malicious:
+        raise HTTPException(400, detail="Name is not valid")
+
     metadata = await storage_mgr.upload_image(file, name, email=user["email"], folder_name=folder_uuid, db=db)
     try:
         # Add image to database
@@ -141,6 +184,9 @@ async def bulk_count(
     db: Session = Depends(get_db),
     background_tasks: BackgroundTasks = BackgroundTasks()
 ):
+    name, is_malicious = sanitize_filename(name)
+    if is_malicious:
+        raise HTTPException(400, detail="Name is not valid")
     if not folder_uuid:
         folder_uuid = Folder.retrieve_root(db, user['email']).id
 

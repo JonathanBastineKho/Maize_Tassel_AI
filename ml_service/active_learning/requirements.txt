@@ -1,0 +1,7 @@
+scikit-learn==1.4.2
+wandb==0.16.6
+ultralytics==8.2.10
+python-dotenv==1.0.1
+pyyaml==6.0
+pandas==2.2.2
+google-cloud-storage==2.16.0

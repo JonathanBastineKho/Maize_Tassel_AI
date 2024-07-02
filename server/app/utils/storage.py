@@ -200,7 +200,7 @@ class StorageManager:
         except Exception as e:
             print(f"Error in add_image_to_dataset: {str(e)}")
 
-    def export_label_data(self, label_data: dict, export_dir: str = 'labels_export.json'):
+    def export_label_data(self, label_data: dict, export_dir: str = 'temp/labels_export.json'):
         blob = self.bucket.blob(export_dir)
         blob.upload_from_string(json.dumps(label_data))
         return f"gs://{self.private_bucket_name}/{export_dir}"
