@@ -16,6 +16,9 @@ class StorageManager:
         self.public_bucket = self.client.bucket(public_bucket)
 
     async def upload_profile_pict(self, file: UploadFile, email: str, thumbnail_size:tuple = (256,256)) -> dict:
+        if not file:
+            raise HTTPException(status_code=400, detail="No file uploaded")
+
         # Check if image is valid
         file_extension = os.path.splitext(file.filename)[1].lower()
         if file_extension not in set({".jpg", ".jpeg", ".png"}):

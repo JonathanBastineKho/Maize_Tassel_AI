@@ -94,9 +94,11 @@ function UploadModal({ setImage, open, setOpen, setFullStorage }) {
       .catch((err) => {
         if (err.response.status === 409) {
             setNameError(err.response.data.detail);
+        } else if (err.response.status === 400) {
+          setNameError(err.response.data.detail);
         } else if (err.response.status === 401) {
-            setUser(null);
-            navigate('/login')
+          setUser(null);
+          navigate('/login')
         } else if (err.response.status === 429) {
           setFullStorage(true);
           getStorage();
@@ -221,7 +223,7 @@ function UploadModal({ setImage, open, setOpen, setFullStorage }) {
           </div>
           <Button
             type="submit"
-            disabled={loading}
+            disabled={!file || loading}
             className={`bg-green-500 focus:ring-4 focus:ring-green-300 enabled:hover:bg-green-700 ${
               loading ? "cursor-not-allowed opacity-50" : ""
             }`}
