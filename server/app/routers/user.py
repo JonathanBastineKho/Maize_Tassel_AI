@@ -61,7 +61,7 @@ def search_user(page: int = 1,
                 "role": user.role,
                 "phone": user.phone,
                 "country": user.country,
-                "verified": user.verified,
+                "verified": user.verified, 
                 "profile_pict" : user.profile_pict,
                 "suspended": suspension_status
             })
