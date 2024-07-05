@@ -105,10 +105,10 @@ def train_model(train_params: TrainParams, db: Session = Depends(get_db), _: dic
             label_data[dataset_name][f"{image.image_folder_id}/image/{image.image_name}"] = [
                 {
                     "box_id": label.box_id,
-                    "xCenter": label.xCenter,
-                    "yCenter": label.yCenter,
-                    "width": label.width,
-                    "height": label.height
+                    "xCenter": label.xCenter / image.image.width,
+                    "yCenter": label.yCenter / image.image.height,
+                    "width": label.width / image.image.width,
+                    "height": label.height / image.image.height
                 }
                 for label in labels
             ]

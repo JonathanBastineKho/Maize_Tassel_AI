@@ -2,17 +2,27 @@ import os
 import json
 import argparse
 import shutil
+import yaml
 from dotenv import load_dotenv
+load_dotenv()
 from google.cloud import storage
 import numpy as np
 import pandas as pd
+import wandb
+import nbformat as nbf
+import time
+from ultralytics import YOLO
+from wandb.integration.ultralytics import add_wandb_callback
 from sklearn.model_selection import train_test_split
+from kaggle.api.kaggle_api_extended import KaggleApi
 
-load_dotenv()
-
+# Preliminary Setup
 BUCKET_NAME = os.getenv('BUCKET_NAME')
 storage_client = storage.Client()
 bucket = storage_client.bucket(BUCKET_NAME)
+
+kaggle = KaggleApi()
+kaggle.authenticate()
 
 def download_from_gcs(blob_name: str, destination: str, log: bool = False):
     """Downloads a blob from the GCS bucket."""
@@ -68,6 +78,164 @@ def download_dataset_images(dataset_names):
                     print(f"Skipped (already exists): {temp_image_name}")
         
         print(f"Finished downloading images for dataset: {dataset_name}")
+
+def create_dataset_yaml(output_dir: str, nc: int = 1, names: list = ['tsl'], base_model_version : int = None):
+    """
+    Creates a YAML file for Ultralytics training.
+    """
+    yaml_content = {
+        'path': f'/kaggle/input/cornsight-dataset-v{base_model_version}' if base_model_version != None else os.path.abspath(output_dir),  # Dataset root dir
+        'train': 'images/train',  # Train images (relative to 'path')
+        'val': 'images/val',      # Val images (relative to 'path')
+        'test': 'images/test',    # Test images (optional)
+        'names': {i: name for i, name in enumerate(names)}  # Class names
+    }
+
+    yaml_path = os.path.join(output_dir, 'dataset.yaml')
+    with open(yaml_path, 'w') as f:
+        yaml.dump(yaml_content, f, default_flow_style=False)
+    
+    print(f"Created dataset YAML at {yaml_path}")
+    return yaml_path
+
+def poll_for_dataset(dataset_name, max_attempts=30, delay=5):
+    print(f"Waiting for dataset {dataset_name} to appear in the list...")
+    for attempt in range(max_attempts):
+        datasets = kaggle.dataset_list(mine=True)
+        if any(dataset.ref == dataset_name for dataset in datasets):
+            print(f"Dataset {dataset_name} found after {attempt + 1} attempts.")
+            return True
+        print(f"Attempt {attempt + 1}/{max_attempts}: Dataset not found. Waiting {delay} seconds...")
+        time.sleep(delay)
+    print(f"Dataset {dataset_name} not found after {max_attempts} attempts.")
+    return False
+
+def upload_to_kaggle(dataset_path: str, dataset_slug: str):
+    full_dataset_name = f"{os.environ.get('KAGGLE_USERNAME')}/{dataset_slug}"
+    metadata_file = os.path.join(dataset_path, 'dataset-metadata.json')
+    if not os.path.exists(metadata_file):
+        metadata = {
+            "title": dataset_slug,
+            "id": full_dataset_name,
+            "licenses": [{"name": "CC0-1.0"}]
+        }
+        with open(metadata_file, 'w') as f:
+            json.dump(metadata, f)
+    kaggle.dataset_create_new(folder=dataset_path, public=False, dir_mode='zip', convert_to_csv=False)
+    print(f"Uploaded dataset to Kaggle: {full_dataset_name}")
+    return full_dataset_name
+
+def run_kaggle_notebook(dataset_name: str, model_blob_name: str, yaml_path: str, args):
+    private_key_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+    with open(private_key_path, 'r') as f:
+        private_key_json = json.load(f)
+    notebook_content = f"""
+import os
+import sys
+import subprocess
+
+def install(package):
+    subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+
+install('ultralytics')
+install('wandb==0.16.6')
+install('google-cloud-storage')
+
+import wandb
+from ultralytics import YOLO
+from wandb.integration.ultralytics import add_wandb_callback
+from google.cloud import storage
+from google.oauth2 import service_account
+
+# Print current working directory and its contents
+print('Current working directory:')
+print(os.getcwd())
+print('Contents of current directory:')
+print(os.listdir())
+
+# Set up Google Cloud credentials
+credentials_json = {private_key_json}
+credentials = service_account.Credentials.from_service_account_info(credentials_json)
+
+# Download model from Google Cloud Storage
+storage_client = storage.Client(credentials=credentials)
+bucket = storage_client.bucket('{BUCKET_NAME}')
+blob = bucket.blob('{model_blob_name}')
+blob.download_to_filename('model.pt')
+
+wandb.login(key="{os.getenv('WANDB_API_KEY')}")
+
+model = YOLO("model.pt")
+add_wandb_callback(model, enable_model_checkpointing=True)
+
+model.train(
+    data="{yaml_path}",
+    epochs={args.epochs},
+    patience={args.patience},
+    batch={args.batch},
+    imgsz={args.imgsz},
+    dropout={args.dropout},
+    freeze={args.freeze},
+    optimizer="{args.optimizer}",
+    single_cls=True,
+    project="fyp",
+    name="Active Learning v{args.base_model_version}"
+)
+
+wandb.finish()
+    """
+    notebook_metadata = {
+        "id": f"{os.environ.get('KAGGLE_USERNAME')}/yolov9-training-{args.base_model_version}",
+        "title": f"YOLOv9 Training - v{args.base_model_version}",
+        "language": "python",
+        "kernel_type": "notebook",
+        "is_private": True,
+        "enable_gpu": True,
+        "enable_internet": True,
+        "dataset_sources": [dataset_name],
+        "kernel_sources": [],
+        "competition_sources": [],
+        "code_file" : "notebook.ipynb"
+    }
+
+    # Create a temporary directory for the kernel
+    kernel_dir = 'kaggle_kernel'
+    os.makedirs(kernel_dir, exist_ok=True)
+
+    with open(os.path.join(kernel_dir, 'kernel-metadata.json'), 'w') as f:
+        json.dump(notebook_metadata, f)
+
+    # Save the notebook content
+    nb = nbf.v4.new_notebook()
+    code_cell = nbf.v4.new_code_cell(notebook_content)
+    nb['metadata'] = {
+        "kernelspec": {
+            "display_name": "Python 3",
+            "language": "python",
+            "name": "python3"
+        },
+        "language_info": {
+            "codemirror_mode": {
+                "name": "ipython",
+                "version": 3
+            },
+            "file_extension": ".py",
+            "mimetype": "text/x-python",
+            "name": "python",
+            "nbconvert_exporter": "python",
+            "pygments_lexer": "ipython3",
+            "version": "3.10.0"
+        }
+    }
+    nb['cells'] = [code_cell]
+    with open(os.path.join(kernel_dir, 'notebook.ipynb'), 'w', encoding='utf-8') as f:
+        nbf.write(nb, f)
+
+    kaggle.kernels_push_cli(kernel_dir)
+    print("Submitted training job to Kaggle")
+
+    # Clean up the temporary directory
+    shutil.rmtree(kernel_dir)
 
 def prepare_yolo_data(label_data: dict, output_dir: str, dataset_bins: dict, train_ratio=0.64, val_ratio=0.16, test_ratio=0.2):
     """Prepares YOLO format labels from the exported nested label data with stratified splitting."""
@@ -144,14 +312,12 @@ def prepare_yolo_data(label_data: dict, output_dir: str, dataset_bins: dict, tra
     print("Data preparation completed.")
 
 def main(args):
-    # Download model and labels
-    download_from_gcs(blob_name=f"admin/models/yolov9e-{args.base_model_version}.pt", 
-                      destination=f"yolov9e-{args.base_model_version}.pt", log=True)
+    # labels
     download_from_gcs(blob_name=args.label_path, destination=os.path.basename(args.label_path), log=True)
 
     # Download images in the dataset
     download_dataset_images(args.dataset_names)
-
+    
     # Splitting dataset
     dataset_bins = json.loads(args.dataset_bins)
     with open(os.path.basename(args.label_path), 'r') as f:
@@ -159,8 +325,52 @@ def main(args):
     prepare_yolo_data(label_data, 'datasets', dataset_bins, args.train_ratio, args.val_ratio, args.test_ratio)
     shutil.rmtree('temp', ignore_errors=True)
 
+    yaml_path = create_dataset_yaml('datasets', base_model_version=args.base_model_version if args.gpu else None)
+
     # Train the model
-    
+    if args.gpu:
+        # Train on kaggle
+        dataset_slug = f"cornsight-dataset-v{args.base_model_version}"
+        dataset_path = 'datasets'
+        full_dataset_name = upload_to_kaggle(dataset_path, dataset_slug)
+
+        # Poll for the dataset to appear in the list
+        dataset_ready = poll_for_dataset(full_dataset_name)
+        
+        if dataset_ready:
+            print("Dataset is ready. Proceeding with notebook creation.")
+            model_blob_name = f"admin/models/yolov9e-{args.base_model_version}.pt"
+            run_kaggle_notebook(full_dataset_name, model_blob_name, f'/kaggle/input/{dataset_slug}/dataset.yaml', args)
+        else:
+            print("Dataset not ready. Please check your Kaggle account and try again later.")
+            return
+
+        print("Training job submitted to Kaggle.")
+    else:
+        # Train locally
+        # Download model
+        download_from_gcs(blob_name=f"admin/models/yolov9e-{args.base_model_version}.pt", 
+                      destination=f"yolov9e-{args.base_model_version}.pt", log=True)
+        
+        model = YOLO(f"yolov9e-{args.base_model_version}.pt")
+        wandb.login()
+        add_wandb_callback(model, enable_model_checkpointing=True)
+
+        model.train(
+            data=yaml_path,
+            epochs=args.epochs,
+            patience=args.patience,
+            batch=args.batch,
+            imgsz=args.imgsz,
+            dropout=args.dropout,
+            freeze=args.freeze,
+            optimizer=args.optimizer,
+            single_cls=True,
+            project="fyp",
+            name=f"Active Learning v{args.base_model_version}"
+        )
+
+    wandb.finish()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train YOLO model")
@@ -185,4 +395,6 @@ if __name__ == "__main__":
     parser.add_argument("--test_ratio", type=float, default=0.2, help="Ratio of test data")
     parser.add_argument("--dataset_bins", type=str, default='{}',
                         help='JSON string specifying bins for each dataset, e.g., \'{"dataset1": 5, "dataset2": 7}\'')
+    
+    parser.add_argument('--gpu', action='store_true', help='Use GPU if this flag is set')
     main(parser.parse_args())

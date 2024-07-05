@@ -345,6 +345,7 @@ async def delete_image(image: ImagePayload, db: Session = Depends(get_db), user:
         img_url = Image.delete(db, name=image.name, folder_id=fldr.id)
         await storage_mgr.delete_image(img_url)
     except Exception as e:
+        print(e)
         db.rollback()
         raise HTTPException(500, detail="An error occurred while deleting the image")
     return {"Success" : True}
