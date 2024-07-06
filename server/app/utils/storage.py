@@ -3,7 +3,7 @@ from fastapi import UploadFile, HTTPException
 from sqlalchemy.orm import Session
 from PIL import Image as PILImage
 from io import BytesIO
-import os, datetime, asyncio
+import os, datetime, asyncio, json
 from typing import List, Union
 from app.database.schema import Folder, Image
 
@@ -12,6 +12,7 @@ class StorageManager:
 
     def __init__(self, bucket_name:str, public_bucket:str) -> None:
         self.client = storage.Client()
+        self.private_bucket_name = bucket_name
         self.bucket = self.client.bucket(bucket_name)
         self.public_bucket = self.client.bucket(public_bucket)
 
@@ -112,13 +113,40 @@ class StorageManager:
         async def generate_signed_url(blob):
             return blob.generate_signed_url(
                 version="v4",
-                expiration=datetime.timedelta(minutes=1),
+                expiration=datetime.timedelta(minutes=15),
                 method="GET"
             )
 
         blobs = [self.bucket.blob(url) for url in urls]
         signed_urls = await asyncio.gather(*[generate_signed_url(blob) for blob in blobs])
         return signed_urls
+    
+    async def rename_blob_async(self, old_path: str, new_path: str):
+        blob = self.bucket.blob(old_path)
+        try:
+            new_blob = await asyncio.to_thread(self.bucket.rename_blob, blob, new_path)
+            return new_blob.name
+        except Exception as e:
+            print(f"Error renaming {old_path} to {new_path}: {e}")
+            return None
+
+    async def rename_image(self, image_path: str, thumbnail_path: str, new_name: str):
+        base_name = os.path.basename(image_path)
+        image_path_dir = os.path.dirname(image_path)
+        thumbnail_path_dir = os.path.dirname(thumbnail_path)
+        _, extension = os.path.splitext(base_name)
+
+        new_image_path = f"{image_path_dir}/{new_name}{extension}"
+        new_thumbnail_path = f"{thumbnail_path_dir}/{new_name}{extension}"
+
+        rename_tasks = [
+            self.rename_blob_async(image_path, new_image_path),
+            self.rename_blob_async(thumbnail_path, new_thumbnail_path)
+        ]
+
+        results = await asyncio.gather(*rename_tasks)
+
+        return results[0], results[1]
     
     async def delete_image(self, urls: Union[str, List[str]]):
         if isinstance(urls, str):
@@ -149,3 +177,30 @@ class StorageManager:
         except Exception as e:
             print(e)
             pass
+
+    async def add_image_to_dataset(self, dataset_name: str, image_name: str, folder_id: str, image_path: str, thumbnail_path: str):
+        try:
+            destination_path_1 = f"dataset/{dataset_name}/{folder_id}/image/{image_name}"
+            destination_path_2 = f"dataset/{dataset_name}/{folder_id}/thumbnail/{image_name}"
+
+            def copy_blob(source_path: str, destination_path: str):
+                source_blob = self.bucket.blob(source_path)
+                destination_blob = self.bucket.blob(destination_path)
+                self.bucket.copy_blob(source_blob, self.bucket, destination_blob.name)
+                return destination_path
+
+            loop = asyncio.get_running_loop()
+            tasks = [
+                loop.run_in_executor(None, copy_blob, image_path, destination_path_1),
+                loop.run_in_executor(None, copy_blob, thumbnail_path, destination_path_2)
+            ]
+            results = await asyncio.gather(*tasks)
+
+            return results[0], results[1]
+        except Exception as e:
+            print(f"Error in add_image_to_dataset: {str(e)}")
+
+    def export_label_data(self, label_data: dict, export_dir: str = 'temp/labels_export.json'):
+        blob = self.bucket.blob(export_dir)
+        blob.upload_from_string(json.dumps(label_data))
+        return f"gs://{self.private_bucket_name}/{export_dir}"

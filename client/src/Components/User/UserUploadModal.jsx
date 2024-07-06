@@ -92,7 +92,7 @@ function UploadModal({ setImage, open, setOpen, setFullStorage }) {
         }
       })
       .catch((err) => {
-        if (err.response.status === 409) {
+        if (err.response.status === 409 || err.response.status === 400) {
             setNameError(err.response.data.detail);
         } else if (err.response.status === 401) {
             setUser(null);

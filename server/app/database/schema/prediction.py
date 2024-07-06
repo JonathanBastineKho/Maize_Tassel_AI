@@ -16,7 +16,8 @@ class Prediction(Base):
                          primaryjoin='and_(Prediction.folder_id == Image.folder_id, Prediction.image_name == Image.name)')
 
     __table_args__ = (
-        ForeignKeyConstraint(['folder_id', 'image_name'], ['images.folder_id', 'images.name']),
+        ForeignKeyConstraint(['folder_id', 'image_name'], ['images.folder_id', 'images.name'],
+                             onupdate="CASCADE"),
     )
 
     @classmethod

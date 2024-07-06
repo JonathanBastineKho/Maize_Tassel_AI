@@ -5,7 +5,7 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import event, inspect
-from typing import Optional, List
+from typing import Optional, List, Tuple
 from io import BytesIO
 from PIL import ImageDraw, ImageFont
 from PIL import Image as PILImage
@@ -21,6 +21,44 @@ from math import isfinite
 
 router = APIRouter(tags=["Regular Service"], prefix="/service")
 
+def sanitize_filename(filename: str) -> Tuple[str, bool]:
+    original_name, ext = os.path.splitext(filename)
+    
+    # Check for potential directory traversal
+    is_malicious = '..' in original_name or '/' in original_name or '\\' in original_name
+    
+    # Remove any directory component
+    name = os.path.basename(original_name)
+    
+    # Check for non-alphanumeric characters (except underscores and hyphens)
+    if re.search(r'[^\w\-_]', name):
+        is_malicious = True
+    
+    # Remove any non-alphanumeric characters except for underscores and hyphens
+    name = re.sub(r'[^\w\-_]', '_', name)
+    
+    # Remove any leading or trailing underscores
+    name = name.strip('_')
+    
+    # Ensure the extension is lowercase and starts with a dot
+    ext = ext.lower()
+    if ext and not ext.startswith('.'):
+        ext = '.' + ext
+    
+    # Limit the length of the name (e.g., to 255 characters minus the length of the extension)
+    max_length = 255 - len(ext)
+    if len(name) > max_length:
+        name = name[:max_length]
+        is_malicious = True
+    
+    # Combine the sanitized name and extension
+    sanitized_filename = name + ext
+    
+    # Check if the sanitization process changed the filename
+    if sanitized_filename != filename:
+        is_malicious = True
+    
+    return sanitized_filename, is_malicious
 
 @router.post("/count")
 async def count(file: UploadFile, folder_uuid: str = Form(None),  # Change to UUID type in production
@@ -32,6 +70,11 @@ async def count(file: UploadFile, folder_uuid: str = Form(None),  # Change to UU
         folder_uuid = Folder.retrieve_root(db, user['email']).id
     if user['role'] == TypeOfUser.REGULAR and Image.count(db, email=user['email']) >= 100:
         raise HTTPException(429, detail="Your storage is full")
+    
+    name, is_malicious = sanitize_filename(name)
+    if is_malicious:
+        raise HTTPException(400, detail="Name is not valid")
+
     metadata = await storage_mgr.upload_image(file, name, email=user["email"], folder_name=folder_uuid, db=db)
     try:
         # Add image to database
@@ -53,6 +96,7 @@ async def count(file: UploadFile, folder_uuid: str = Form(None),  # Change to UU
                 "thumbnail_url": thumbnail_url[0], 
                 "upload_date": new_img.upload_date}
     except Exception as e:
+        print(e)
         raise HTTPException(
             status_code=500, detail="Some error occured, please retry")
 
@@ -140,6 +184,9 @@ async def bulk_count(
     db: Session = Depends(get_db),
     background_tasks: BackgroundTasks = BackgroundTasks()
 ):
+    name, is_malicious = sanitize_filename(name)
+    if is_malicious:
+        raise HTTPException(400, detail="Name is not valid")
     if not folder_uuid:
         folder_uuid = Folder.retrieve_root(db, user['email']).id
 
@@ -298,6 +345,7 @@ async def delete_image(image: ImagePayload, db: Session = Depends(get_db), user:
         img_url = Image.delete(db, name=image.name, folder_id=fldr.id)
         await storage_mgr.delete_image(img_url)
     except Exception as e:
+        print(e)
         db.rollback()
         raise HTTPException(500, detail="An error occurred while deleting the image")
     return {"Success" : True}
@@ -384,7 +432,6 @@ async def download_and_process_image(db:Session, zip_buffer:BytesIO, image, draw
             pil_image = PILImage.open(BytesIO(image_data))
             draw = ImageDraw.Draw(pil_image)
             font = ImageFont.load_default(size=round(max(pil_image.size) * 0.015))
-            print(round(max(pil_image.size) * 0.014))
             # Parse the box color from hexadecimal string
             box_color_rgb = tuple(int(box_color[i:i+2], 16) for i in (1, 3, 5))
 
@@ -407,7 +454,10 @@ async def download_and_process_image(db:Session, zip_buffer:BytesIO, image, draw
 
             # Save the modified image to a BytesIO object
             modified_image_buffer = BytesIO()
-            pil_image.save(modified_image_buffer, format="JPEG")
+            if image.image_url.endswith('.png'):
+                pil_image.save(modified_image_buffer, format="PNG")
+            else:
+                pil_image.save(modified_image_buffer, format="JPEG")
             modified_image_buffer.seek(0)
             image_data = modified_image_buffer.getvalue()
 
@@ -521,7 +571,7 @@ def download_folder(
     })
 
 @router.patch("/rename-image")
-def rename_image(image : RenameImageBody, db : Session = Depends(get_db), user:dict = Depends(LoginRequired(roles_required={TypeOfUser.REGULAR, TypeOfUser.PREMIUM}))):
+async def rename_image(image : RenameImageBody, db : Session = Depends(get_db), user:dict = Depends(LoginRequired(roles_required={TypeOfUser.REGULAR, TypeOfUser.PREMIUM}))):
     if not image.folder_id:
         fldr = Folder.retrieve_root(db, user_email=user['email'])
     else:
@@ -534,7 +584,8 @@ def rename_image(image : RenameImageBody, db : Session = Depends(get_db), user:d
         raise HTTPException(400, detail="name cannot contain special character")
     try:
         img = Image.update(db, old_name=image.name, folder_id=fldr.id, name=image.new_name)
-        Prediction.update(db, folder_id=fldr.id, old_image_name=image.name, new_image_name=image.new_name)
+        new_img_url, new_thumbnail_url = await storage_mgr.rename_image(img.image_url, img.thumbnail_url, image.new_name)
+        img.update_self(db, image_url=new_img_url, thumbnail_url=new_thumbnail_url)
     except IntegrityError as e:
         db.rollback()
         raise HTTPException(status_code=400, detail="Image with the same name already exists")

@@ -84,7 +84,7 @@ class Folder(Base):
         if start_date:
             query = query.filter(Folder.create_date >= start_date)
         if end_date:
-            query = query.filter(Folder.create_date <= end_date)
+            query = query.filter(Folder.create_date <= end_date + timedelta(days=1))
         return query.all()
     
     @classmethod

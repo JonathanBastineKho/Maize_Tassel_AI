@@ -42,10 +42,12 @@ class Image(Base):
         return img
     
     @classmethod
-    def search(cls, db: Session, folder_id: str, offset:int, page_size:int = 20, search: Optional[str] = None,
+    def search(cls, db: Session, folder_id: Optional[str] = None, offset:int = 0, page_size:int = 20, search: Optional[str] = None,
                start_date: Optional[datetime] = None, end_date: Optional[datetime] = None,
                min_tassel_count: Optional[int] = None, max_tassel_count: Optional[int] = None):
-        img_query = db.query(cls).filter(cls.folder_id == folder_id)
+        img_query = db.query(cls)
+        if folder_id:
+            img_query = img_query.filter(cls.folder_id == folder_id)
         if search:
             img_query = img_query.filter(cls.name.ilike(f"%{search}%"))
         if start_date:
