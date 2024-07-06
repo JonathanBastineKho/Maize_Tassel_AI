@@ -3,4 +3,4 @@ __pycache__
 tempCodeRunnerFile.py
 .DS_Store
 *.db
-private_key.json
+*.json

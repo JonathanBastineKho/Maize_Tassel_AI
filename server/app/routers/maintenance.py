@@ -1,11 +1,11 @@
-import asyncio, os
+import asyncio, uuid
 from fastapi import APIRouter, Depends, HTTPException
 from typing import Optional, List
 from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from app.utils.payload import CreateDataset, LoginRequired, ImagePayload, TrainParams
-from app.utils import storage_mgr
+from app.utils import storage_mgr, cloud_run_mgr
 from app.database.utils import get_db
 from app.database.schema import TypeOfUser, Dataset, DatasetImageLink, Image, TypeOfImageStatus, Prediction, Label
 
@@ -116,6 +116,27 @@ def train_model(train_params: TrainParams, db: Session = Depends(get_db), _: dic
     # Upload labels to the google cloud
     label_url = storage_mgr.export_label_data(label_data=label_data, export_dir="temp/labels_export.json")
 
+    # Submit Training job
+    job_args = [
+            "--dataset_names", *train_params.dataset_names,
+            "--base_model_version", str(train_params.base_model_version),
+            "--epochs", str(train_params.epochs),
+            "--patience", str(train_params.patience),
+            "--batch", str(train_params.batch),
+            "--imgsz", str(train_params.imgsz),
+            "--dropout", str(train_params.dropout),
+            "--freeze", str(train_params.freeze_layers),
+            "--optimizer", train_params.optimizer,
+            "--learning_rate", str(train_params.learning_rate),
+        ]
+    if train_params.gpu:
+        job_args.append("--gpu")
+    
+    cloud_run_mgr.run_job(
+        location='asia-southeast1',
+        service_name=f"train-model-service-{uuid.uuid4()}",
+        args=job_args)
+    
 @router.patch("/deploy-model")
 def deploy_model():
     pass

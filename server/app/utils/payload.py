@@ -116,3 +116,4 @@ class TrainParams(BaseModel):
     learning_rate: float
     freeze_layers: int
     imgsz: int
+    gpu: bool = True

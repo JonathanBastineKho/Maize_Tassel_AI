@@ -3,6 +3,7 @@ import json
 import argparse
 import shutil
 import yaml
+import uuid
 from dotenv import load_dotenv
 load_dotenv()
 from google.cloud import storage
@@ -79,12 +80,12 @@ def download_dataset_images(dataset_names):
         
         print(f"Finished downloading images for dataset: {dataset_name}")
 
-def create_dataset_yaml(output_dir: str, nc: int = 1, names: list = ['tsl'], base_model_version : int = None):
+def create_dataset_yaml(output_dir: str, nc: int = 1, names: list = ['tsl'], dataset_slug: str = ''):
     """
     Creates a YAML file for Ultralytics training.
     """
     yaml_content = {
-        'path': f'/kaggle/input/cornsight-dataset-v{base_model_version}' if base_model_version != None else os.path.abspath(output_dir),  # Dataset root dir
+        'path': f'/kaggle/input/{dataset_slug}',  # Dataset root dir
         'train': 'images/train',  # Train images (relative to 'path')
         'val': 'images/val',      # Val images (relative to 'path')
         'test': 'images/test',    # Test images (optional)
@@ -125,7 +126,7 @@ def upload_to_kaggle(dataset_path: str, dataset_slug: str):
     print(f"Uploaded dataset to Kaggle: {full_dataset_name}")
     return full_dataset_name
 
-def run_kaggle_notebook(dataset_name: str, model_blob_name: str, yaml_path: str, args):
+def run_kaggle_notebook(dataset_name: str, model_blob_name: str, yaml_path: str, gpu: bool, args):
     private_key_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
     with open(private_key_path, 'r') as f:
         private_key_json = json.load(f)
@@ -177,6 +178,7 @@ model.train(
     dropout={args.dropout},
     freeze={args.freeze},
     optimizer="{args.optimizer}",
+    lr0={args.learning_rate},
     single_cls=True,
     project="fyp",
     name="Active Learning v{args.base_model_version}"
@@ -184,13 +186,14 @@ model.train(
 
 wandb.finish()
     """
+    notebook_id = uuid.uuid4()
     notebook_metadata = {
-        "id": f"{os.environ.get('KAGGLE_USERNAME')}/yolov9-training-{args.base_model_version}",
-        "title": f"YOLOv9 Training - v{args.base_model_version}",
+        "id": f"{os.environ.get('KAGGLE_USERNAME')}/{args.base_model_version}{notebook_id}",
+        "title": f"v{args.base_model_version}{notebook_id}",
         "language": "python",
         "kernel_type": "notebook",
         "is_private": True,
-        "enable_gpu": True,
+        "enable_gpu": gpu,
         "enable_internet": True,
         "dataset_sources": [dataset_name],
         "kernel_sources": [],
@@ -255,31 +258,42 @@ def prepare_yolo_data(label_data: dict, output_dir: str, dataset_bins: dict, tra
         # Reassign single-sample bins before the first split
         bins = reassign_single_sample_bins(bins)
 
-        # Perform first split: (train+val) vs test
-        train_val_indices, test_indices = train_test_split(
-            np.arange(len(image_list)), 
-            test_size=test_ratio, 
-            stratify=bins, 
-            random_state=42
-        )
-        
-        # Get the bins for the train_val set
-        train_val_bins = bins[train_val_indices]
+        # Check if we have enough samples for stratification
+        unique_bins = np.unique(bins)
+        if len(image_list)*test_ratio >= len(unique_bins) and len(image_list)*train_ratio*val_ratio >= len(unique_bins) :
+            # Perform stratified split
+            train_val_indices, test_indices = train_test_split(
+                np.arange(len(image_list)), 
+                test_size=test_ratio, 
+                stratify=bins, 
+                random_state=42
+            )
+            
+            train_val_bins = bins[train_val_indices]
+            train_val_bins = reassign_single_sample_bins(train_val_bins)
 
-        # Reassign single-sample bins again before the second split
-        train_val_bins = reassign_single_sample_bins(train_val_bins)
+            train_indices, val_indices = train_test_split(
+                np.arange(len(train_val_indices)), 
+                test_size=val_ratio/(train_ratio+val_ratio), 
+                stratify=train_val_bins, 
+                random_state=42
+            )
 
-        # Perform second split on train_val: train vs val
-        train_indices, val_indices = train_test_split(
-            np.arange(len(train_val_indices)), 
-            test_size=val_ratio/(train_ratio+val_ratio), 
-            stratify=train_val_bins, 
-            random_state=42
-        )
-
-        # Convert back to original indices
-        train_indices = train_val_indices[train_indices]
-        val_indices = train_val_indices[val_indices]
+            # Convert back to original indices
+            train_indices = train_val_indices[train_indices]
+            val_indices = train_val_indices[val_indices]
+        else:
+            print(f"Warning: Not enough samples for stratified split in dataset {dataset_name}. Falling back to random split.")
+            train_val_indices, test_indices = train_test_split(
+                np.arange(len(image_list)), 
+                test_size=test_ratio, 
+                random_state=42
+            )
+            train_indices, val_indices = train_test_split(
+                train_val_indices,
+                test_size=val_ratio/(train_ratio+val_ratio), 
+                random_state=42
+            )
 
         # Now process the split data
         split_indices = {
@@ -324,53 +338,25 @@ def main(args):
         label_data = json.load(f)
     prepare_yolo_data(label_data, 'datasets', dataset_bins, args.train_ratio, args.val_ratio, args.test_ratio)
     shutil.rmtree('temp', ignore_errors=True)
-
-    yaml_path = create_dataset_yaml('datasets', base_model_version=args.base_model_version if args.gpu else None)
+    dataset_slug = f"{args.base_model_version}-{str(uuid.uuid4())[:-4]}"
+    dataset_path = 'datasets'
+    create_dataset_yaml(dataset_path, dataset_slug=dataset_slug)
 
     # Train the model
-    if args.gpu:
-        # Train on kaggle
-        dataset_slug = f"cornsight-dataset-v{args.base_model_version}"
-        dataset_path = 'datasets'
-        full_dataset_name = upload_to_kaggle(dataset_path, dataset_slug)
+    full_dataset_name = upload_to_kaggle(dataset_path, dataset_slug)
 
-        # Poll for the dataset to appear in the list
-        dataset_ready = poll_for_dataset(full_dataset_name)
-        
-        if dataset_ready:
-            print("Dataset is ready. Proceeding with notebook creation.")
-            model_blob_name = f"admin/models/yolov9e-{args.base_model_version}.pt"
-            run_kaggle_notebook(full_dataset_name, model_blob_name, f'/kaggle/input/{dataset_slug}/dataset.yaml', args)
-        else:
-            print("Dataset not ready. Please check your Kaggle account and try again later.")
-            return
-
-        print("Training job submitted to Kaggle.")
+    # Poll for the dataset to appear in the list
+    dataset_ready = poll_for_dataset(full_dataset_name)
+    
+    if dataset_ready:
+        print("Dataset is ready. Proceeding with notebook creation.")
+        model_blob_name = f"admin/models/yolov9e-{args.base_model_version}.pt"
+        run_kaggle_notebook(full_dataset_name, model_blob_name, f'/kaggle/input/{dataset_slug}/dataset.yaml', args.gpu, args)
     else:
-        # Train locally
-        # Download model
-        download_from_gcs(blob_name=f"admin/models/yolov9e-{args.base_model_version}.pt", 
-                      destination=f"yolov9e-{args.base_model_version}.pt", log=True)
-        
-        model = YOLO(f"yolov9e-{args.base_model_version}.pt")
-        wandb.login()
-        add_wandb_callback(model, enable_model_checkpointing=True)
+        print("Dataset not ready. Please check your Kaggle account and try again later.")
+        return
 
-        model.train(
-            data=yaml_path,
-            epochs=args.epochs,
-            patience=args.patience,
-            batch=args.batch,
-            imgsz=args.imgsz,
-            dropout=args.dropout,
-            freeze=args.freeze,
-            optimizer=args.optimizer,
-            single_cls=True,
-            project="fyp",
-            name=f"Active Learning v{args.base_model_version}"
-        )
-
-    wandb.finish()
+    print("Training job submitted to Kaggle.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train YOLO model")
@@ -388,6 +374,7 @@ if __name__ == "__main__":
     parser.add_argument("--dropout", type=float, default=0.1, help="Dropout ratio")
     parser.add_argument("--freeze", type=float, default=10, help="Number of layers to be frozen")
     parser.add_argument("--optimizer", type=str, default="Adam", help="Optimizer (SGD, Adam, AdamW, RMSProp)")
+    parser.add_argument("--learning_rate", type=float, default=0.001, help="Initial learning rate")
 
     # Dataset ratio
     parser.add_argument("--train_ratio", type=float, default=0.64, help="Ratio of training data")
