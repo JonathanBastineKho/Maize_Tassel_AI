@@ -30,6 +30,7 @@ import TestPage from './Pages/TestPage';
 import UserSubscriptionPage from './Pages/User/UserSubscriptionPage';
 import UserProfilePage from './Pages/User/UserProfilePage';
 import SuccessSubscriptionPage from './Pages/User/SuccessSubscriptionPage';
+import AdminImagePage from './Pages/Admin/AdminImagePage';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <GoogleOAuthProvider clientId={import.meta.env.VITE_REACT_APP_GOOGLE_CLIENT_ID}>
@@ -77,6 +78,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <Route path="/admin" element={<PrivateRoute requiredRoles={["admin"]} verified={true}><AdminLayout /></PrivateRoute>}>
           <Route path="dashboard" element={<AdminDashboardPage />} />
           <Route path="users" element={<AdminUsersPage />} />
+          <Route path="images" element={<AdminImagePage />} />
         </Route>
    {/* Other Path */}
       <Route path="/test" element={<TestPage />}/>
