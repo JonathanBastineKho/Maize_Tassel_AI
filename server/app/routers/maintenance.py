@@ -1,18 +1,19 @@
 import asyncio, uuid
 from fastapi import APIRouter, Depends, HTTPException
 from typing import Optional, List
+from config import Config
 from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from app.utils.payload import CreateDataset, LoginRequired, ImagePayload, TrainParams
-from app.utils import storage_mgr, cloud_run_mgr
+from app.utils import storage_mgr, cloud_run_mgr, llm_mgr
 from app.database.utils import get_db
 from app.database.schema import TypeOfUser, Dataset, DatasetImageLink, Image, TypeOfImageStatus, Prediction, Label
 
 router = APIRouter(tags=["Maintenance"], prefix="/maintenance")
 
 @router.get("/search-images")
-async def search_images(
+def search_images(
         page: int = 1,
         page_size: int = 20,
         search: Optional[str] = None,
@@ -31,20 +32,34 @@ async def search_images(
     except ValueError:
         raise HTTPException(400, detail="Date time invalid")
     offset = (page - 1) * page_size
-    images = Image.search(db, offset=offset, page_size=page_size, search=search,
+    images = Image.search(db, offset=offset, page_size=page_size,
                               start_date=start_date_obj, end_date=end_date_obj, min_tassel_count=min_tassel_count,
-                              max_tassel_count=max_tassel_count)
-    image_urls = await storage_mgr.get_image([image.thumbnail_url for image in images])
+                              max_tassel_count=max_tassel_count, status=TypeOfImageStatus.DONE)
+    has_more = len(images) > 0
+    print(has_more, f"page {page}")
+    if len(images) > 0 and search:
+        print("filtering")
+        img_idx = llm_mgr.filter_image(
+            image_uris=[
+                f"gs://{Config.PRIVATE_BUCKET_NAME}/{image.image_url}"
+                for image in images
+            ],
+            search=search
+        )
+        print(img_idx)
+        images = [images[i] for i in img_idx if i < len(images)]
+    image_urls = asyncio.run(storage_mgr.get_image([image.thumbnail_url for image in images]))
     image_data = [
-        [image.name, {
-            "size": round(image.size / (1024 * 1024), 2),
+        {
+            "name" : image.name,
             "status": image.processing_status,
             "upload_date": image.upload_date.strftime('%Y-%m-%dT%H:%M:%S%z'),
             "thumbnail_url": url
-        }]
+        }
         for image, url in zip(images, image_urls)
-    ]
+        ]
     return {"Success" : True,
+            "has_more" : has_more,
             "images" : image_data}
 
 @router.post("/create-dataset")
@@ -54,7 +69,6 @@ def create_dataset(dataset: CreateDataset, db: Session = Depends(get_db), user: 
         return {"Success": True}
     except IntegrityError:
         raise HTTPException(400, detail="Duplicate name")
-
 
 @router.post("/add-image")
 async def add_image(dataset: CreateDataset, images: List[ImagePayload], db: Session = Depends(get_db), _: dict = Depends(LoginRequired(roles_required={TypeOfUser.ADMIN}))):

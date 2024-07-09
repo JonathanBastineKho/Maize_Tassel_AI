@@ -44,7 +44,7 @@ class Image(Base):
     @classmethod
     def search(cls, db: Session, folder_id: Optional[str] = None, offset:int = 0, page_size:int = 20, search: Optional[str] = None,
                start_date: Optional[datetime] = None, end_date: Optional[datetime] = None,
-               min_tassel_count: Optional[int] = None, max_tassel_count: Optional[int] = None):
+               min_tassel_count: Optional[int] = None, max_tassel_count: Optional[int] = None, status: Optional[str] = None):
         img_query = db.query(cls)
         if folder_id:
             img_query = img_query.filter(cls.folder_id == folder_id)
@@ -58,12 +58,13 @@ class Image(Base):
             img_query = img_query.filter(cls.tassel_count >= min_tassel_count)
         if max_tassel_count is not None:
             img_query = img_query.filter(cls.tassel_count <= max_tassel_count)
+        if status:
+            img_query = img_query.filter(cls.processing_status == status)
             
         if offset is not None:
-            img_query.offset(offset)
+            img_query = img_query.offset(offset)
         if page_size is not None:
-            img_query.limit(page_size)
-            
+            img_query = img_query.limit(page_size)
         return img_query.all()
     
     @classmethod
