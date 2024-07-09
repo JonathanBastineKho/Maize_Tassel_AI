@@ -5,7 +5,7 @@ from app.database.schema import TypeOfUser
 from app.database.utils import get_db
 from app.utils.payload import LoginRequired, UserUpdateRequest
 from app.utils import storage_mgr, session_mgr
-
+import re
 
 router = APIRouter(tags=["Profile"], prefix="/profile")
 
@@ -18,8 +18,20 @@ def update_account(
     ):
 
     update_data = updated_user.model_dump(exclude_unset=True)
-    if 'name' in update_data and update_data['name'] == "":
-        raise HTTPException(400, detail="Name cannot be empty")
+
+    name_parts = update_data['name'].split()
+    if len(name_parts[0]) == 0 or name_parts[0] == "":
+        raise HTTPException(400, detail="First name cannot be empty")
+    if len(name_parts[0]) > 10:
+        raise HTTPException(400, detail="First name must be 10 characters or fewer")
+    if len(name_parts) > 1 and len(name_parts[1]) > 10:
+        raise HTTPException(400, detail="Last name must be 10 characters or fewer")
+
+    if 'phone' in update_data and len(update_data['phone']) > 13:
+        raise HTTPException(400, detail="Phone number must be 13 characters or fewer")
+    if not re.match(r'^[\w\s\.-]+$', update_data['phone']):
+        raise HTTPException(400, detail="Phone number cannot contain special character")
+    
     usr = User.update(db, email=user['email'], **update_data)
     session_mgr.logout_user(request)
     return session_mgr.login_user(email=usr.email, name=usr.name, verified=usr.verified, role=usr.role, profile_pict=usr.profile_pict, request=request)

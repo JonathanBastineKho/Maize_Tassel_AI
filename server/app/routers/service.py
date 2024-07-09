@@ -581,7 +581,7 @@ async def rename_image(image : RenameImageBody, db : Session = Depends(get_db), 
     if image.new_name == "":
         raise HTTPException(400, detail="Image name cannot be empty")
     if not re.match(r'^[\w\s\.-]+$', image.new_name):
-        raise HTTPException(400, detail="name cannot contain special character")
+        raise HTTPException(400, detail="Image name cannot contain special character")
     try:
         img = Image.update(db, old_name=image.name, folder_id=fldr.id, name=image.new_name)
         new_img_url, new_thumbnail_url = await storage_mgr.rename_image(img.image_url, img.thumbnail_url, image.new_name)

@@ -8,7 +8,7 @@ import {
   Avatar,
   Select,
 } from "flowbite-react";
-import { FaCheck, FaCloudUploadAlt } from "react-icons/fa";
+import { FaCheck } from "react-icons/fa";
 import ToastMsg from "../../Components/Other/ToastMsg";
 import { getData } from "country-list";
 import { useContext, useEffect, useRef, useState } from "react";
@@ -24,6 +24,9 @@ function UserProfilePage() {
   const [changed, setChanged] = useState(false);
   const [successUpdate, setSuccessUpdate] = useState(false);
   const [data, setData] = useState();
+  const [firstNameError, setFirstNameError] = useState('');
+  const [lastNameError, setLastNameError] = useState('');
+  const [phoneError, setPhoneError] = useState('');
   const navigate = useNavigate();
 
   const cardTheme = {
@@ -54,6 +57,9 @@ function UserProfilePage() {
   const submitGeneralInfoChange = (e) => {
     e.preventDefault();
     setChangedLoading(true);
+    setFirstNameError('');
+    setLastNameError('');
+    setPhoneError('');
     const firstName = e.target.first_name.value.trim();
     const formData = {
       name: `${firstName} ${e.target.last_name.value.trim()}`,
@@ -75,6 +81,19 @@ function UserProfilePage() {
       .catch((err) => {
         if (err.response.status === 401) {
           navigate("/login");
+        } else if (err.response.status === 400) {
+          const errorMessage = err.response.data.detail;
+          if (errorMessage.includes("First name cannot be empty")) {
+            setFirstNameError(errorMessage);
+          } else if (errorMessage.includes("First name must be 10 characters or fewer")) {
+            setFirstNameError(errorMessage);
+          } else if (errorMessage.includes("Last name must be 10 characters or fewer")) {
+            setLastNameError(errorMessage);
+          } else if (errorMessage.includes("Phone number must be 13 characters or fewer")) {
+            setPhoneError(errorMessage);
+          } else if (errorMessage.includes("Phone number cannot contain special character")) {
+            setPhoneError(errorMessage);
+          }
         }
       })
       .finally(() => {
@@ -124,7 +143,7 @@ function UserProfilePage() {
             message="Your profile has been updated"
           />
           <div className="flex flex-col md:flex-row md:flex-nowrap gap-6">
-            <Card className="p-6 w-full md:w-fit min-w-64" theme={cardTheme}>
+            <Card className="p-6 w-full md:w-fit min-w-80" theme={cardTheme}>
               <Avatar referrerPolicy="no-referrer" img={`${user.profile_pict}?${Date.now()}`} size="xl" />
               <div className="flex flex-col gap-1 mt-2">
                 <span className="text-xl font-bold">{user.name}</span>
@@ -141,35 +160,42 @@ function UserProfilePage() {
             </Card>
             <Card className="p-6 w-full" theme={cardTheme}>
               <h2 className="text-xl font-bold">General Information</h2>
-              <form onSubmit={submitGeneralInfoChange}>
+              <form
+                onSubmit={submitGeneralInfoChange}
+                onChange={() => setChanged(true)}
+              >
                 <div className="grid gap-5 md:grid-cols-2 sm:grid-cols-1">
                   <div>
                     <div className="mb-2 block">
-                      <Label htmlFor="first_name" value="First Name" />
+                      <Label htmlFor="first_name" value="First name" />
                     </div>
                     <TextInput
-                      onChange={() => setChanged(true)}
-                      theme={inputTheme}
                       id="first_name"
-                      pattern="^[a-zA-Z]*$"
                       name="first_name"
                       type="text"
-                      required
+                      pattern="^[a-zA-Z]*$"
+                      required={true}
                       defaultValue={data.first_name}
+                      shadow={true}
+                      theme={inputTheme}
+                      color={firstNameError ? 'failure' : undefined}
+                      helperText={firstNameError ? <span className="text-red-500">{firstNameError}</span> : undefined}
                     />
                   </div>
                   <div>
                     <div className="mb-2 block">
-                      <Label htmlFor="last_name" value="Last Name" />
+                      <Label htmlFor="last_name" value="Last name" />
                     </div>
                     <TextInput
-                      onChange={() => setChanged(true)}
-                      theme={inputTheme}
                       id="last_name"
-                      pattern="^[a-zA-Z]*$"
                       name="last_name"
                       type="text"
+                      pattern="^[a-zA-Z]*$"
                       defaultValue={data.last_name}
+                      shadow={true}
+                      theme={inputTheme}
+                      color={lastNameError ? 'failure' : undefined}
+                      helperText={lastNameError ? <span className="text-red-500">{lastNameError}</span> : undefined}
                     />
                   </div>
                   <div>
@@ -177,35 +203,36 @@ function UserProfilePage() {
                       <Label htmlFor="country" value="Country" />
                     </div>
                     <Select
-                      onChange={() => setChanged(true)}
-                      id="country"
-                      name="country"
-                      defaultValue={data.country || ""}
-                    >
-                      <option value="" disabled>
-                        Select a country
-                      </option>
-                      {getData().map((country) => (
-                        <option key={country.code} value={country.name}>
-                          {country.name}
+                        onChange={() => setChanged(true)}
+                        id="country"
+                        name="country"
+                        defaultValue={data.country || ""}
+                      >
+                        <option value="" disabled>
+                          Select a country
                         </option>
-                      ))}
-                    </Select>
+                        {getData().map((country) => (
+                          <option key={country.code} value={country.name}>
+                            {country.name}
+                          </option>
+                        ))}
+                      </Select>
                   </div>
                   <div>
                     <div className="mb-2 block">
                       <Label htmlFor="phone" value="Phone Number" />
                     </div>
                     <TextInput
-                      onChange={() => setChanged(true)}
-                      placeholder="+112345678"
-                      name="phone"
-                      theme={inputTheme}
                       id="phone"
+                      name="phone"
                       type="tel"
-                      pattern="^\+?[0-9]*$"
+                      placeholder="+112345678"
                       maxLength={20}
                       defaultValue={data.phone}
+                      shadow={true}
+                      theme={inputTheme}
+                      color={phoneError ? 'failure' : undefined}
+                      helperText={phoneError ? <span className="text-red-500">{phoneError}</span> : undefined}
                     />
                   </div>
                 </div>
