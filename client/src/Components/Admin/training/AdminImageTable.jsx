@@ -1,7 +1,7 @@
 import { Table, Checkbox, Label, Avatar, Badge } from "flowbite-react";
-import { tableTheme } from "../../theme";
+import { checkBoxTheme, tableTheme } from "../../theme";
 import axios from "axios";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import InifiniteScroll from "react-infinite-scroll-component";
 import { format } from 'date-fns';
@@ -14,20 +14,29 @@ function AdminImageTable({ image, setImage }) {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const search = searchParams.get("search") || "";
+  const abortControllerRef = useRef(null);
 
   const fetchItem = (currentPage = page, currentImageLength = image.length) => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
     axios
-      .get(`/api/maintenance/search-images?search=${search}&page=${currentPage}&page_size=30`)
+      .get(`/api/maintenance/search-images?search=${search}&page=${currentPage}&page_size=20`)
       .then((res) => {
         if (res.status === 200) {
+          const newImages = res.data.images.map(img => ({
+            ...img,
+            checked: false // Add the checked property
+          }));
           if (currentPage === 1) {
-            setImage(res.data.images);
+            setImage(newImages);
           } else {
-            setImage((prev) => [...prev, ...res.data.images]);
+            setImage((prev) => [...prev, ...newImages]);
           }
           setPage(currentPage + 1);
           setHasMore(res.data.has_more);
-          if (res.data.has_more && currentImageLength< 30) {
+          if (res.data.has_more && currentImageLength < 20) {
             fetchItem(currentPage + 1, currentImageLength + res.data.images.length); // Fetch more items immediately
           }
         }
@@ -35,6 +44,8 @@ function AdminImageTable({ image, setImage }) {
       .catch((err) => {
         if (err.response.status === 401) {
           navigate("/login");
+        } else if (err.response.status === 500) {
+          setHasMore(false);
         }
       })
       .finally(() => {
@@ -60,6 +71,10 @@ function AdminImageTable({ image, setImage }) {
     </Table.Row>
   );
 
+  const areAllChecked = useMemo(() => {
+    return image.length > 0 && image.every(img => img.checked);
+  }, [image]);
+
   useEffect(() => {
     setLoading(true);
     setPage(1);
@@ -69,6 +84,11 @@ function AdminImageTable({ image, setImage }) {
     if (page === 1) {
       fetchItem(1, 0);
     }
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, [page, search]);
 
   return (
@@ -88,7 +108,12 @@ function AdminImageTable({ image, setImage }) {
       <Table hoverable theme={tableTheme}>
         <Table.Head>
           <Table.HeadCell>
-            <Checkbox />
+            <Checkbox 
+            checked={areAllChecked}
+            onChange={(e) => {
+              setImage(prevImages => prevImages.map(img => ({ ...img, checked: e.target.checked })));
+            }}
+            theme={checkBoxTheme} />
           </Table.HeadCell>
           <Table.HeadCell className="w-full md:w-auto">Name</Table.HeadCell>
           <Table.HeadCell className="hidden md:table-cell min-w-32">Status</Table.HeadCell>
@@ -103,7 +128,19 @@ function AdminImageTable({ image, setImage }) {
           ) : (
             image.map((img, idx) => (
               <Table.Row className="cursor-pointer" key={idx}>
-                <Table.Cell className="w-fit md:w-auto"><Checkbox /></Table.Cell>
+                <Table.Cell className="w-fit md:w-auto">
+                  <Checkbox
+                    theme={checkBoxTheme}
+                    checked={img.checked}
+                    onChange={() => {
+                      setImage(prevImages => {
+                        const newImages = [...prevImages];
+                        newImages[idx] = { ...newImages[idx], checked: !newImages[idx].checked };
+                        return newImages;
+                      });
+                    }}
+                  />
+                  </Table.Cell>
                 <Table.Cell className="w-full md:w-auto whitespace-nowrap font-medium text-gray-900 flex flex-row gap-2 items-center ">
                   <Avatar size="xs" img={img.thumbnail_url} />
                   <Label className="truncate max-w-64">{img.name}</Label>
