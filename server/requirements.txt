@@ -18,3 +18,4 @@ cryptography==42.0.7
 stripe==9.7.0
 wandb==0.16.6
 google-cloud-run==0.10.5
+google-cloud-aiplatform==1.59.0

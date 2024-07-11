@@ -23,6 +23,8 @@ class Config:
     STRIPE_SECRET = os.environ.get("STRIPE_SECRET")
     STRIPE_WEBHOOK = os.environ.get("STRIPE_WEBHOOK")
     GOOGLE_CLOUD_RUN_KEY = os.environ.get("GOOGLE_CLOUD_RUN_KEY")
+    GOOGLE_APPLICATION_CREDENTIALS = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+    GOOGLE_PROJECT_ID = os.environ.get("GOOGLE_PROJECT_ID")
 
     # RabbitMQ
     RABBIT_MQ_USERNAME = os.environ.get("RABBIT_MQ_USERNAME")

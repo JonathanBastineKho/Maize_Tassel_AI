@@ -3,6 +3,7 @@ from .storage import StorageManager
 from .session import SessionManager
 from .email import EmailSender
 from .job import JobManager, CloudRunManager
+from .llm import LLMmanager
 
 # initialize session manager
 session_mgr = SessionManager()
@@ -24,3 +25,7 @@ job_mgr.connect()
 
 # Initialize cloud run manager
 cloud_run_mgr = CloudRunManager(service_account_path=Config.GOOGLE_CLOUD_RUN_KEY)
+
+# Initialize LLM Manager
+llm_mgr = LLMmanager(credential_path=Config.GOOGLE_APPLICATION_CREDENTIALS, 
+                     project_id=Config.GOOGLE_PROJECT_ID)

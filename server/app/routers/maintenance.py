@@ -1,18 +1,19 @@
 import asyncio, uuid
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from typing import Optional, List
+from config import Config
 from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from app.utils.payload import CreateDataset, LoginRequired, ImagePayload, TrainParams
-from app.utils import storage_mgr, cloud_run_mgr
+from app.utils import storage_mgr, cloud_run_mgr, llm_mgr
 from app.database.utils import get_db
 from app.database.schema import TypeOfUser, Dataset, DatasetImageLink, Image, TypeOfImageStatus, Prediction, Label
 
 router = APIRouter(tags=["Maintenance"], prefix="/maintenance")
 
 @router.get("/search-images")
-async def search_images(
+def search_images(
         page: int = 1,
         page_size: int = 20,
         search: Optional[str] = None,
@@ -31,20 +32,32 @@ async def search_images(
     except ValueError:
         raise HTTPException(400, detail="Date time invalid")
     offset = (page - 1) * page_size
-    images = Image.search(db, offset=offset, page_size=page_size, search=search,
+    images = Image.search(db, offset=offset, page_size=page_size,
                               start_date=start_date_obj, end_date=end_date_obj, min_tassel_count=min_tassel_count,
-                              max_tassel_count=max_tassel_count)
-    image_urls = await storage_mgr.get_image([image.thumbnail_url for image in images])
+                              max_tassel_count=max_tassel_count, status=TypeOfImageStatus.DONE)
+    has_more = len(images) > 0
+    if len(images) > 0 and search:
+        img_idx = llm_mgr.filter_image(
+            image_uris=[
+                f"gs://{Config.PRIVATE_BUCKET_NAME}/{image.image_url}"
+                for image in images
+            ],
+            search=search
+        )
+        images = [images[i] for i in img_idx if i < len(images)]
+    image_urls = asyncio.run(storage_mgr.get_image([image.thumbnail_url for image in images]))
     image_data = [
-        [image.name, {
-            "size": round(image.size / (1024 * 1024), 2),
+        {
+            "name" : image.name,
+            "folder_id" : image.folder_id,
             "status": image.processing_status,
             "upload_date": image.upload_date.strftime('%Y-%m-%dT%H:%M:%S%z'),
             "thumbnail_url": url
-        }]
+        }
         for image, url in zip(images, image_urls)
-    ]
+        ]
     return {"Success" : True,
+            "has_more" : has_more,
             "images" : image_data}
 
 @router.post("/create-dataset")
@@ -54,16 +67,35 @@ def create_dataset(dataset: CreateDataset, db: Session = Depends(get_db), user: 
         return {"Success": True}
     except IntegrityError:
         raise HTTPException(400, detail="Duplicate name")
-
+    
+@router.get("/search-dataset")
+def search_dataset(dataset: Optional[str] = None,
+                   page: int = 1,
+                   page_size: int = 20,
+                   db: Session = Depends(get_db), user: dict = Depends(LoginRequired(roles_required={TypeOfUser.ADMIN}))):
+    offset = (page - 1) * page_size
+    datasets = Dataset.search(db, dataset_name=dataset, offset=offset, page_size=page_size)
+    return {
+        "Success" : True,
+        "dataset" : [
+            {
+                "name" : dataset.name,
+                "create_date" : dataset.create_date
+            }
+            for dataset in datasets
+        ]
+    }
 
 @router.post("/add-image")
-async def add_image(dataset: CreateDataset, images: List[ImagePayload], db: Session = Depends(get_db), _: dict = Depends(LoginRequired(roles_required={TypeOfUser.ADMIN}))):
+async def add_image(response: Response, dataset: CreateDataset, images: List[ImagePayload], db: Session = Depends(get_db), _: dict = Depends(LoginRequired(roles_required={TypeOfUser.ADMIN}))):
     storage_tasks = []
+    not_done_image = 0
+    duplicate_image = 0
 
     for image in images:
         img = Image.retrieve(db, name=image.name, folder_id=image.folder_id)
         if img.processing_status != TypeOfImageStatus.DONE:
-            raise HTTPException(400, detail="Image has not done processing yet")
+            not_done_image += 1
         
         try:            
             DatasetImageLink.create(db, dataset_name=dataset.name,
@@ -76,13 +108,26 @@ async def add_image(dataset: CreateDataset, images: List[ImagePayload], db: Sess
                              box_id=pred.box_id, xCenter=pred.xCenter, yCenter=pred.yCenter, width=pred.width, height=pred.height)
             storage_tasks.append(storage_mgr.add_image_to_dataset(dataset.name, img.name, img.folder_id, img.image_url, img.thumbnail_url))
         except IntegrityError:
-            raise HTTPException(400, detail="Image already added to the dataset")
+            duplicate_image += 1
+            db.rollback()
 
     try:
         await asyncio.gather(*storage_tasks)
     except Exception as e:
+        response.status = 500
         raise HTTPException(500, detail=f"An error occurred while processing images: {str(e)}")
     
+    if not_done_image + duplicate_image == len(images):
+        response.status = 400
+        raise HTTPException(400, detail=f"All {len(images)} images are already added")
+    elif not_done_image > 0 or duplicate_image > 0:
+        response.status_code = 206
+        return {
+            "Success" : False,
+            "not_done_count": not_done_image,
+            "duplicate_count": duplicate_image
+        }
+    response.status_code = 200
     return {"Success": True}
 
 @router.patch("/edit-image")
