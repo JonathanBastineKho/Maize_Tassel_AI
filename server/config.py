@@ -26,6 +26,9 @@ class Config:
     GOOGLE_APPLICATION_CREDENTIALS = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
     GOOGLE_PROJECT_ID = os.environ.get("GOOGLE_PROJECT_ID")
 
+    # OpenWeather
+    OPEN_WEATHER_API = os.environ.get("OPEN_WEATHER_API")
+
     # RabbitMQ
     RABBIT_MQ_USERNAME = os.environ.get("RABBIT_MQ_USERNAME")
     RABBIT_MQ_PASSWORD = os.environ.get("RABBIT_MQ_PASSWORD")

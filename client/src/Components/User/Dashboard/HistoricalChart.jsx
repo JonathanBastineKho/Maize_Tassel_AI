@@ -1,4 +1,4 @@
-import { Card, Datepicker } from "flowbite-react";
+import { Card } from "flowbite-react";
 import Chart from "react-apexcharts";
 import { FaArrowUp, FaArrowDown } from "react-icons/fa";
 

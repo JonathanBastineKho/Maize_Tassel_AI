@@ -11,6 +11,9 @@ from PIL import ImageDraw, ImageFont
 from PIL import Image as PILImage
 import asyncio, os, re
 import zipfile
+import requests
+import json
+from app import Config
 from app.utils import storage_mgr
 from app.database.schema import Folder, TypeOfUser, Image, Prediction, TypeOfImageStatus
 from app.database.utils import get_db
@@ -683,6 +686,18 @@ def search_all_folders(user: dict = Depends(LoginRequired(roles_required={TypeOf
     return {
         "folder_list" : [{"name" : fldr.name, "id" : fldr.id} for fldr in fldrs]
     }
+
+@router.get("/view-weather-forecast")
+def view_weather_forecast(lon: float, lat: float, _: dict = Depends(LoginRequired(roles_required={TypeOfUser.REGULAR, TypeOfUser.PREMIUM}))):
+    res = requests.get("https://api.openweathermap.org/data/2.5/forecast/daily",
+                        params={
+                            "lat" : lat,
+                            "lon" : lon,
+                            "appid" : Config.OPEN_WEATHER_API
+                        })
+    res = json.loads(res.text)
+    return res
+    
 
 @event.listens_for(Image, 'after_update')
 def receive_after_update(mapper, connection, target):
