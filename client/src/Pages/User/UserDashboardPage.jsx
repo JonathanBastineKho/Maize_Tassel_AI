@@ -1,5 +1,5 @@
 import { Card, Datepicker, Button, Label } from "flowbite-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaRegCalendarAlt, FaChartBar, FaCaretDown } from "react-icons/fa";
 import { IoMdTrendingDown, IoMdTrendingUp } from "react-icons/io";
@@ -9,6 +9,8 @@ import { format } from "date-fns";
 import HistoricalChart from "../../Components/User/Dashboard/HistoricalChart";
 import FolderPicker from "../../Components/User/Dashboard/FolderPicker";
 import { datepickerTheme } from "../../Components/theme";
+import WeatherChart from "../../Components/User/Dashboard/WeatherChart";
+import WeatherForecast from "../../Components/User/Dashboard/WeatherForecast";
 
 function UserDashboardPage() {
     const navigate = useNavigate();
@@ -19,9 +21,12 @@ function UserDashboardPage() {
     const [openFolder, setOpenFolder] = useState(false);
     const [folders, setFolders] = useState([{name: "Home", id: null}]);
     const [firstSearch, setFirstSearch] = useState(true);
+    const [location, setLocation] = useState(null);
+    const [weather, setWeather] = useState(null);
+    const [weatherQuotaExceed, setWeatherQuotaExceed] = useState(false);
+    const prevLocationRef = useRef();
 
     useEffect(()=>{
-
         const params = {};
         if (selectedFolder.id !== null) {
             params.folder_id = selectedFolder.id;
@@ -64,6 +69,56 @@ function UserDashboardPage() {
             }
         })
     }, [])
+
+    useEffect(() => {
+        if (!navigator.geolocation){
+            setLocation({
+                lon : 103.819839,
+                lat : 1.352083
+            });
+        }
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                setLocation({
+                    lon : position.coords.longitude,
+                    lat : position.coords.latitude
+                });
+            },
+            (error) => {
+                setLocation({
+                    lon : 103.819839,
+                    lat : 1.352083
+                });
+            }
+        )
+    }, [])
+
+    const isLocationChanged = (prevLoc, currLoc) => {
+        if (!prevLoc || !currLoc) return true;
+        return prevLoc.lat !== currLoc.lat || prevLoc.lon !== currLoc.lon;
+      };
+
+    useEffect(() => {
+        if (location !== null && isLocationChanged(prevLocationRef.current, location)){
+            axios.get("/api/service/view-weather-forecast", {
+                params : {lat: location.lat, lon : location.lon}
+            })
+            .then((res) => {
+                if (res.status === 200) {
+                    setWeather(res.data);
+                    setWeatherQuotaExceed(false);
+                }
+            })
+            .catch((err) => {
+                if (err.response.status === 400) {
+                    navigate("/login")
+                } else if (err.response.status === 500) {
+                    setWeatherQuotaExceed(true);
+                }
+            })
+            prevLocationRef.current = location;
+        }
+    }, [location])
 
     return (
         <div className="mt-20 p-6">
@@ -149,6 +204,19 @@ function UserDashboardPage() {
                 </Card>
             </div>
             <HistoricalChart historicalData={historicalData} />
+            <div className="mt-8">
+                <h1 className="font-extrabold text-2xl mb-8">Weather Forecast</h1>
+                <div>
+                    <div className="grid grid-cols-1 xl:grid-cols-3 gap-3">
+                        <div className="lg:col-span-2">
+                            <WeatherChart weatherData={weather} />
+                        </div>
+                        <div className="lg:col-span-1 w-full">
+                            <WeatherForecast location={location} setLocation={setLocation} weatherData={weather} />
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }
