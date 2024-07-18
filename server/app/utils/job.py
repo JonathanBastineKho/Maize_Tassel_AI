@@ -9,6 +9,7 @@ class JobManager:
         self.rabbit_host = rabbit_host
         self.rabbit_port = rabbit_port
         self.rabbit_queue = rabbit_queue
+        self.model_update_exchange = 'model_updates'
         self.connection = None
         self.channel = None
 
@@ -48,6 +49,22 @@ class JobManager:
             properties=pika.BasicProperties(
                 delivery_mode=2,  # make the message persistent
                 priority=priority
+            )
+        )
+
+    def broadcast_model_update(self, new_model_url: str):
+        update_data = {
+            'model_url': new_model_url
+        }
+
+        update_body = json.dumps(update_data)
+
+        self.channel.basic_publish(
+            exchange=self.model_update_exchange,
+            routing_key='',  # fanout exchanges ignore the routing key
+            body=update_body,
+            properties=pika.BasicProperties(
+                delivery_mode=2,  # make the message persistent
             )
         )
 

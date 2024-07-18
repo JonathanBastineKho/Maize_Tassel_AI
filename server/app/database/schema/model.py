@@ -22,10 +22,20 @@ class Model(Base):
     @classmethod
     def retrieve(cls, db:Session, version: int):
         return db.query(cls).filter(cls.version == version).one_or_none()
+    
+    @classmethod
+    def get_deployed_model(cls, db:Session):
+        return db.query(cls).filter(cls.deployed == True).one_or_none()
 
     @classmethod
     def search(cls, db: Session):
         return db.query(cls).all()
+    
+    def update_self(self, db: Session, **kw):
+        for key, value in kw.items():
+            setattr(self, key, value)
+        db.commit()
+        return self
     
     @classmethod
     def update(cls, db: Session, version:int, **kw):

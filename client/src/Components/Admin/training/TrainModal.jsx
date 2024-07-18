@@ -223,6 +223,13 @@ function TrainModal({ open, setOpen, models, setSuccessTrainToastOpen }) {
         </div>
         <div>
           <TextInput
+            value={search}
+            onChange={(e) => {setSearch(e.target.value)}}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                  setDebouncedSearch(search);
+              }
+            }}
             theme={inputTheme}
             icon={HiSearch}
             placeholder="Search dataset"

@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { Table, Badge, Button } from "flowbite-react";
 import { format } from "date-fns";
 import { FaCheck } from "react-icons/fa";
+import { HiCheck } from "react-icons/hi";
 import TrainModal from "../../Components/Admin/training/TrainModal";
 import ToastMsg from "../../Components/Other/ToastMsg";
 
@@ -50,12 +51,11 @@ function AdminModelPage() {
             })
         }
     }, [selectedRunId, models])
-
     return (
         <div className="mt-24 px-5">
             <ToastMsg color="green" icon={<FaCheck className="h-5 w-5" />} open={successTrainToastOpen} setOpen={setSuccessTrainToastOpen} message="Training Job submitted" />
             <TrainModal open={trainModalOpen} setOpen={setTrainModalOpen} models={models} setSuccessTrainToastOpen={setSuccessTrainToastOpen} />
-            <h1 className="text-2xl font-bold mb-4">Model V0 Metric</h1>
+            <h1 className="text-2xl font-bold mb-4">Model V{selectedRunId} Metric</h1>
             <MetricsCard metrics={metrics} />
             <div className="flex flex-row flex-wrap justify-between items-center">
                 <h1 className="text-2xl font-bold my-8">Model List</h1>
@@ -72,14 +72,17 @@ function AdminModelPage() {
                         <Table.HeadCell>MAP</Table.HeadCell>
                         <Table.HeadCell>Deployed</Table.HeadCell>
                         <Table.HeadCell>Finished Train Date</Table.HeadCell>
+                        <Table.HeadCell>
+                            <span className="sr-only">Selected</span>
+                        </Table.HeadCell>
                     </Table.Head>
                     <Table.Body className="divide-y">
                         {models !== null ? (
                             models.map((model, idx) => (
-                            <Table.Row key={idx}>
+                            <Table.Row onClick={() => {setSelectedRunId(idx)}} key={idx} className="cursor-pointer">
                                 <Table.Cell>Model {model.version}</Table.Cell>
-                                <Table.Cell>{model.test_mae}</Table.Cell>
-                                <Table.Cell>{model.test_map}</Table.Cell>
+                                <Table.Cell>{model.test_mae?.toFixed(2)}</Table.Cell>
+                                <Table.Cell>{model.test_map?.toFixed(4)}</Table.Cell>
                                 <Table.Cell>{model.deployed ? (
                                     <div className="w-fit">
                                         <Badge color="success">In Use</Badge>
@@ -91,6 +94,11 @@ function AdminModelPage() {
                                 )}</Table.Cell>
                                 <Table.Cell>
                                     {model.finish_train_date !== null ? (format(model.finish_train_date, "MMM dd, yyyy")) : ("-")}
+                                </Table.Cell>
+                                <Table.Cell>
+                                    {selectedRunId === idx && 
+                                        <HiCheck className="text-green-500" size={20} />
+                                    }
                                 </Table.Cell>
                             </Table.Row>
                             ))

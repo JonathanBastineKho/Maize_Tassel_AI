@@ -6,8 +6,8 @@ from config import Config
 from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from app.utils.payload import CreateDataset, LoginRequired, ImagePayload, TrainParams
-from app.utils import storage_mgr, cloud_run_mgr, llm_mgr
+from app.utils.payload import CreateDataset, LoginRequired, ImagePayload, TrainParams, DeployModel
+from app.utils import storage_mgr, cloud_run_mgr, llm_mgr, job_mgr
 from app.database.utils import get_db
 from app.database.schema import Model, TypeOfUser, Dataset, DatasetImageLink, Image, TypeOfImageStatus, Prediction, Label
 
@@ -259,5 +259,15 @@ def model_list(db: Session = Depends(get_db), _: dict = Depends(LoginRequired(ro
     }
 
 @router.patch("/deploy-model")
-def deploy_model():
-    pass
+def deploy_model(model_deploy: DeployModel, db: Session = Depends(get_db), _: dict = Depends(LoginRequired(roles_required={TypeOfUser.ADMIN}))):
+    model = Model.retrieve(db, version=model_deploy.version)
+    if model.finish_train_date == None:
+        raise HTTPException(400, detail="Model still not finish training")
+    
+    try:
+        job_mgr.broadcast_model_update(model.model_url)
+        old_model = Model.get_deployed_model(db)
+        old_model.update_self(db, deployed=False)
+        model.update(db, deployed=True)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

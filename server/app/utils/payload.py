@@ -126,3 +126,6 @@ class TrainingHookPayload(BaseModel):
     model_version: Optional[int] = None
     run_id: str
     metrics: Optional[MetricsModel] = None
+
+class DeployModel(BaseModel):
+    version: int
