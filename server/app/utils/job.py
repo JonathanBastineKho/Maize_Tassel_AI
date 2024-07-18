@@ -85,12 +85,6 @@ class CloudRunManager:
                             }
                         }
                     }],
-                    # "volumes": [{
-                    #     "name": "job-disk",
-                    #     "empty_dir": {
-                    #         "size_limit": "50Gi"
-                    #     }
-                    # }],
                 },
             },
         }
@@ -114,3 +108,20 @@ class CloudRunManager:
         except Exception as e:
             print(f"An error occurred while running the job: {str(e)}")
             raise
+
+    def check_running_cloud_run_jobs(self):
+        project_id = self._get_project_id(self.service_account_path)
+        location = "asia-southeast1"  # Singapore region
+        parent = f"projects/{project_id}/locations/{location}"
+        
+        request = run_v2.ListJobsRequest(parent=parent)
+        
+        try:
+            jobs = self.client.list_jobs(request=request)
+            return any(not hasattr(job, 'terminal_condition') or 
+                       job.terminal_condition.state != run_v2.Condition.State.CONDITION_SUCCEEDED
+                       for job in jobs)
+        except Exception as e:
+            print(f"An error occurred while checking for running jobs: {str(e)}")
+            # In case of an error, we assume there might be a running job to be safe
+            return True

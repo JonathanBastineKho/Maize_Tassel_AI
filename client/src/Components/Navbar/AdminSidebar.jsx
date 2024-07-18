@@ -38,7 +38,7 @@ function AdminSideBar({setCollapsed, collapsed}) {
                         <Sidebar.Collapse icon={BsStars} label="Big Data">
                             <Sidebar.Item as={Link} to="/admin/images">Images</Sidebar.Item>
                             <Sidebar.Item>Dataset</Sidebar.Item>
-                            <Sidebar.Item>Model</Sidebar.Item>
+                            <Sidebar.Item as={Link} to="/admin/models">Model</Sidebar.Item>
                         </Sidebar.Collapse>
                     </Sidebar.ItemGroup>
                     <Sidebar.ItemGroup>

@@ -1,6 +1,6 @@
 from fastapi import Request, HTTPException
-from pydantic import BaseModel
-from typing import Set, List, Optional
+from pydantic import BaseModel, Field
+from typing import Set, List, Optional, Literal, Union
 from . import session_mgr
 from app.database.schema import TypeOfUser
 
@@ -107,13 +107,22 @@ class CreateDataset(BaseModel):
 
 class TrainParams(BaseModel):
     dataset_names: List[str]
-    base_model_version: int
-    epochs: int
-    patience: int
-    batch: int
-    dropout: float
-    optimizer: str
-    learning_rate: float
-    freeze_layers: int
-    imgsz: int
-    gpu: bool = True
+    base_model_version: int = Field(..., ge=0)
+    epochs: int = Field(100, ge=1, le=500)
+    patience: int = Field(10, ge=1, le=50)
+    batch: int = Field(16, ge=1, le=16)
+    dropout: float = Field(0.1, ge=0.0, le=1.0)
+    optimizer: str = Field("Adam", pattern='^(sgd|adam|adamw|Adam)$')
+    learning_rate: float = Field(0.001, gt=0, le=1)
+    freeze_layers: int = Field(10, ge=8)
+    imgsz: int = Field(860, ge=32, le=1024)
+
+class MetricsModel(BaseModel):
+    map50: float
+    mae: float
+
+class TrainingHookPayload(BaseModel):
+    status: Literal["benchmark", "training"]
+    model_version: Optional[int] = None
+    run_id: str
+    metrics: Optional[MetricsModel] = None

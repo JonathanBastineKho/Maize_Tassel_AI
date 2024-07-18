@@ -25,7 +25,7 @@ def create_database(engine=engine, base=Base):
     db.add(admin)
 
     # Adding default model
-    default_model = Model(version=0, finish_train_date=datetime.now(timezone.utc), test_map=0.901, test_mae=5.87, model_url="admin/models/yolov9e-0.pt")
+    default_model = Model(version=0, finish_train_date=datetime.now(timezone.utc), test_map=0.901, test_mae=5.87, model_url="admin/models/yolov9e-0.pt", deployed=True, run_id=Config.INITIAL_RUN_ID)
     db.add(default_model)
 
     db.commit()
