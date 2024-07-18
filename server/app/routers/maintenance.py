@@ -1,14 +1,15 @@
 import asyncio, uuid
+import wandb
 from fastapi import APIRouter, Depends, HTTPException, Response
 from typing import Optional, List
 from config import Config
 from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from app.utils.payload import CreateDataset, LoginRequired, ImagePayload, TrainParams
-from app.utils import storage_mgr, cloud_run_mgr, llm_mgr
+from app.utils.payload import CreateDataset, LoginRequired, ImagePayload, TrainParams, DeployModel
+from app.utils import storage_mgr, cloud_run_mgr, llm_mgr, job_mgr
 from app.database.utils import get_db
-from app.database.schema import TypeOfUser, Dataset, DatasetImageLink, Image, TypeOfImageStatus, Prediction, Label
+from app.database.schema import Model, TypeOfUser, Dataset, DatasetImageLink, Image, TypeOfImageStatus, Prediction, Label
 
 router = APIRouter(tags=["Maintenance"], prefix="/maintenance")
 
@@ -140,11 +141,20 @@ def annotage_image():
 
 @router.post("/train-model")
 def train_model(train_params: TrainParams, db: Session = Depends(get_db), _: dict = Depends(LoginRequired(roles_required={TypeOfUser.ADMIN}))):
+    # Check for running Cloud Run jobs
+    if cloud_run_mgr.check_running_cloud_run_jobs():
+        raise HTTPException(status_code=503, detail="There are still job running")
+    
+    if Model.retrieve(db, version=train_params.base_model_version).finish_train_date == None:
+        raise HTTPException(status_code=400, detail="Base Model cannot be trained")
+    
     # Label preparation
     label_data = {}
+    total_images = 0
     for dataset_name in train_params.dataset_names:
         label_data[dataset_name] = {}
         images = Dataset.search_images(db, dataset_name=dataset_name)
+        total_images += len(images)
         for image in images:
             labels = Label.retrieve(db, folder_id=image.image_folder_id, image_name=image.image_name)
             label_data[dataset_name][f"{image.image_folder_id}/image/{image.image_name}"] = [
@@ -157,10 +167,11 @@ def train_model(train_params: TrainParams, db: Session = Depends(get_db), _: dic
                 }
                 for label in labels
             ]
-    
+    if total_images == 0:
+        raise HTTPException(status_code=400, detail="No images found inside")
     # Upload labels to the google cloud
-    label_url = storage_mgr.export_label_data(label_data=label_data, export_dir="temp/labels_export.json")
-
+    storage_mgr.export_label_data(label_data=label_data, export_dir="temp/labels_export.json")
+    model_version = Model.count(db)
     # Submit Training job
     job_args = [
             "--dataset_names", *train_params.dataset_names,
@@ -173,15 +184,90 @@ def train_model(train_params: TrainParams, db: Session = Depends(get_db), _: dic
             "--freeze", str(train_params.freeze_layers),
             "--optimizer", train_params.optimizer,
             "--learning_rate", str(train_params.learning_rate),
+            "--webhook_url", str(Config.TRAIN_WEBHOOK_URL),
+            "--model_version", str(model_version),
+            "--gpu"
         ]
-    if train_params.gpu:
-        job_args.append("--gpu")
     
     cloud_run_mgr.run_job(
         location='asia-southeast1',
         service_name=f"train-model-service-{uuid.uuid4()}",
         args=job_args)
     
+@router.get("/model-metric")
+def model_metric(run_id: str, _: dict = Depends(LoginRequired(roles_required={TypeOfUser.ADMIN}))):
+    if not Config.WANDB_API or not Config.WANDB_ENTITY or not Config.WANDB_PROJECT:
+        raise HTTPException(500, detail="Please provide your WANDB API, WANDB_ENTITY and WANDB Project name")
+    try:
+        api = wandb.Api()
+        run = api.run(f"{Config.WANDB_PROJECT}/{Config.WANDB_ENTITY}/{run_id}")
+        
+        # Get the history of the run
+        history = run.scan_history(keys=[
+            "metrics/precision(B)",
+            "val/box_loss",
+            "metrics/recall(B)",
+            "metrics/mAP50(B)"
+        ])
+        
+        # Initialize dictionaries to store the metrics
+        precision = []
+        box_loss = []
+        recall = []
+        map50 = []
+
+        # Iterate through the history and extract the required metrics
+        for step, row in enumerate(history):
+            if 'metrics/precision(B)' in row:
+                precision.append({"x": step, "y": row['metrics/precision(B)']})
+            if 'val/box_loss' in row:
+                box_loss.append({"x": step, "y": row['val/box_loss']})
+            if 'metrics/recall(B)' in row:
+                recall.append({"x": step, "y": row['metrics/recall(B)']})
+            if 'metrics/mAP50(B)' in row:
+                map50.append({"x": step, "y": row['metrics/mAP50(B)']})
+        print(run.state)
+        return {
+            "box_loss": box_loss,
+            "precision": precision,
+            "recall": recall,
+            "map50": map50,
+            "status" : run.state
+        }
+
+    except wandb.errors.CommError:
+        raise HTTPException(400, detail="Run ID not found")
+    
+@router.get("/model-list")
+def model_list(db: Session = Depends(get_db), _: dict = Depends(LoginRequired(roles_required={TypeOfUser.ADMIN}))):
+    models = []
+    model_list = Model.search(db)
+    default_selected_idx = 0
+    for i in range(len(model_list)):
+        models.append({
+                "version" : model_list[i].version,
+                "finish_train_date" : model_list[i].finish_train_date,
+                "test_map" : model_list[i].test_map,
+                "test_mae" : model_list[i].test_mae,
+                "deployed" : model_list[i].deployed
+            })
+        if model_list[i].deployed:
+            default_selected_idx = i
+    return {
+        "models" : model_list,
+        "default_selected_idx" : default_selected_idx
+    }
+
 @router.patch("/deploy-model")
-def deploy_model():
-    pass
+def deploy_model(model_deploy: DeployModel, db: Session = Depends(get_db), _: dict = Depends(LoginRequired(roles_required={TypeOfUser.ADMIN}))):
+    model = Model.retrieve(db, version=model_deploy.version)
+    if model.finish_train_date == None:
+        raise HTTPException(400, detail="Model still not finish training")
+    
+    try:
+        job_mgr.broadcast_model_update(model.model_url)
+        old_model = Model.get_deployed_model(db)
+        old_model.update_self(db, deployed=False)
+        model.update(db, deployed=True)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

@@ -29,6 +29,15 @@ class Config:
     # OpenWeather
     OPEN_WEATHER_API = os.environ.get("OPEN_WEATHER_API")
 
+    # Wandb
+    WANDB_API = os.environ.get("WANDB_API")
+    WANDB_ENTITY = os.environ.get("WANDB_ENTITY")
+    WANDB_PROJECT = os.environ.get("WANDB_PROJECT")
+    INITIAL_RUN_ID = os.environ.get("INITIAL_RUN_ID")
+
+    # TRAIN_WEBHOOK_URL
+    TRAIN_WEBHOOK_URL = os.environ.get("TRAIN_WEBHOOK_URL")
+
     # RabbitMQ
     RABBIT_MQ_USERNAME = os.environ.get("RABBIT_MQ_USERNAME")
     RABBIT_MQ_PASSWORD = os.environ.get("RABBIT_MQ_PASSWORD")

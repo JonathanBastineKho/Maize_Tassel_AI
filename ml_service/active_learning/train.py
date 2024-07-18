@@ -16,6 +16,7 @@ from ultralytics import YOLO
 from wandb.integration.ultralytics import add_wandb_callback
 from sklearn.model_selection import train_test_split
 from kaggle.api.kaggle_api_extended import KaggleApi
+import requests
 
 # Preliminary Setup
 BUCKET_NAME = os.getenv('BUCKET_NAME')
@@ -123,10 +124,9 @@ def upload_to_kaggle(dataset_path: str, dataset_slug: str):
         with open(metadata_file, 'w') as f:
             json.dump(metadata, f)
     kaggle.dataset_create_new(folder=dataset_path, public=False, dir_mode='zip', convert_to_csv=False)
-    print(f"Uploaded dataset to Kaggle: {full_dataset_name}")
     return full_dataset_name
 
-def run_kaggle_notebook(dataset_name: str, model_blob_name: str, yaml_path: str, gpu: bool, args):
+def run_kaggle_notebook(dataset_name: str, model_blob_name: str, yaml_path: str, gpu: bool, dataset_slug: str, args):
     private_key_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
     with open(private_key_path, 'r') as f:
         private_key_json = json.load(f)
@@ -134,13 +134,17 @@ def run_kaggle_notebook(dataset_name: str, model_blob_name: str, yaml_path: str,
 import os
 import sys
 import subprocess
+import hmac
+import hashlib
+import json
+import requests
 
 def install(package):
     subprocess.check_call([sys.executable, "-m", "pip", "install", package])
 
-install('ultralytics')
+install('ultralytics==8.2.10')
 install('wandb==0.16.6')
-install('google-cloud-storage')
+install('google-cloud-storage==2.16.0')
 
 import wandb
 from ultralytics import YOLO
@@ -148,11 +152,53 @@ from wandb.integration.ultralytics import add_wandb_callback
 from google.cloud import storage
 from google.oauth2 import service_account
 
-# Print current working directory and its contents
-print('Current working directory:')
-print(os.getcwd())
-print('Contents of current directory:')
-print(os.listdir())
+def generate_signature(secret_key, payload):
+    return hmac.new(secret_key.encode(), json.dumps(payload).encode(), hashlib.sha256).hexdigest()
+
+def call_webhook(webhook_url, data, secret_key):
+    signature = generate_signature(secret_key, data)
+    headers = {{
+        'Content-Type': 'application/json',
+        'X-Webhook-Signature': signature
+    }}
+    try:
+        response = requests.post(webhook_url, json=data, headers=headers)
+        response.raise_for_status()
+        print(f"Webhook called successfully: {{response.status_code}}")
+    except requests.exceptions.RequestException as e:
+        print(f"Error calling webhook: {{e}}")
+
+def calc_MAE(model: YOLO, files:list, image_dir:str, labels_dir:str, buffer:int=20):
+    n = 0
+    ae = 0
+
+    for i in range(0, len(files), buffer):
+        images = [os.path.join(image_dir, f'{{file}}') for file in files[i:i+buffer]]
+        labels = [os.path.join(labels_dir, f'{{file[:-4]}}.txt') for file in files[i:i+buffer]]
+        res = model(images, device='gpu')
+        for j in range(len(labels)):
+            n+=1
+            with open(labels[j], 'r') as f:
+                ae += abs(len(res[j].boxes) - sum(1 for line in f))
+    return ae/n
+
+def benchmark_metrics(model_path, data_yaml, test_image_dir, test_label_dir):
+    model = YOLO(model_path)
+    
+    # Calculate mAP50 using Ultralytics
+    results = model.val(data=data_yaml, split='test')
+    map50 = results.box.map50
+    
+    # Calculate MAE
+    test_files = [f for f in os.listdir(test_image_dir) if (f.endswith('.jpg') or f.endswith('.png'))]
+    mae = calc_MAE(model, test_files, test_image_dir, test_label_dir)
+    
+    metrics = {{
+        'map50': map50,
+        'mae': mae
+    }}
+    
+    return metrics
 
 # Set up Google Cloud credentials
 credentials_json = {private_key_json}
@@ -167,7 +213,11 @@ blob.download_to_filename('model.pt')
 wandb.login(key="{os.getenv('WANDB_API_KEY')}")
 
 model = YOLO("model.pt")
-add_wandb_callback(model, enable_model_checkpointing=True)
+run = wandb.init(project="fyp", name=f"Active Learning v{args.model_version}")
+add_wandb_callback(model)
+
+webhook_url = "{args.webhook_url}"
+call_webhook(webhook_url, {{"status": "training", "run_id": run.id}}, "{os.environ.get('SECRET_KEY')}")
 
 model.train(
     data="{yaml_path}",
@@ -176,20 +226,34 @@ model.train(
     batch={args.batch},
     imgsz={args.imgsz},
     dropout={args.dropout},
-    freeze={args.freeze},
+    freeze={int(args.freeze)},
     optimizer="{args.optimizer}",
     lr0={args.learning_rate},
-    single_cls=True,
-    project="fyp",
-    name="Active Learning v{args.base_model_version}"
+    single_cls=True
 )
+model.save('best_model.pt')
+best_model_path = '/kaggle/working/best_model.pt'
+blob = bucket.blob('admin/models/yolov9e-{args.model_version}.pt')
+blob.upload_from_filename(best_model_path)
+
+# Benchmark
+test_image_dir = '/kaggle/input/{dataset_slug}/images/test'
+test_label_dir = '/kaggle/input/{dataset_slug}/labels/test'
+metrics = benchmark_metrics(best_model_path, "{yaml_path}", test_image_dir, test_label_dir)
+
+call_webhook(webhook_url, {{
+    "status": "benchmark",
+    "model_version" : {args.model_version},
+    "run_id": run.id, 
+    "metrics": metrics,
+}}, "{os.environ.get('SECRET_KEY')}")
 
 wandb.finish()
     """
     notebook_id = uuid.uuid4()
     notebook_metadata = {
-        "id": f"{os.environ.get('KAGGLE_USERNAME')}/{args.base_model_version}{notebook_id}",
-        "title": f"v{args.base_model_version}{notebook_id}",
+        "id": f"{os.environ.get('KAGGLE_USERNAME')}/{args.model_version}{notebook_id}",
+        "title": f"v{args.model_version}{notebook_id}",
         "language": "python",
         "kernel_type": "notebook",
         "is_private": True,
@@ -308,7 +372,7 @@ def prepare_yolo_data(label_data: dict, output_dir: str, dataset_bins: dict, tra
                 folder_id, _, image_name = image_path.split('/')
                 
                 # Create label file
-                label_file = os.path.join(output_dir, 'labels', split, f"{dataset_name}_{folder_id}_{image_name.replace('.jpg', '.txt')}")
+                label_file = os.path.join(output_dir, 'labels', split, f"{dataset_name}_{folder_id}_{image_name[:-4]}.txt")
                 os.makedirs(os.path.dirname(label_file), exist_ok=True)
                 with open(label_file, 'w') as f:
                     for label in labels:
@@ -338,7 +402,7 @@ def main(args):
         label_data = json.load(f)
     prepare_yolo_data(label_data, 'datasets', dataset_bins, args.train_ratio, args.val_ratio, args.test_ratio)
     shutil.rmtree('temp', ignore_errors=True)
-    dataset_slug = f"{args.base_model_version}-{str(uuid.uuid4())[:-4]}"
+    dataset_slug = f"{args.model_version}-{str(uuid.uuid4())[:-4]}"
     dataset_path = 'datasets'
     create_dataset_yaml(dataset_path, dataset_slug=dataset_slug)
 
@@ -346,12 +410,13 @@ def main(args):
     full_dataset_name = upload_to_kaggle(dataset_path, dataset_slug)
 
     # Poll for the dataset to appear in the list
+    print("dataset full name", full_dataset_name)
     dataset_ready = poll_for_dataset(full_dataset_name)
     
     if dataset_ready:
         print("Dataset is ready. Proceeding with notebook creation.")
         model_blob_name = f"admin/models/yolov9e-{args.base_model_version}.pt"
-        run_kaggle_notebook(full_dataset_name, model_blob_name, f'/kaggle/input/{dataset_slug}/dataset.yaml', args.gpu, args)
+        run_kaggle_notebook(full_dataset_name, model_blob_name, f'/kaggle/input/{dataset_slug}/dataset.yaml', args.gpu, dataset_slug, args)
     else:
         print("Dataset not ready. Please check your Kaggle account and try again later.")
         return
@@ -364,6 +429,7 @@ if __name__ == "__main__":
     # Preliminary thing to download
     parser.add_argument("--dataset_names", nargs='+', required=True, help="List of dataset names")
     parser.add_argument("--base_model_version", type=int, required=True, help="Base model version")
+    parser.add_argument("--model_version", type=int, required=True, help="Model version")
     parser.add_argument("--label_path", type=str, default="temp/labels_export.json", help="Label path")
 
     # Hyper parameters
@@ -384,4 +450,6 @@ if __name__ == "__main__":
                         help='JSON string specifying bins for each dataset, e.g., \'{"dataset1": 5, "dataset2": 7}\'')
     
     parser.add_argument('--gpu', action='store_true', help='Use GPU if this flag is set')
+    parser.add_argument("--webhook_url", type=str, required=True, help="Webhook URL to call after training")
     main(parser.parse_args())
+    from wandb.integration.ultralytics import add_wandb_callback

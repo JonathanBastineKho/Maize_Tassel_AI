@@ -7,9 +7,10 @@ from datetime import timezone, datetime
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from config import Config
+from typing import Optional
 from app.database.utils import get_db
-from app.database.schema import Image, Prediction, Transaction, TypeOfImageStatus, User, TypeOfUser
-from app.utils.payload import JobStatus, JobPrediction
+from app.database.schema import Image, Prediction, Transaction, TypeOfImageStatus, User, TypeOfUser, Model
+from app.utils.payload import JobStatus, JobPrediction, TrainingHookPayload
 from app.utils import session_mgr, email_sender
 
 router = APIRouter(tags=["WebHook"], prefix="/hook")
@@ -149,3 +150,30 @@ async def stripe_hook(request: Request, db: Session = Depends(get_db)):
             session_mgr.downgrade_user(email)
 
     return {"Success" : True}
+
+@router.post("/train")
+async def train_hook(request: Request, payload: TrainingHookPayload, db: Session = Depends(get_db), x_webhook_signature: Optional[str] = Header(None)):
+    if not x_webhook_signature:
+        raise HTTPException(status_code=401, detail="Invalid signature")
+    raw_payload = await request.body()
+    computed_signature = hmac.new(Config.SECRET_KEY.encode(), raw_payload, hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(computed_signature, x_webhook_signature):
+        raise HTTPException(status_code=401, detail="Invalid signature")
+    if payload.status == "benchmark":
+        try:
+            # Process benchmark data
+            Model.update(db, version=payload.model_version, 
+                         test_map=payload.metrics.map50,
+                         test_mae=payload.metrics.mae,
+                         finish_train_date=func.now(),
+                         model_url=f"admin/models/yolov9e-{payload.model_version}.pt")
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=f"Invalid benchmark payload: {str(e)}")
+    elif payload.status == "training":
+        try:
+            # Process training data
+            Model.create(db, run_id=payload.run_id)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=f"Invalid training payload: {str(e)}")
+    else:
+        raise HTTPException(status_code=400, detail="Invalid payload status")

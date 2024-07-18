@@ -128,3 +128,13 @@ export const isValidInteger = (value) => {
   const parsedValue = parseInt(value);
   return !isNaN(parsedValue) && parsedValue == value && parsedValue >= 0;
 };
+
+export const selectTheme = {
+  field: {
+    select: {
+      colors: {
+        green: 'border-gray-300 bg-gray-50 text-gray-900 focus:border-green-500 focus:ring-green-500', // Tailwind CSS class for green outline
+      },
+    },
+  },
+};
