@@ -12,7 +12,7 @@ from config import Config
 from ultralytics import YOLO
 
 class Worker:
-    def __init__(self, rabbit_host: str, rabbit_port: int, rabbit_queue: str, update_status_url: str, finish_predict_url: str, model_url: str, bucket_name: str):
+    def __init__(self, rabbit_host: str, rabbit_port: int, rabbit_queue: str, update_status_url: str, finish_predict_url: str, model_path: str, bucket_name: str, deployed_model_url: str):
         # Rabbit MQ connection
         self.rabbit_host = rabbit_host
         self.rabbit_port = rabbit_port
@@ -20,24 +20,71 @@ class Worker:
         self.connection = None
         self.channel = None
 
+        # Model update exchange
+        self.model_update_exchange = 'model_updates'
+
         # Webhook connection
         self.update_status_url = update_status_url
         self.finish_predict_url = finish_predict_url
+        self.deployed_model_url = deployed_model_url
 
         # Storage
         self.client = storage.Client()
         self.bucket = self.client.bucket(bucket_name)
 
         # Model
-        self.model = self.init_model(model_url=model_url)
+        self.model_path = model_path
+        self.model = self.init_model()
 
-    def init_model(self, model_url:str):
-        if not os.path.exists(model_url):
-            model = self.bucket.blob(model_url).download_as_bytes()
-            with tempfile.NamedTemporaryFile(delete=True, suffix='.pt') as tmp_file:
-                tmp_file.write(model)
-                return YOLO(tmp_file.name)
-        return YOLO(model_url)
+    def init_model(self):
+        try:
+            # Check if there's a .pt file in the model_path
+            pt_files = [f for f in os.listdir(self.model_path) if f.endswith('.pt')]
+            
+            if pt_files:
+                current_model = os.path.join(self.model_path, pt_files[0])
+                current_version = int(pt_files[0].split('-')[1].split('.')[0])
+            else:
+                current_model = None
+                current_version = None
+
+            # Get the deployed model version
+            payload = b''
+            signature = hmac.new(Config.SECRET_KEY.encode(), payload, hashlib.sha256).hexdigest()
+            headers = {'X-Webhook-Signature': signature}
+            response = requests.get(self.deployed_model_url, headers=headers)
+
+            if response.status_code == 200:
+                deployed_version = int(response.json()['version'])
+
+                if current_version != deployed_version:
+                    print(f"Updating model from version {current_version} to {deployed_version}")
+                    new_model_name = f"yolov9e-{deployed_version}.pt"
+                    new_model_path = os.path.join(self.model_path, new_model_name)
+                    
+                    # Ensure the directory exists
+                    os.makedirs(self.model_path, exist_ok=True)
+                    
+                    # Download the new model
+                    self.bucket.blob(os.path.join(self.model_path, new_model_name)).download_to_filename(new_model_path)
+                    
+                    # Remove the old model file if it exists
+                    if current_model and os.path.exists(current_model):
+                        os.remove(current_model)
+                    
+                    return YOLO(new_model_path)
+                else:
+                    print("Model is up to date")
+                    return YOLO(current_model)
+            else:
+                print("Failed to get deployed model version. Using current model if available.")
+                if current_model:
+                    return YOLO(current_model)
+                else:
+                    raise Exception("No model available and failed to get deployed version")
+        except Exception as e:
+            print(f"Error initializing model: {str(e)}. Unable to proceed.")
+            raise
 
     def connect(self):
         credentials = pika.PlainCredentials('worker', 'maizetasselai')
@@ -50,12 +97,31 @@ class Worker:
         self.connection = pika.BlockingConnection(parameters)
         self.channel = self.connection.channel()
         self.channel.queue_declare(queue=self.rabbit_queue, durable=True, arguments={'x-max-priority': 10})
+
+        # Setup for model updates
+        self.channel.exchange_declare(exchange=self.model_update_exchange, exchange_type='fanout')
+        result = self.channel.queue_declare(queue='', exclusive=True)
+        self.model_update_queue = result.method.queue
+        self.channel.queue_bind(exchange=self.model_update_exchange, queue=self.model_update_queue)
+
         self.channel.basic_consume(
             queue=self.rabbit_queue,
             on_message_callback=self.process_inference_job,
             auto_ack=True
         )
         self.channel.basic_qos(prefetch_count=1)
+        self.channel.basic_consume(
+            queue=self.model_update_queue,
+            on_message_callback=self.process_model_update,
+            auto_ack=True
+        )
+
+    def process_model_update(self, ch, method, properties, body):
+        try:
+            self.model = self.init_model()
+            print("Model updated successfully")
+        except Exception as e:
+            print(f"Error updating model: {str(e)}")
 
     def close(self):
         if self.connection and self.connection.is_open:

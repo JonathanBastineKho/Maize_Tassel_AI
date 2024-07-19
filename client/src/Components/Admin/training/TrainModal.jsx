@@ -27,6 +27,12 @@ function TrainModal({ open, setOpen, models, setSuccessTrainToastOpen }) {
     return datasets.some(dataset => dataset.checked);
   }, [datasets]);
 
+  const validateNumber = (value, min, max) => {
+    const num = parseFloat(value);
+    if (isNaN(num)) return min;
+    return Math.min(Math.max(num, min), max);
+  };
+
   const fetch = useCallback(() => {
     axios
       .get(
@@ -123,7 +129,11 @@ function TrainModal({ open, setOpen, models, setSuccessTrainToastOpen }) {
             <TextInput
               theme={inputTheme}
               value={epoch}
-              onChange={(e) => setEpoch(e.target.value)}
+              onChange={(e) => {
+                const newEpoch = validateNumber(e.target.value, 1, 300);
+                setEpoch(newEpoch);
+                setPatience(prevPatience => Math.min(prevPatience, newEpoch));
+              }}
               id="epoch"
               type="number"
               min={1}
@@ -139,10 +149,11 @@ function TrainModal({ open, setOpen, models, setSuccessTrainToastOpen }) {
             <TextInput
               theme={inputTheme}
               value={patience}
-              onChange={(e) => {setPatience(e.target.value)}}
+              onChange={(e) => {validateNumber(e.target.value, 0, epoch)}}
               id="patience"
               type="number"
               min={0}
+              max={epoch}
               placeholder="Patience"
               required
             />
@@ -154,10 +165,11 @@ function TrainModal({ open, setOpen, models, setSuccessTrainToastOpen }) {
             <TextInput
               theme={inputTheme}
               value={dropout}
-              onChange={(e) => {setDropout(e.target.value)}}
+              onChange={(e) => {setDropout(validateNumber(e.target.value, 0, 0.9))}}
               id="dropout"
               type="number"
               min={0}
+              step={0.1}
               max={0.9}
               placeholder="Dropout"
               required
@@ -170,10 +182,11 @@ function TrainModal({ open, setOpen, models, setSuccessTrainToastOpen }) {
             <TextInput
               theme={inputTheme}
               value={lr}
-              onChange={(e) => setLr(e.target.value)}
+              onChange={(e) => setLr(validateNumber(e.target.value, 0.00001, 1))}
               id="lr"
               type="number"
-              min={0}
+              min={0.00001}
+              step={0.00001}
               max={1}
               placeholder="Learning rate"
               required
@@ -186,7 +199,7 @@ function TrainModal({ open, setOpen, models, setSuccessTrainToastOpen }) {
             <TextInput
               theme={inputTheme}
               value={freeze}
-              onChange={(e) => {setFreeze(e.target.value)}}
+              onChange={(e) => {setFreeze(validateNumber(e.target.value, 8, 30))}}
               id="freeze"
               type="number"
               min={8}

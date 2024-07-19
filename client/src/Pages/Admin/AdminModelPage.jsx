@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import MetricsCard from "../../Components/Admin/training/MetricsCard";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -8,14 +8,38 @@ import { FaCheck } from "react-icons/fa";
 import { HiCheck } from "react-icons/hi";
 import TrainModal from "../../Components/Admin/training/TrainModal";
 import ToastMsg from "../../Components/Other/ToastMsg";
+import DeployConfirmModal from "../../Components/Admin/training/DeployConfirmModal";
 
 function AdminModelPage() {
     const [models, setModels] = useState(null);
     const [metrics, setMetrics] = useState(null);
-    const [selectedRunId, setSelectedRunId] = useState(null);
+    const [selectedRunId, setSelectedRunId] = useState(0);
     const [trainModalOpen, setTrainModalOpen] = useState(false); 
     const [successTrainToastOpen, setSuccessTrainToastOpen] = useState(false);
+    const [deployConfirmation, setDeployConfirmation] = useState(false);
     const navigate = useNavigate();
+
+    const fetchMetrics = useCallback(async () => {
+        if (selectedRunId !== null && models !== null) {
+            const res = axios.get("/api/maintenance/model-metric", {
+                params : {
+                    run_id: models[selectedRunId].run_id
+                }
+            })
+            .then((res) => {
+                if (res.status === 200) {
+                    setMetrics(res.data);
+                    return res.data.status;
+                }
+            })
+            .catch((err) => {
+                if (err.response?.status === 401) {
+                    navigate("/login");
+                }
+            });
+            return res;
+        }
+    }, [selectedRunId, models, navigate]);
 
     useEffect(() => {
         axios.get("/api/maintenance/model-list")
@@ -30,38 +54,47 @@ function AdminModelPage() {
                 navigate("/login");
             }
         })
-    }, [])
+    }, [navigate])
 
     useEffect(() => {
-        if (selectedRunId !== null && models !== null) {
-            axios.get("/api/maintenance/model-metric", {
-                params : {
-                    run_id: models[selectedRunId].run_id
-                }
-            })
-            .then((res) => {
-                if (res.status === 200) {
-                    setMetrics(res.data);
-                }
-            })
-            .catch((err) => {
-                if (err.response.status === 401) {
-                    navigate("/login");
-                }
-            })
-        }
-    }, [selectedRunId, models])
+        let intervalId;
+
+        const checkAndSetInterval = async () => {
+            const status = await fetchMetrics();
+            if (status === "running") {
+                intervalId = setInterval(fetchMetrics, 10000);
+            } else {
+                clearInterval(intervalId);
+            }
+        };
+
+        checkAndSetInterval();
+
+        return () => {
+            if (intervalId) {
+                clearInterval(intervalId);
+            }
+        };
+    }, [selectedRunId, models, fetchMetrics]);
     return (
         <div className="mt-24 px-5">
             <ToastMsg color="green" icon={<FaCheck className="h-5 w-5" />} open={successTrainToastOpen} setOpen={setSuccessTrainToastOpen} message="Training Job submitted" />
             <TrainModal open={trainModalOpen} setOpen={setTrainModalOpen} models={models} setSuccessTrainToastOpen={setSuccessTrainToastOpen} />
-            <h1 className="text-2xl font-bold mb-4">Model V{selectedRunId} Metric</h1>
+            <DeployConfirmModal setModels={setModels} selectedRunId={selectedRunId} open={deployConfirmation} setOpen={setDeployConfirmation} />
+            <div className="flex flex-row gap-2 items-center mb-4">
+                <h1 className="text-2xl font-bold">Model V{selectedRunId} Metric</h1>
+                {metrics?.status === "finished" ? (
+                    <Badge color="success">Finished</Badge>
+                ) : metrics?.status === "running" ?
+                (<Badge color="warning">Running</Badge>) :
+                (<Badge color="failure">Fails</Badge>) }
+            </div>
             <MetricsCard metrics={metrics} />
             <div className="flex flex-row flex-wrap justify-between items-center">
                 <h1 className="text-2xl font-bold my-8">Model List</h1>
                 <div className="flex-row flex justify-between gap-3">
                     <Button onClick={() => setTrainModalOpen(true)} className="bg-green-500 focus:ring-4 focus:ring-green-300 enabled:hover:bg-green-600">+ Train</Button>
-                    <Button className="focus:ring-green-300" color="light">Deploy</Button>
+                    <Button onClick={() => {setDeployConfirmation(true)}} disabled={metrics === null || metrics.status !== "finished" || models === null || models[selectedRunId].deployed} className="focus:ring-green-300" color="light">Deploy</Button>
                 </div>
             </div>
             <div className="overflow-x-auto rounded rounded-lg">
