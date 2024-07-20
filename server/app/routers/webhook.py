@@ -177,3 +177,16 @@ async def train_hook(request: Request, payload: TrainingHookPayload, db: Session
             raise HTTPException(status_code=400, detail=f"Invalid training payload: {str(e)}")
     else:
         raise HTTPException(status_code=400, detail="Invalid payload status")
+    
+@router.get("/deployed-model")
+async def get_deployed_model(request: Request, db: Session = Depends(get_db), x_webhook_signature: Optional[str] = Header(None)):
+    if not x_webhook_signature:
+        raise HTTPException(status_code=401, detail="Invalid signature")
+    raw_payload = await request.body()
+    computed_signature = hmac.new(Config.SECRET_KEY.encode(), raw_payload, hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(computed_signature, x_webhook_signature):
+        raise HTTPException(status_code=401, detail="Invalid signature")
+    model = Model.get_deployed_model(db)
+    return {
+        "version" : model.version
+    }

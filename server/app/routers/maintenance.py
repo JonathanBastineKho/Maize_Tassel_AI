@@ -226,7 +226,6 @@ def model_metric(run_id: str, _: dict = Depends(LoginRequired(roles_required={Ty
                 recall.append({"x": step, "y": row['metrics/recall(B)']})
             if 'metrics/mAP50(B)' in row:
                 map50.append({"x": step, "y": row['metrics/mAP50(B)']})
-        print(run.state)
         return {
             "box_loss": box_loss,
             "precision": precision,
@@ -261,13 +260,16 @@ def model_list(db: Session = Depends(get_db), _: dict = Depends(LoginRequired(ro
 @router.patch("/deploy-model")
 def deploy_model(model_deploy: DeployModel, db: Session = Depends(get_db), _: dict = Depends(LoginRequired(roles_required={TypeOfUser.ADMIN}))):
     model = Model.retrieve(db, version=model_deploy.version)
-    if model.finish_train_date == None:
+    if model == None or model.finish_train_date == None:
         raise HTTPException(400, detail="Model still not finish training")
+    if model.deployed:
+        raise HTTPException(400, detail="Model already deployed")
     
     try:
-        job_mgr.broadcast_model_update(model.model_url)
         old_model = Model.get_deployed_model(db)
         old_model.update_self(db, deployed=False)
-        model.update(db, deployed=True)
+        model.update(db, version=model_deploy.version, deployed=True)
+        job_mgr.broadcast_model_update(model.model_url)
     except Exception as e:
+        print(e)
         raise HTTPException(status_code=500, detail=str(e))

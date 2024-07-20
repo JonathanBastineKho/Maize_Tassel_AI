@@ -1,6 +1,6 @@
 from fastapi import Request, HTTPException
-from pydantic import BaseModel, Field
-from typing import Set, List, Optional, Literal, Union
+from pydantic import BaseModel, Field, ConfigDict
+from typing import Set, List, Optional, Literal
 from . import session_mgr
 from app.database.schema import TypeOfUser
 
@@ -122,6 +122,7 @@ class MetricsModel(BaseModel):
     mae: float
 
 class TrainingHookPayload(BaseModel):
+    model_config  = ConfigDict(protected_namespaces=())
     status: Literal["benchmark", "training"]
     model_version: Optional[int] = None
     run_id: str

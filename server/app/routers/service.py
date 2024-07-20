@@ -33,15 +33,18 @@ def sanitize_filename(filename: str) -> Tuple[str, bool]:
     # Remove any directory component
     name = os.path.basename(original_name)
     
-    # Check for non-alphanumeric characters (except underscores and hyphens)
-    if re.search(r'[^\w\-_]', name):
+    # Define allowed special characters
+    allowed_special_chars = r'!@#$%^&*()_+-=[]{}|;:,.<>? '
+    
+    # Check for disallowed characters
+    if re.search(f'[^\\w{re.escape(allowed_special_chars)}]', name):
         is_malicious = True
     
-    # Remove any non-alphanumeric characters except for underscores and hyphens
-    name = re.sub(r'[^\w\-_]', '_', name)
+    # Replace disallowed characters with underscores
+    name = re.sub(f'[^\\w{re.escape(allowed_special_chars)}]', '_', name)
     
-    # Remove any leading or trailing underscores
-    name = name.strip('_')
+    # Remove any leading or trailing spaces and underscores
+    name = name.strip(' _')
     
     # Ensure the extension is lowercase and starts with a dot
     ext = ext.lower()
