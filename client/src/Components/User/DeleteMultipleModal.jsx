@@ -10,8 +10,8 @@ function DeleteMultipleModal({
   setImage,
   selectedItems,
   setSelectedItems,
-  state,  // Changed from open to state for consistency
-  setState,  // Changed from setOpen to setState for consistency
+  state,
+  setState,
 }) {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -24,7 +24,7 @@ function DeleteMultipleModal({
       if (item.type === "image") {
         deleteRequests.push(
           axios.delete("/api/service/delete-image", {
-            data: { name: item.id, folder_id: item.folder_id }, // Add folder_id here
+            data: { name: item.id, folder_id: item.folder_id },
           })
         );
       } else if (item.type === "folder") {
