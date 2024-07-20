@@ -64,8 +64,8 @@ def search_images(
 @router.post("/create-dataset")
 def create_dataset(dataset: CreateDataset, db: Session = Depends(get_db), user: dict = Depends(LoginRequired(roles_required={TypeOfUser.ADMIN}))):
     try:
-        Dataset.create(db, name=dataset.name)
-        return {"Success": True}
+        dtset = Dataset.create(db, name=dataset.name)
+        return {"Success": True, "dataset" : {"name" : dtset.name, "create_date": dtset.create_date}}
     except IntegrityError:
         raise HTTPException(400, detail="Duplicate name")
     
