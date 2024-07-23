@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 
-function ImageAdminCanvas({ newBoxToggle, cropData, setCropData, croppingMode, selectedBox, setSelectedBox, sideBarOpen, img, labels, setLabel }) {
+function ImageAdminCanvas({ setImageHasBeenCropped, setImageHasBeenReannotate, newBoxToggle, cropData, setCropData, croppingMode, selectedBox, setSelectedBox, sideBarOpen, img, labels, setLabel }) {
     const canvasRef = useRef(null);
     const containerRef = useRef(null);
     const [ctx, setCtx] = useState(null);
@@ -18,7 +18,7 @@ function ImageAdminCanvas({ newBoxToggle, cropData, setCropData, croppingMode, s
     const [cropResizeHandle, setCropResizeHandle] = useState(null);
 
     useEffect(() => {
-        if (image && !cropData) {
+        if (image) {
             setCropData({
                 x: 0,
                 y: 0,
@@ -26,7 +26,7 @@ function ImageAdminCanvas({ newBoxToggle, cropData, setCropData, croppingMode, s
                 height: image.height
             });
         }
-    }, [image, cropData, setCropData]);
+    }, [image, setCropData]);
 
     const drawCanvas = useCallback(() => {
         const canvas = canvasRef.current;
@@ -140,6 +140,7 @@ function ImageAdminCanvas({ newBoxToggle, cropData, setCropData, croppingMode, s
     const handleKeyDown = useCallback((e) => {
         if (e.key === 'Delete' && selectedBox !== null) {
             setLabel(prevLabels => prevLabels.filter((_, index) => index !== selectedBox));
+            setImageHasBeenReannotate(true);
             setSelectedBox(null);
         }
     }, [selectedBox, setLabel]);
@@ -274,7 +275,7 @@ function ImageAdminCanvas({ newBoxToggle, cropData, setCropData, croppingMode, s
                         newHeight = Math.max(10, prevCropData.height + dy);
                         break;
                 }
-
+                setImageHasBeenCropped(true);
                 return {
                     x: Math.max(0, Math.min(newX, image.width - newWidth)),
                     y: Math.max(0, Math.min(newY, image.height - newHeight)),
@@ -329,6 +330,7 @@ function ImageAdminCanvas({ newBoxToggle, cropData, setCropData, croppingMode, s
                     xCenter: newX,
                     yCenter: newY
                 };
+                setImageHasBeenReannotate(true);
                 return newLabels;
             });
         } else if (isResizing && selectedBox !== null) {
@@ -377,6 +379,7 @@ function ImageAdminCanvas({ newBoxToggle, cropData, setCropData, croppingMode, s
                     width: newWidth,
                     height: newHeight
                 };
+                setImageHasBeenReannotate(true);
                 return newLabels;
             });
         } else {
@@ -408,7 +411,10 @@ function ImageAdminCanvas({ newBoxToggle, cropData, setCropData, croppingMode, s
                 width: Math.abs(x - newBoxStart.x),
                 height: Math.abs(y - newBoxStart.y),
             };
-            setLabel(prevLabels => [...prevLabels, newBox]);
+            setLabel(prevLabels => {
+                setImageHasBeenReannotate(true);
+                return [...prevLabels, newBox];
+            });
             setNewBoxStart(null);
             drawCanvas();
             return;

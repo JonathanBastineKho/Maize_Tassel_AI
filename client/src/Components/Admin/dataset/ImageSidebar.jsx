@@ -11,8 +11,11 @@ import { IoMdClose } from "react-icons/io";
 import { PiRectangleDashedDuotone } from "react-icons/pi";
 
 
-function ImageSideBarContent({ croppingMode, setCroppingMode, newBoxToggle, setNewBoxToggle, selectedBox, setSelectedBox, label, setLabel, img }) {
-    return (
+function ImageSideBarContent({ saveChanges, saveLoading, imageHasBeenCropped, imageHasBeenReannotate, setImageHasBeenReannotate,
+    croppingMode, setCroppingMode, newBoxToggle, setNewBoxToggle, selectedBox, label, setLabel, img }) {
+        console.log(saveLoading);
+    
+        return (
         <div className="md:pt-24 p-2 md:p-5 flex flex-col h-full md:h-screen relative">
           <div className="mb-4">
             <h2 className="text-xl font-bold mb-4">Image Data</h2>
@@ -108,7 +111,12 @@ function ImageSideBarContent({ croppingMode, setCroppingMode, newBoxToggle, setN
                     </div>
                     <div className="flex flex-row items-center gap-2">
                       <Label className="text-gray-500">({Math.round(box.xCenter)}, {Math.round(box.yCenter)})</Label>
-                      <button className="hover:bg-gray-200 rounded rounded-md p-1">
+                      <button 
+                      onClick={() => {
+                        setLabel(prevLabels => prevLabels.filter((_, index) => index !== idx));
+                        setImageHasBeenReannotate(true);
+                      }}
+                      className="hover:bg-gray-200 rounded rounded-md p-1">
                         <IoMdClose className="text-gray-500" />
                       </button>
                     </div>
@@ -117,10 +125,12 @@ function ImageSideBarContent({ croppingMode, setCroppingMode, newBoxToggle, setN
               </div>
             </div>
           </div>
-    
           <div className="mt-4">
-            <Button className="w-full bg-green-500 focus:ring-4 focus:ring-green-300 enabled:hover:bg-green-800">
-              Save Changes
+            <Button
+            onClick={saveChanges}
+            disabled={(!imageHasBeenCropped && !imageHasBeenReannotate) || saveLoading}
+            className="w-full bg-green-500 focus:ring-4 focus:ring-green-300 enabled:hover:bg-green-800">
+              {saveLoading ? 'Loading' : 'Save Changes'}
             </Button>
           </div>
         </div>

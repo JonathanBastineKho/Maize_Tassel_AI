@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from PIL import Image as PILImage
 from io import BytesIO
 import os, datetime, asyncio, json
-from typing import List, Union
+from typing import List, Union, Dict
 from app.database.schema import Folder, Image
 
 class StorageManager:
@@ -202,6 +202,59 @@ class StorageManager:
             return results[0], results[1]
         except Exception as e:
             print(f"Error in add_image_to_dataset: {str(e)}")
+
+    async def crop_image(self, image_path: str, thumbnail_path: str, crop_data: Dict[str, int], thumbnail_size: tuple = (128, 128)):
+        """
+        Crop the image and its thumbnail based on the given crop data.
+
+        Args:
+            image_path (str): Path to the original image in the bucket.
+            thumbnail_path (str): Path to the thumbnail image in the bucket.
+            crop_data (dict): A dictionary with keys 'x', 'y', 'width', 'height' for cropping.
+
+        Returns:
+            tuple: Paths to the cropped image and thumbnail.
+        """
+        try:
+            # Download the original image
+            image_blob = self.bucket.blob(image_path)
+            image_bytes = await asyncio.to_thread(image_blob.download_as_bytes)
+            image = PILImage.open(BytesIO(image_bytes))
+
+            # Crop the image
+            crop_box = (crop_data['x'], crop_data['y'], 
+                        crop_data['x'] + crop_data['width'], 
+                        crop_data['y'] + crop_data['height'])
+            cropped_image = image.crop(crop_box)
+
+            # Save the cropped image in its original format
+            cropped_image_bytes = BytesIO()
+            image_format = image.format or 'JPEG'  # Default to JPEG if format is None
+            cropped_image.save(cropped_image_bytes, format=image_format)
+            cropped_image_bytes.seek(0)
+
+            # Upload the cropped image, overwriting the original
+            await asyncio.to_thread(image_blob.upload_from_file, cropped_image_bytes, content_type=f"image/{image_format.lower()}")
+
+            # Create a new thumbnail 
+            cropped_image.thumbnail(thumbnail_size)
+            if cropped_image.mode in ('RGBA', 'LA'):
+                background = PILImage.new(cropped_image.mode[:-1], cropped_image.size, (255, 255, 255))
+                background.paste(cropped_image, cropped_image.split()[-1])
+                cropped_image = background
+            cropped_thumbnail_bytes = BytesIO()
+            cropped_image.save(cropped_thumbnail_bytes, format='JPEG', quality=95)
+            cropped_thumbnail_bytes.seek(0)
+
+            # Upload the new thumbnail, overwriting the original
+            thumbnail_blob = self.bucket.blob(thumbnail_path)
+            await asyncio.to_thread(thumbnail_blob.upload_from_file, cropped_thumbnail_bytes, content_type="image/jpeg")
+
+            return image_path, thumbnail_path
+
+        except Exception as e:
+            print(f"Error in crop_image: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Failed to crop image: {str(e)}")
 
     def export_label_data(self, label_data: dict, export_dir: str = 'temp/labels_export.json'):
         blob = self.bucket.blob(export_dir)

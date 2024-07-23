@@ -19,9 +19,12 @@ function ImageModal({images, currIdx, setCurrIdx}) {
   const [sideBarOpen, setSideBarOpen] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  useEffect(() => {
-    if (imageName) {
-      axios
+  const [imageHasBeenCropped, setImageHasBeenCropped] = useState(false);
+  const [imageHasBeenReannotate, setImageHasBeenReannotate] = useState(false);
+  const [saveLoading, setSaveLoading] = useState(false);
+
+  const fetchImage = () => {
+    axios
         .get(`/api/maintenance/view-image?dataset_name=${encodeURIComponent(dataset_name)}&image_name=${encodeURIComponent(imageName)}&folder_id=${folder_id}`)
         .then((res) => {
           setImg({
@@ -38,6 +41,57 @@ function ImageModal({images, currIdx, setCurrIdx}) {
             navigate("/login");
           }
         });
+  }
+
+  const saveChanges = async () => {
+    setSaveLoading(true);
+    if (imageHasBeenReannotate){
+        await axios.patch("/api/maintenance/reannotate-image", {
+            image_name: imageName,
+            folder_id: folder_id,
+            dataset_name: dataset_name,
+            new_label: label
+        })
+        .then((res) => {
+            if (res.status === 200){
+                setImageHasBeenCropped(false);
+                setImageHasBeenReannotate(false);
+            }
+        })
+        .catch((err) => {
+            if (err.response.status === 401){
+                navigate("/login")
+            }
+        })
+    }
+    if (imageHasBeenCropped) {
+        await axios.patch("/api/maintenance/crop-image", {
+            image_name: imageName,
+            folder_id: folder_id,
+            dataset_name: dataset_name,
+            crop_data: cropData
+        })
+        .then((res) => {
+            if (res.status === 200) {
+                setImageHasBeenCropped(false);
+                setImageHasBeenReannotate(false);
+            }
+        })
+        .catch((err) => {
+            if (err.response.status === 401){
+                navigate("/login")
+            }
+        })
+    }
+    fetchImage();
+    setSaveLoading(false);
+  }
+
+  useEffect(() => {
+    if (imageName) {
+      setImageHasBeenCropped(false);
+      setImageHasBeenReannotate(false);
+      fetchImage();
     }
   }, [imageName, navigate]);
   return (
@@ -53,18 +107,35 @@ function ImageModal({images, currIdx, setCurrIdx}) {
             {/* Side Bar */}
             {sideBarOpen && (
                 <div className="hidden md:block min-w-[20rem] w-[20rem] bg-white border-r-2 overflow-y-auto">
-                    <ImageSideBarContent croppingMode={croppingMode} setCroppingMode={setCroppingMode} newBoxToggle={newBoxToggle} setNewBoxToggle={setNewBoxToggle} selectedBox={selectedBox} setSelectedBox={setSelectedBox} setLabel={setLabel} label={label} img={img} />
+                    <ImageSideBarContent
+                    saveChanges={saveChanges}
+                    saveLoading={saveLoading}
+                    imageHasBeenCropped={imageHasBeenCropped}
+                    imageHasBeenReannotate={imageHasBeenReannotate}
+                    setImageHasBeenCropped={setImageHasBeenCropped}
+                    setImageHasBeenReannotate={setImageHasBeenReannotate}  
+                    croppingMode={croppingMode} setCroppingMode={setCroppingMode} newBoxToggle={newBoxToggle} setNewBoxToggle={setNewBoxToggle} selectedBox={selectedBox} setSelectedBox={setSelectedBox} setLabel={setLabel} label={label} img={img} />
                 </div>
                 )
             }
             <div className="md:hidden">
             <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)}>
-                <ImageSideBarContent croppingMode={croppingMode} setCroppingMode={setCroppingMode} newBoxToggle={newBoxToggle} setNewBoxToggle={setNewBoxToggle} setLabel={setLabel} label={label} img={img} />
+                <ImageSideBarContent
+                saveChanges={saveChanges}
+                saveLoading={saveLoading}
+                imageHasBeenCropped={imageHasBeenCropped}
+                imageHasBeenReannotate={imageHasBeenReannotate}
+                setImageHasBeenCropped={setImageHasBeenCropped}
+                setImageHasBeenReannotate={setImageHasBeenReannotate} 
+                croppingMode={croppingMode} setCroppingMode={setCroppingMode} newBoxToggle={newBoxToggle} setNewBoxToggle={setNewBoxToggle} setLabel={setLabel} label={label} img={img} />
             </Drawer>
             </div>
             {/* Canvas */}
             <div className="flex-grow">
-                <ImageAdminCanvas cropData={cropData} setCropData={setCropData} croppingMode={croppingMode} newBoxToggle={newBoxToggle} setNewBoxToggle={setNewBoxToggle} selectedBox={selectedBox} setSelectedBox={setSelectedBox} sideBarOpen={sideBarOpen} img={img} labels={label} setLabel={setLabel} />
+                <ImageAdminCanvas
+                setImageHasBeenCropped={setImageHasBeenCropped}
+                setImageHasBeenReannotate={setImageHasBeenReannotate} 
+                cropData={cropData} setCropData={setCropData} croppingMode={croppingMode} newBoxToggle={newBoxToggle} setNewBoxToggle={setNewBoxToggle} selectedBox={selectedBox} setSelectedBox={setSelectedBox} sideBarOpen={sideBarOpen} img={img} labels={label} setLabel={setLabel} />
             </div>
         </div>
         </>

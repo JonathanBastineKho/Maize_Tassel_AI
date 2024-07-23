@@ -140,3 +140,15 @@ class TrainingHookPayload(BaseModel):
 
 class DeployModel(BaseModel):
     version: int
+
+class ReannotateImage(BaseModel):
+    image_name: str
+    folder_id: str
+    dataset_name: str
+    new_label: List[dict]
+
+class CroppedImage(BaseModel):
+    image_name: str
+    folder_id: str
+    dataset_name: str
+    crop_data: dict
