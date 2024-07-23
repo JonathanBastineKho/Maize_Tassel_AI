@@ -6,7 +6,7 @@ from config import Config
 from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from app.utils.payload import CreateDataset, LoginRequired, ImagePayload, TrainParams, DeployModel
+from app.utils.payload import CreateDataset, LoginRequired, ImagePayload, TrainParams, DeployModel, ReannotateImage, CroppedImage
 from app.utils import storage_mgr, cloud_run_mgr, llm_mgr, job_mgr
 from app.database.utils import get_db
 from app.database.schema import Model, TypeOfUser, Dataset, DatasetImageLink, Image, TypeOfImageStatus, Prediction, Label
@@ -18,6 +18,7 @@ def search_images(
         page: int = 1,
         page_size: int = 20,
         search: Optional[str] = None,
+        dataset_name: Optional[str] = None,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
         min_tassel_count: Optional[int] = None,
@@ -33,39 +34,92 @@ def search_images(
     except ValueError:
         raise HTTPException(400, detail="Date time invalid")
     offset = (page - 1) * page_size
-    images = Image.search(db, offset=offset, page_size=page_size,
+    if dataset_name:
+        results = DatasetImageLink.search_images(db, dataset_name=dataset_name, offset=offset, page_size=page_size,
                               start_date=start_date_obj, end_date=end_date_obj, min_tassel_count=min_tassel_count,
-                              max_tassel_count=max_tassel_count, status=TypeOfImageStatus.DONE)
+                              max_tassel_count=max_tassel_count)
+        images, dataset_image_urls, dataset_thumbnail_urls, label_counts = [], [], [], []
+        for result in results:
+            images.append(result[0])
+            dataset_image_urls.append(result[1])
+            dataset_thumbnail_urls.append(result[2])
+            label_counts.append(result[3])
+    else:
+        images = Image.search(db, offset=offset, page_size=page_size,
+                                start_date=start_date_obj, end_date=end_date_obj, min_tassel_count=min_tassel_count,
+                                max_tassel_count=max_tassel_count, status=TypeOfImageStatus.DONE)
     has_more = len(images) > 0
+
+    # Filtering the images through LLM
     if len(images) > 0 and search:
-        img_idx = llm_mgr.filter_image(
-            image_uris=[
-                f"gs://{Config.PRIVATE_BUCKET_NAME}/{image.image_url}"
-                for image in images
-            ],
-            search=search
-        )
+        if dataset_name:
+            img_uris = [f"gs://{Config.PRIVATE_BUCKET_NAME}/{url}" for url in dataset_image_urls]
+        else:
+            img_uris = [f"gs://{Config.PRIVATE_BUCKET_NAME}/{image.image_url}" for image in images]
+        
+        img_idx = llm_mgr.filter_image(image_uris=img_uris, search=search)
         images = [images[i] for i in img_idx if i < len(images)]
-    image_urls = asyncio.run(storage_mgr.get_image([image.thumbnail_url for image in images]))
+        if dataset_name:
+            dataset_image_urls, dataset_thumbnail_urls, label_counts = [], [], []
+            for i in img_idx:
+                if i < len(label_counts):
+                    dataset_image_urls.append(dataset_image_urls[i])
+                    dataset_thumbnail_urls.append(dataset_image_urls[i])
+                    label_counts.append(label_counts[i])
+
+    # Getting the data
+    if dataset_name:
+        image_urls = asyncio.run(storage_mgr.get_image([url for url in dataset_thumbnail_urls]))
+    else:
+        image_urls = asyncio.run(storage_mgr.get_image([image.thumbnail_url for image in images]))
+        
     image_data = [
         {
-            "name" : image.name,
-            "folder_id" : image.folder_id,
+            "name": image.name,
+            "folder_id": image.folder_id,
             "status": image.processing_status,
+            "tassel_count": label_count if dataset_name else image.tassel_count,
             "upload_date": image.upload_date.strftime('%Y-%m-%dT%H:%M:%S%z'),
-            "thumbnail_url": url
+            "thumbnail_url": thumb_url
         }
-        for image, url in zip(images, image_urls)
-        ]
+        for image, thumb_url, label_count in zip(
+            images, 
+            image_urls, 
+            label_counts if dataset_name else [None] * len(images)
+        )
+    ]
     return {"Success" : True,
             "has_more" : has_more,
             "images" : image_data}
 
+@router.get("/view-image")
+async def view_image(dataset_name: str, image_name: str, folder_id: str, db: Session = Depends(get_db), _: dict = Depends(LoginRequired(roles_required={TypeOfUser.ADMIN}))):
+    image_data = {}
+
+    img, feedback, upload_date = DatasetImageLink.retrieve(db, dataset_name=dataset_name, image_name=image_name, folder_id=folder_id)
+    image_data['name'] = img.image_name
+    image_data['upload_date'] = upload_date
+    image_data['feedback'] = feedback
+    url = await storage_mgr.get_image([img.image_url, img.thumbnail_url])
+    image_data['thumbnail_url'] = url[1]
+    image_data['url'] = url[0]
+    image_data['label'] = [
+            {
+                "xCenter" : box.xCenter,
+                "yCenter" : box.yCenter,
+                "width" : box.width,
+                "height" : box.height,
+            }
+            for box in
+            Label.retrieve(db, dataset_name=dataset_name, folder_id=folder_id, image_name=image_name)
+        ]
+    return image_data
+
 @router.post("/create-dataset")
 def create_dataset(dataset: CreateDataset, db: Session = Depends(get_db), user: dict = Depends(LoginRequired(roles_required={TypeOfUser.ADMIN}))):
     try:
-        Dataset.create(db, name=dataset.name)
-        return {"Success": True}
+        dtset = Dataset.create(db, name=dataset.name)
+        return {"Success": True, "dataset" : {"name" : dtset.name, "create_date": dtset.create_date}}
     except IntegrityError:
         raise HTTPException(400, detail="Duplicate name")
     
@@ -131,14 +185,91 @@ async def add_image(response: Response, dataset: CreateDataset, images: List[Ima
     response.status_code = 200
     return {"Success": True}
 
-@router.patch("/edit-image")
-def edit_image():
-    pass
+@router.patch("/crop-image")
+async def crop_image(crop_image: CroppedImage, db: Session = Depends(get_db), _: dict = Depends(LoginRequired(roles_required={TypeOfUser.ADMIN}))):
+    try:
+        # Retrieve the dataset image
+        dataset_image, __, __ = DatasetImageLink.retrieve(db, dataset_name=crop_image.dataset_name, image_name=crop_image.image_name, folder_id=crop_image.folder_id)
+        
+        # Crop the image
+        await storage_mgr.crop_image(image_path=dataset_image.image_url, thumbnail_path=dataset_image.thumbnail_url, crop_data=crop_image.crop_data)
+        
+        # Retrieve all labels for this image
+        labels = Label.retrieve(
+            db,
+            dataset_name=crop_image.dataset_name,
+            folder_id=crop_image.folder_id,
+            image_name=crop_image.image_name
+        )
 
-@router.patch("/annotate-image")
-def annotage_image():
-    pass
+        # Filter and adjust labels based on the new crop
+        new_labels = []
+        for label in labels:
+            label_left = label.xCenter - label.width / 2
+            label_right = label.xCenter + label.width / 2
+            label_top = label.yCenter - label.height / 2
+            label_bottom = label.yCenter + label.height / 2
 
+            if (label_left >= crop_image.crop_data['x'] and
+                label_right <= crop_image.crop_data['x'] + crop_image.crop_data['width'] and
+                label_top >= crop_image.crop_data['y'] and
+                label_bottom <= crop_image.crop_data['y'] + crop_image.crop_data['height']):
+
+                new_label = {
+                    'box_id': label.box_id,
+                    'xCenter': label.xCenter - crop_image.crop_data['x'],
+                    'yCenter': label.yCenter - crop_image.crop_data['y'],
+                    'width': label.width,
+                    'height': label.height
+                }
+                new_labels.append(new_label)
+
+        # Clear the session to avoid conflicts
+        db.expunge_all()
+
+        # Update labels in the database
+        updated_labels = Label.update(
+            db,
+            dataset_name=crop_image.dataset_name,
+            folder_id=crop_image.folder_id,
+            image_name=crop_image.image_name,
+            new_labels=new_labels
+        )
+
+        return {
+            "new_labels": [
+                {
+                    "xCenter": box.xCenter,
+                    "yCenter": box.yCenter,
+                    "width": box.width,
+                    "height": box.height,
+                }
+                for box in updated_labels
+            ]
+        }
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error during image cropping: {str(e)}")
+
+@router.patch("/reannotate-image")
+def annotage_image(new_label_data: ReannotateImage, db: Session = Depends(get_db), _: dict = Depends(LoginRequired(roles_required={TypeOfUser.ADMIN}))):
+    new_labels = Label.update(db, 
+                              dataset_name=new_label_data.dataset_name, 
+                              folder_id=new_label_data.folder_id, 
+                              image_name=new_label_data.image_name,
+                              new_labels=new_label_data.new_label)
+    return {
+        "new_labels" : [
+            {
+                "xCenter" : box.xCenter,
+                "yCenter" : box.yCenter,
+                "width" : box.width,
+                "height" : box.height,
+            }
+            for box in new_labels
+        ]
+    }
 @router.post("/train-model")
 def train_model(train_params: TrainParams, db: Session = Depends(get_db), _: dict = Depends(LoginRequired(roles_required={TypeOfUser.ADMIN}))):
     # Check for running Cloud Run jobs

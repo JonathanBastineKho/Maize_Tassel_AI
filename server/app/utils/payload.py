@@ -1,5 +1,6 @@
+import re
 from fastapi import Request, HTTPException
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from typing import Set, List, Optional, Literal
 from . import session_mgr
 from app.database.schema import TypeOfUser
@@ -105,6 +106,15 @@ class RenameImageBody(ImagePayload):
 class CreateDataset(BaseModel):
     name: str
 
+    @field_validator('name')
+    @classmethod
+    def name_must_be_valid(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError('Dataset name cannot be empty')
+        if not re.match(r'^[a-zA-Z0-9]+$', v):
+            raise ValueError('Dataset name can only contain letters and numbers')
+        return v
+
 class TrainParams(BaseModel):
     dataset_names: List[str]
     base_model_version: int = Field(..., ge=0)
@@ -130,3 +140,15 @@ class TrainingHookPayload(BaseModel):
 
 class DeployModel(BaseModel):
     version: int
+
+class ReannotateImage(BaseModel):
+    image_name: str
+    folder_id: str
+    dataset_name: str
+    new_label: List[dict]
+
+class CroppedImage(BaseModel):
+    image_name: str
+    folder_id: str
+    dataset_name: str
+    crop_data: dict
