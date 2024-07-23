@@ -36,5 +36,5 @@ class Label(Base):
         return new
     
     @classmethod
-    def retrieve(cls, db: Session, folder_id: str, image_name: str):
-        return db.query(cls).filter(cls.image_folder_id == folder_id, cls.image_name == image_name).all()
+    def retrieve(cls, db: Session, dataset_name: str, folder_id: str, image_name: str):
+        return db.query(cls).filter(cls.dataset_name == dataset_name, cls.image_folder_id == folder_id, cls.image_name == image_name).all()

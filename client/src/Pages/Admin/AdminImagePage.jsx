@@ -22,7 +22,7 @@ const ConditionalTooltip = ({ children, showTooltip, tooltipContent }) => {
 
 function AdminImagePage() {
   const [image, setImage] = useState([]); // Images in the search
-  const [imageToAction, setImageToAction] = useState(null); // Images to view, edit, delete, etc
+  const [imageToAction, setImageToAction] = useState(null); // Images to move to dataset
   const [filterModalOpen, setFilterModalOpen] = useState(false);
   const [addDatasetModalOpen, setAddDatasetModalOpen] = useState(false);
 

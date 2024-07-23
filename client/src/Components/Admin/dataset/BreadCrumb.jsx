@@ -3,7 +3,7 @@ import { HiHome } from "react-icons/hi";
 import { Link, useParams } from "react-router-dom";
 
 function AdminBreadCrumb() {
-  const { dataset } = useParams();
+  const { dataset_name } = useParams();
   return (
     <Breadcrumb>
       <Breadcrumb.Item icon={HiHome}>
@@ -11,7 +11,7 @@ function AdminBreadCrumb() {
           Home
         </Link>
       </Breadcrumb.Item>
-      {dataset && <Breadcrumb.Item href="#">{dataset}</Breadcrumb.Item>}
+      {dataset_name && <Breadcrumb.Item href="#">{decodeURI(dataset_name)}</Breadcrumb.Item>}
     </Breadcrumb>
   );
 }

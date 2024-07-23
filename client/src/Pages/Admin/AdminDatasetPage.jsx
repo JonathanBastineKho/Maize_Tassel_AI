@@ -128,7 +128,9 @@ function AdminDatasetPage() {
                             </Table.Row>
                         }
                         {datasets.map((dataset, idx) => (
-                            <Table.Row key={idx} className="cursor-pointer">
+                            <Table.Row key={idx} 
+                            onClick={() => {navigate(`/admin/datasets/${encodeURI(dataset.name)}`)}}
+                            className="cursor-pointer">
                                 <Table.Cell className="whitespace-nowrap font-medium text-gray-900 flex flex-row gap-4 items-center">
                                     <FaFolder className="text-gray-500 w-6 h-6" />
                                     <Label className="truncate max-w-72">{dataset.name}</Label>

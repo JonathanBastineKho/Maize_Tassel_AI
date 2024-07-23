@@ -18,6 +18,7 @@ def search_images(
         page: int = 1,
         page_size: int = 20,
         search: Optional[str] = None,
+        dataset_name: Optional[str] = None,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
         min_tassel_count: Optional[int] = None,
@@ -33,33 +34,86 @@ def search_images(
     except ValueError:
         raise HTTPException(400, detail="Date time invalid")
     offset = (page - 1) * page_size
-    images = Image.search(db, offset=offset, page_size=page_size,
+    if dataset_name:
+        results = DatasetImageLink.search_images(db, dataset_name=dataset_name, offset=offset, page_size=page_size,
                               start_date=start_date_obj, end_date=end_date_obj, min_tassel_count=min_tassel_count,
-                              max_tassel_count=max_tassel_count, status=TypeOfImageStatus.DONE)
+                              max_tassel_count=max_tassel_count)
+        images, dataset_image_urls, dataset_thumbnail_urls, label_counts = [], [], [], []
+        for result in results:
+            images.append(result[0])
+            dataset_image_urls.append(result[1])
+            dataset_thumbnail_urls.append(result[2])
+            label_counts.append(result[3])
+    else:
+        images = Image.search(db, offset=offset, page_size=page_size,
+                                start_date=start_date_obj, end_date=end_date_obj, min_tassel_count=min_tassel_count,
+                                max_tassel_count=max_tassel_count, status=TypeOfImageStatus.DONE)
     has_more = len(images) > 0
+
+    # Filtering the images through LLM
     if len(images) > 0 and search:
-        img_idx = llm_mgr.filter_image(
-            image_uris=[
-                f"gs://{Config.PRIVATE_BUCKET_NAME}/{image.image_url}"
-                for image in images
-            ],
-            search=search
-        )
+        if dataset_name:
+            img_uris = [f"gs://{Config.PRIVATE_BUCKET_NAME}/{url}" for url in dataset_image_urls]
+        else:
+            img_uris = [f"gs://{Config.PRIVATE_BUCKET_NAME}/{image.image_url}" for image in images]
+        
+        img_idx = llm_mgr.filter_image(image_uris=img_uris, search=search)
         images = [images[i] for i in img_idx if i < len(images)]
-    image_urls = asyncio.run(storage_mgr.get_image([image.thumbnail_url for image in images]))
+        if dataset_name:
+            dataset_image_urls, dataset_thumbnail_urls, label_counts = [], [], []
+            for i in img_idx:
+                if i < len(label_counts):
+                    dataset_image_urls.append(dataset_image_urls[i])
+                    dataset_thumbnail_urls.append(dataset_image_urls[i])
+                    label_counts.append(label_counts[i])
+
+    # Getting the data
+    if dataset_name:
+        image_urls = asyncio.run(storage_mgr.get_image([url for url in dataset_thumbnail_urls]))
+    else:
+        image_urls = asyncio.run(storage_mgr.get_image([image.thumbnail_url for image in images]))
+        
     image_data = [
         {
-            "name" : image.name,
-            "folder_id" : image.folder_id,
+            "name": image.name,
+            "folder_id": image.folder_id,
             "status": image.processing_status,
+            "tassel_count": label_count if dataset_name else image.tassel_count,
             "upload_date": image.upload_date.strftime('%Y-%m-%dT%H:%M:%S%z'),
-            "thumbnail_url": url
+            "thumbnail_url": thumb_url
         }
-        for image, url in zip(images, image_urls)
-        ]
+        for image, thumb_url, label_count in zip(
+            images, 
+            image_urls, 
+            label_counts if dataset_name else [None] * len(images)
+        )
+    ]
     return {"Success" : True,
             "has_more" : has_more,
             "images" : image_data}
+
+@router.get("/view-image")
+async def view_image(dataset_name: str, image_name: str, folder_id: str, db: Session = Depends(get_db), _: dict = Depends(LoginRequired(roles_required={TypeOfUser.ADMIN}))):
+    image_data = {}
+
+    img, feedback, upload_date = DatasetImageLink.retrieve(db, dataset_name=dataset_name, image_name=image_name, folder_id=folder_id)
+    image_data['name'] = img.image_name
+    image_data['upload_date'] = upload_date
+    image_data['feedback'] = feedback
+    url = await storage_mgr.get_image([img.image_url, img.thumbnail_url])
+    image_data['thumbnail_url'] = url[1]
+    image_data['url'] = url[0]
+    image_data['label'] = [
+            {
+                "xCenter" : box.xCenter,
+                "yCenter" : box.yCenter,
+                "width" : box.width,
+                "height" : box.height,
+            }
+            for box in
+            Label.retrieve(db, dataset_name=dataset_name, folder_id=folder_id, image_name=image_name)
+        ]
+    return image_data
 
 @router.post("/create-dataset")
 def create_dataset(dataset: CreateDataset, db: Session = Depends(get_db), user: dict = Depends(LoginRequired(roles_required={TypeOfUser.ADMIN}))):

@@ -33,6 +33,7 @@ import SuccessSubscriptionPage from './Pages/User/SuccessSubscriptionPage';
 import AdminImagePage from './Pages/Admin/AdminImagePage';
 import AdminModelPage from './Pages/Admin/AdminModelPage';
 import AdminDatasetPage from './Pages/Admin/AdminDatasetPage';
+import AdminDatasetImagePage from './Pages/Admin/AdminDatasetImagePage';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <GoogleOAuthProvider clientId={import.meta.env.VITE_REACT_APP_GOOGLE_CLIENT_ID}>
@@ -82,6 +83,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           <Route path="users" element={<AdminUsersPage />} />
           <Route path="images" element={<AdminImagePage />} />
           <Route path="datasets" element={<AdminDatasetPage />} />
+          <Route path="datasets/:dataset_name" element={<AdminDatasetImagePage />} />
+          <Route path="datasets/:dataset_name/:folder_id/:imageName" element={<AdminDatasetImagePage />} />
           <Route path="models" element={<AdminModelPage />} />
         </Route>
    {/* Other Path */}
