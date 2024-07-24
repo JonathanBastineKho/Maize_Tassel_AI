@@ -1,11 +1,8 @@
 import { Button, TextInput } from "flowbite-react";
-import { HiSearch } from "react-icons/hi";
-import { FaTrashAlt, FaFilter, FaFolderPlus, FaCheck } from "react-icons/fa";
-import { HiExclamation } from "react-icons/hi";
-import { FaPlus } from "react-icons/fa6";
+import { HiSearch, HiExclamation } from "react-icons/hi";
+import { FaTrashAlt, FaFilter, FaFolderPlus, FaCheck, FaPlus } from "react-icons/fa";
 import { useState, useRef, useContext } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-
 import { inputTheme } from "../../Components/theme";
 import BreadcrumbFolder from "../../Components/User/BreadCrumbFolder";
 import UserImageTable from "../../Components/User/UserImageTable";
@@ -20,6 +17,7 @@ import { StorageContext } from "../../Components/Navbar/StorageContext";
 import DeleteFolderModal from "../../Components/User/DeleteFolderModal";
 import RenameFolderModal from "../../Components/User/RenameFolderModal";
 import RenameImageModal from "../../Components/User/RenameImageModal";
+import DeleteMultipleModal from "../../Components/User/DeleteMultipleModal"; // Import the new modal
 
 function UserImagePage() {
   const { user } = useContext(AuthContext);
@@ -31,12 +29,15 @@ function UserImagePage() {
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
   const [renameFolderModalOpen, setRenameFolderModalOpen] = useState(false); // Rename folder modal
   const [renameImageModalOpen, setRenameImageModalOpen] = useState(false); // Rename image modal
+  const [deleteMultipleModalOpen, setDeleteMultipleModalOpen] = useState(false); // Delete multiple modal
 
   const [folder, setFolder] = useState([]); // Folder in the search
   const [image, setImage] = useState({ item: new Map() }); // Images in the search
   const [imageToAction, setImageToAction] = useState(null); // Images to view, edit, delete, etc
   const [folderToAction, setFolderToAction] = useState(null); // Folder to edit, delete, etc
   const [filterModalOpen, setFilterModalOpen] = useState(false);
+
+  const [selectedItems, setSelectedItems] = useState([]); // State to manage selected items
 
   // Toast message
   const [premiumWarning, setpPremiumWarning] = useState(false); // toast for premium
@@ -55,11 +56,11 @@ function UserImagePage() {
   const handleInputChange = (e) => {
     const value = e.target.value;
     setInputValue(value);
-  
+
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
-  
+
     timeoutRef.current = setTimeout(() => {
       let url = "/user/images";
       if (folderId) {
@@ -91,6 +92,15 @@ function UserImagePage() {
       setpPremiumWarning(true);
     }
   }
+
+  const handleDeleteClick = () => {
+    if (selectedItems.length > 0) {
+      setDeleteMultipleModalOpen(true);
+    } else {
+      alert("Please select items to delete."); // or use any other method to notify user
+    }
+  };
+
   return (
     <div className="px-5 mt-24 flex flex-col gap-5">
       <ToastMsg color="red" icon={<HiExclamation className="h-5 w-5" />} open={premiumWarning} setOpen={setpPremiumWarning} message="Premium feature only" />
@@ -110,6 +120,14 @@ function UserImagePage() {
       setFolderList={setFolder}
       folderToDelete={folderToAction}
       setFolderToDelete={setFolderToAction} />
+      <DeleteMultipleModal
+        state={deleteMultipleModalOpen}
+        setState={setDeleteMultipleModalOpen}
+        selectedItems={selectedItems}
+        setSelectedItems={setSelectedItems}
+        setFolderList={setFolder}
+        setImage={setImage}
+      />
       {user.role === "regular" ? (
       <UploadModal
         className="w-screen h-screen"
@@ -159,7 +177,7 @@ function UserImagePage() {
             onKeyDown={handleKeyDown}
           />
           <div className="flex flex-row gap-1">
-            <button className="hover:bg-gray-100 p-2 rounded-md">
+            <button className="hover:bg-gray-100 p-2 rounded-md" onClick={handleDeleteClick}>
               <FaTrashAlt className="w-5 h-5 text-gray-500" />
             </button>
             <button className="hover:bg-gray-100 p-2 rounded-md" onClick={() => setFilterModalOpen(true)}>
@@ -203,6 +221,8 @@ function UserImagePage() {
         folder={folder}
         setFolder={setFolder}
         setpPremiumWarning={setpPremiumWarning}
+        selectedItems={selectedItems}
+        setSelectedItems={setSelectedItems}
       />
     </div>
   );
