@@ -3,6 +3,8 @@ import json
 from config import Config
 from google.cloud import run_v2
 from google.oauth2 import service_account
+import requests
+from requests.auth import HTTPBasicAuth 
 
 class JobManager:
     def __init__(self, rabbit_host, rabbit_port, rabbit_queue):
@@ -50,6 +52,20 @@ class JobManager:
                 priority=priority
             )
         )
+    
+    def get_queue_stats(self, username=Config.RABBIT_MQ_USERNAME, password=Config.RABBIT_MQ_PASSWORD):
+        # username = 'guest'
+        # password = 'guest'
+        print(f'{username}, {password}')
+        management_port = 15672 
+        url = f'http://{self.rabbit_host}:{management_port}/api/queues/%2F/{self.rabbit_queue}'
+        response = requests.get(url, auth=HTTPBasicAuth(username, password))
+        if response.status_code == 200:
+        
+            return response.json()
+        else: 
+            raise Exception(f"{response.status_code}, {response.text}")
+    
 
 class CloudRunManager:
     def __init__(self, service_account_path: str = None) -> None:

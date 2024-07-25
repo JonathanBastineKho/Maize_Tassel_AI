@@ -3,10 +3,11 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from typing import Optional, List
 from config import Config
 from datetime import datetime
+import time
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from app.utils.payload import CreateDataset, LoginRequired, ImagePayload, TrainParams
-from app.utils import storage_mgr, cloud_run_mgr, llm_mgr
+from app.utils import storage_mgr, cloud_run_mgr, llm_mgr, job_mgr
 from app.database.utils import get_db
 from app.database.schema import TypeOfUser, Dataset, DatasetImageLink, Image, TypeOfImageStatus, Prediction, Label
 
@@ -185,3 +186,21 @@ def train_model(train_params: TrainParams, db: Session = Depends(get_db), _: dic
 @router.patch("/deploy-model")
 def deploy_model():
     pass
+
+@router.get("/queue-stats")
+def get_queue_stats(poll_interval = 5, timeout = 60):
+    
+    start_time = time.time()
+    try: 
+        stats = job_mgr.get_queue_stats() 
+        # if stats['messages'] > 0:
+        #     return {"Success": True, "stats": stats}
+        
+        # if time.time() - start_time > timeout:
+        #     return {"Success": False, "messsage": "Timeout"}
+       
+        # time.sleep(poll_interval)
+        return {"Success": True, "stats": stats}
+        
+    except Exception as e:
+        raise HTTPException(500, detail=f"An error occurred while getting queue stats: {str(e)}")
