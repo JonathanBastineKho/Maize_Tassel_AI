@@ -34,6 +34,7 @@ import AdminImagePage from './Pages/Admin/AdminImagePage';
 import AdminModelPage from './Pages/Admin/AdminModelPage';
 import AdminDatasetPage from './Pages/Admin/AdminDatasetPage';
 import AdminDatasetImagePage from './Pages/Admin/AdminDatasetImagePage';
+import ChatPage from './Components/User/PlantDisease.jsx/ChatPage';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <GoogleOAuthProvider clientId={import.meta.env.VITE_REACT_APP_GOOGLE_CLIENT_ID}>
@@ -76,6 +77,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           <Route path="images/root/:imageName" element={<UserImagePage />}/>
           <Route path="subscription" element={<UserSubscriptionPage />}/>
           <Route path="profile" element={<UserProfilePage />} />
+          <Route path="chat" element={<ChatPage />} />
         </Route>
     {/* Admin Path */}
         <Route path="/admin" element={<PrivateRoute requiredRoles={["admin"]} verified={true}><AdminLayout /></PrivateRoute>}>

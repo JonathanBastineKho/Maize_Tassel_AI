@@ -14,6 +14,7 @@ export default {
   },
   plugins: [
     flowbite.plugin({ charts: true }),
+    require('tailwindcss-animated')
   ],
 }
 
