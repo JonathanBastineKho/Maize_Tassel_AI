@@ -49,8 +49,8 @@ function UserSideBar({setCollapsed, collapsed}) {
                         <Sidebar.Item as={Link} to="/user/profile" icon={IoMdPerson}>
                             Profile
                         </Sidebar.Item>
-                        <Sidebar.Item icon={IoIosHelpCircle}>
-                            Help
+                        <Sidebar.Item as={Link} to="/user/chat" icon={IoIosHelpCircle}>
+                            CornSult
                         </Sidebar.Item>
                         <Sidebar.Item icon={MdCloudQueue}>
                             Storage {user.role === "regular" ? `(${Math.round(storage / 100 * 100)}% full)` : 'Unlimited'}
