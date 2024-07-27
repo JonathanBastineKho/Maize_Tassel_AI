@@ -1,7 +1,7 @@
 import { Card } from "flowbite-react";
 import Chart from "react-apexcharts";
 
-function WeatherChart({ weatherData }) {
+function WeatherChart({ forecastData, weatherData }) {
   const chartOptions = {
     chart: {
       toolbar: {

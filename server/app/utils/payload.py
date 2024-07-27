@@ -152,3 +152,7 @@ class CroppedImage(BaseModel):
     folder_id: str
     dataset_name: str
     crop_data: dict
+
+class FutureYieldInput(BaseModel):
+    weather_forecast: list
+    historical_count: list

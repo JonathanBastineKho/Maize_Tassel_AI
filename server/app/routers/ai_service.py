@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form
 from fastapi.responses import StreamingResponse
 from app.utils import llm_mgr
-from app.utils.payload import LoginRequired
+from app.utils.payload import LoginRequired, FutureYieldInput
 from app.database.schema import TypeOfUser, Chat
 from sqlalchemy.orm import Session
 from app.database.utils import get_db
@@ -51,3 +51,9 @@ def get_quota(db: Session = Depends(get_db), user: dict = Depends(LoginRequired(
     return {
         "count": 0 if chat is None else chat.count
     }
+
+@router.post("/future-yield")
+async def future_yield(input: FutureYieldInput):
+    result = await llm_mgr.future_yield(input.weather_forecast, input.historical_count)
+    print(result)
+    return result

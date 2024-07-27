@@ -107,7 +107,7 @@ class Worker:
         self.channel.basic_consume(
             queue=self.rabbit_queue,
             on_message_callback=self.process_inference_job,
-            auto_ack=True
+            # auto_ack=True
         )
         self.channel.basic_qos(prefetch_count=1)
         self.channel.basic_consume(
@@ -177,7 +177,9 @@ class Worker:
             }
             headers = {'signature': self.generate_signature(data)}
             requests.post(self.finish_predict_url, json=data, headers=headers)
+            ch.basic_ack(delivery_tag=method.delivery_tag)
         except:
+            ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
             self.update_job_status(job['email'], job["image_name"], job["folder_id"], "error", job['job_id'])
 
     def start_consuming(self):

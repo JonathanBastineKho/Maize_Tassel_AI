@@ -222,11 +222,28 @@ function UserImageTable({
                     })}
                   </Table.Cell>
                   <Table.Cell>
-                    <FolderActionButton setSuccessFocusDownload={setSuccessFocusDownload} setPremiumWarning={setpPremiumWarning} idx={index} setDeleteModalOpen={setDeleteFolderOpen} folderID={fldr.id} setFolderToAction={setFolderToAction} setRenameFolderModalOpen={setRenameFolderModalOpen} />
+                    <FolderActionButton setSuccessFocusDownload={setSuccessFocusDownload} setPremiumWarning={setpPremiumWarning} idx={index} setDeleteModalOpen={setDeleteFolderOpen} folderID={fldr.id} setFoldeToAction={setFolderToAction} setRenameFolderModalOpen={setRenameFolderModalOpen} />
                   </Table.Cell>
                 </Table.Row>
               ))}
               {[...image.item]
+                .filter(([key, img]) => { 
+                  const statusFilters = []; 
+                  if (searchParams.has("in_queue")) { 
+                    statusFilters.push("in_queue"); 
+                  } 
+                  if (searchParams.has("processing")) { 
+                    statusFilters.push("processing"); 
+                  } 
+                  if (searchParams.has("done")) { 
+                    statusFilters.push("done"); 
+                  } 
+              
+                  if (statusFilters.length === 0 || statusFilters.includes(img.status)) { 
+                    return true; 
+                  } 
+                  return false; 
+                })
                 .map(([key, img], index) => (
                   <Table.Row key={index} className="cursor-pointer" onClick={() => {
                     setCurrImageIdx(index);
