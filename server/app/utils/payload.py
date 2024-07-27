@@ -152,3 +152,10 @@ class CroppedImage(BaseModel):
     folder_id: str
     dataset_name: str
     crop_data: dict
+
+class Interpolation(BaseModel):
+    farmWidth: int
+    farmHeight: int
+    positions: List[tuple]
+    imgDimensions: List[tuple]
+    tasselCoordinates: List[List[tuple]]
