@@ -1,15 +1,31 @@
 import { Card } from "flowbite-react";
+import { useMemo } from "react";
 import Chart from "react-apexcharts";
 import { FaArrowUp, FaArrowDown } from "react-icons/fa";
 
-function HistoricalChart({ historicalData }) {
+function HistoricalChart({ forecastData, historicalData }) {
+  const forecastEndDate = useMemo(() => {
+    const date = new Date();
+    date.setDate(date.getDate() + 14);
+    return date;
+  })
+
+  const toolTipForecast = (
+    <div class="custom-tooltip p-2 bg-white border border-gray-200 rounded shadow-lg max-w-xs">
+      <div class="text-sm text-gray-500 mt-2">
+      hello
+      </div>
+    </div>
+  )
+
+  console.log(forecastData);
   const chartOptions = {
     chart: {
       toolbar: {
         show: false,
       },
     },
-    colors: ["#22C55E"],
+    colors: ["#22C55E", "#34d399", "#60a5fa", "#fb7185"],
     xaxis: {
       type: "datetime",
       labels: {
@@ -35,16 +51,19 @@ function HistoricalChart({ historicalData }) {
           colors: ["#6B7280"],
           fontWeight: 550,
         },
+        formatter: (value) => Math.round(value),
       },
     },
     dataLabels: {
       enabled: false,
     },
     stroke: {
-      curve: "smooth",
+      curve: ['smooth', 'straight', "straight", "straight"],
+      width: [4, 2, 2, 2],
+      dashArray: [0, 14, 14, 14]
     },
     fill: {
-      type: "gradient",
+      type: ["gradient", "solid"],
       gradient: {
         shadeIntensity: 1,
         opacityFrom: 0.7,
@@ -53,7 +72,7 @@ function HistoricalChart({ historicalData }) {
     },
     markers: {
       size: 5,
-      colors: ["#16A34A"],
+      colors: ["#16A34A", "#10b981", "#3b82f6", "#f43f5e"],
       strokeColors: "#fff",
       strokeWidth: 2,
       hover: {
@@ -72,15 +91,54 @@ function HistoricalChart({ historicalData }) {
     },
   };
 
-  const chartSeries = [
-    {
-      name: "Tassel Count",
-      data: historicalData.date_count.map(({ date, total_tassel_count }) => ({
-        x: date,
-        y: total_tassel_count,
-      })),
-    },
-  ];
+  let chartSeries = [];
+
+  if (forecastData === null) {
+    chartSeries = [
+      {
+        name: "Tassel Count",
+        type: "area",
+        data: historicalData.date_count.map(({ date, total_tassel_count }) => ({
+          x: date,
+          y: total_tassel_count,
+        })),
+      }
+    ]
+  } else {
+    chartSeries = [
+      {
+        name: "Tassel Count",
+        type: "area",
+        data: historicalData.date_count.map(({ date, total_tassel_count }) => ({
+          x: date,
+          y: total_tassel_count,
+        })),
+      },
+      {
+        name: "Max Forecast",
+        type: "line",
+        data: [
+          { x : historicalData.date_count[historicalData.date_count.length - 1].date, y: historicalData.date_count[historicalData.date_count.length - 1].total_tassel_count },
+          { x: forecastEndDate.getTime(), y: historicalData.date_count[historicalData.date_count.length - 1].total_tassel_count * (1+forecastData.max_change) },
+        ],
+      },
+      {name: "Avg Forecast",
+       type: "line",
+       data: [
+        { x : historicalData.date_count[historicalData.date_count.length - 1].date, y: historicalData.date_count[historicalData.date_count.length - 1].total_tassel_count },
+        { x: forecastEndDate.getTime(), y: historicalData.date_count[historicalData.date_count.length - 1].total_tassel_count * (1+forecastData.avg_change) },
+       ]
+      },
+      {
+        name: "Min Forecast",
+        type: "line",
+        data: [
+        { x : historicalData.date_count[historicalData.date_count.length - 1].date, y: historicalData.date_count[historicalData.date_count.length - 1].total_tassel_count },
+        { x: forecastEndDate.getTime(), y: historicalData.date_count[historicalData.date_count.length - 1].total_tassel_count * (1+forecastData.min_change)}
+        ]
+      }
+    ];
+  }
 
   return (
     <Card>

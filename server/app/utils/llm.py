@@ -286,3 +286,99 @@ class LLMmanager:
 
     def get_current_location(self):
         return self.location
+    
+    async def future_yield(self, weather_forecast: list, historical_count: list, max_retries: int = 7) -> dict:
+        response_schema = {
+            "type": "object",
+            "properties": {
+                "max_change": {"type": "number", "minimum": -1, "maximum": 1},
+                "min_change": {"type": "number", "minimum": -1, "maximum": 1},
+                "avg_change": {"type": "number", "minimum": -1, "maximum": 1},
+                "explanation": {"type": "string"}
+            },
+            "required": ["max_change", "min_change", "avg_change", "explanation"]
+        }
+        
+        prompt = f"""
+        You are an expert AI assistant specializing in agricultural yield prediction, particularly for maize crops. 
+        Your task is to provide an estimation of the change in tassel count 14 days from now, based on the given weather forecast and historical data.
+
+        Weather forecast data for the next 14 days:
+        {json.dumps(weather_forecast, indent=2)}
+
+        Historical tassel count data:
+        {json.dumps(historical_count, indent=2)}
+
+        Using your expertise in maize growth patterns and the provided data, estimate the following:
+        1. The maximum percentage change in tassel count (positive or negative)
+        2. The minimum percentage change in tassel count (positive or negative)
+        3. The average (most likely) percentage change in tassel count (positive or negative)
+        
+        Remember, while exact predictions are impossible, your role is to provide the best possible estimation based on the available information. Be decisive in your analysis.
+
+        In your explanation:
+        - Clearly state the key factors influencing your prediction
+        - Highlight how specific weather patterns in the forecast are likely to impact tassel development
+        - Draw insights from the historical data to support your estimates
+        - Briefly mention any assumptions you've made
+        - Focus on the most probable scenarios rather than extreme outliers
+        - Make the text more readable by highlighting key points or make bullet points. and don't make it too long as I am putting it into a tool tip, but don't make it too short too.
+
+        Provide your response in the following JSON format:
+        {{
+            "max_change": float,
+            "min_change": float,
+            "avg_change": float,
+            "explanation": string
+        }}
+
+        Express all percentage changes as decimals (e.g., 0.2 for 20% increase, -0.15 for 15% decrease).
+        Your explanation should be concise yet comprehensive, emphasizing the confidence in your estimation while acknowledging the complexity of the prediction.
+        """
+
+        for attempt in range(max_retries):
+            try:
+                generation_config = GenerationConfig(
+                    temperature=0.2,
+                    top_p=1,
+                    top_k=1,
+                    candidate_count=1,
+                    max_output_tokens=1024,
+                    stop_sequences=[],
+                    response_mime_type="application/json",
+                    response_schema=response_schema
+                )
+
+                response = self.pro_model.generate_content(
+                    prompt,
+                    generation_config=generation_config
+                )
+                
+                # Parse the JSON response
+                result = json.loads(response.text)
+                
+                # Validate the response structure
+                required_keys = ["max_change", "min_change", "avg_change", "explanation"]
+                if not all(key in result for key in required_keys):
+                    raise ValueError("Invalid response structure")
+                
+                return result
+
+            except ResourceExhausted:
+                print(f"Quota exceeded for location: {self.location}. Attempt {attempt + 1} of {max_retries}")
+                self.current_location_index = (self.current_location_index + 1) % len(self.locations)
+                self._init_vertexai()
+                
+                if attempt == max_retries - 1:
+                    raise HTTPException(status_code=429, detail="All locations quota exceeded. Please try again later.")
+                
+                print(f"Retrying with new location: {self.location}")
+
+            except json.JSONDecodeError:
+                raise HTTPException(status_code=500, detail="Failed to parse LLM response as JSON")
+            except ValueError as ve:
+                raise HTTPException(status_code=500, detail=str(ve))
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
+
+        raise HTTPException(status_code=500, detail="Failed to generate prediction after maximum retries")

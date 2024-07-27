@@ -97,7 +97,6 @@ function UserImagePage() {
     if (selectedItems.length > 0) {
       setDeleteMultipleModalOpen(true);
     } else {
-      alert("Please select items to delete."); // or use any other method to notify user
     }
   };
 

@@ -696,7 +696,8 @@ def view_weather_forecast(lon: float, lat: float, _: dict = Depends(LoginRequire
                         params={
                             "lat" : lat,
                             "lon" : lon,
-                            "appid" : Config.OPEN_WEATHER_API
+                            "appid" : Config.OPEN_WEATHER_API,
+                            "cnt" : 14
                         })
     res = json.loads(res.text)
     return res
