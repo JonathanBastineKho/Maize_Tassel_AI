@@ -152,7 +152,14 @@ class CroppedImage(BaseModel):
     folder_id: str
     dataset_name: str
     crop_data: dict
-
+      
 class FutureYieldInput(BaseModel):
     weather_forecast: list
     historical_count: list
+      
+class Interpolation(BaseModel):
+    farmWidth: int
+    farmHeight: int
+    positions: List[tuple]
+    imgDimensions: List[tuple]
+    tasselCoordinates: List[List[tuple]]
