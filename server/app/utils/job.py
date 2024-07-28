@@ -74,7 +74,6 @@ class JobManager:
         management_port = 15672 
         url = f'http://{self.rabbit_host}:{management_port}/api/channels'
         response = requests.get(url, auth=(username, password))
-        print(url)
         if response.status_code == 200:
             channels = json.loads(response.text)
             ack_details_list = []
