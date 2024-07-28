@@ -1,5 +1,7 @@
 import pika
 import json
+import requests
+from requests.auth import HTTPBasicAuth
 from config import Config
 from google.cloud import run_v2
 from google.oauth2 import service_account
@@ -67,6 +69,22 @@ class JobManager:
                 delivery_mode=2,  # make the message persistent
             )
         )
+    
+    def get_queue_stats(self, username=Config.RABBIT_MQ_USERNAME, password=Config.RABBIT_MQ_PASSWORD):
+        management_port = 15672 
+        url = f'http://{self.rabbit_host}:{management_port}/api/channels'
+        response = requests.get(url, auth=(username, password))
+        print(url)
+        if response.status_code == 200:
+            channels = json.loads(response.text)
+            ack_details_list = []
+            for channel in channels: 
+                if 'message_stats' in channel and 'ack_details' in channel['message_stats']:
+                    ack_details = channel['message_stats']['ack_details']
+                    ack_details_list.append(ack_details)       
+            return ack_details_list
+        else: 
+            raise Exception(f"{response.status_code}, {response.text}")
 
 class CloudRunManager:
     def __init__(self, service_account_path: str = None) -> None:
