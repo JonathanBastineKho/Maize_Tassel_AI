@@ -42,24 +42,24 @@ function FilterModal({ open, setOpen }) {
 
     const applyFilter = () => {
         const newSearchParams = new URLSearchParams();
-        
+    
         if (filters.start_date !== null) {
-            filters.start_date.setDate(filters.start_date.getDate() + 1)
-            newSearchParams.set("start_date", filters.start_date.toISOString().slice(0, 10));
-          }
-          if (filters.end_date !== null) {
-            filters.end_date.setDate(filters.end_date.getDate() + 1)
-            newSearchParams.set("end_date", filters.end_date.toISOString().slice(0, 10));
-          }
-          if (filters.tassel_min !== null) {
+            const startDateUTC = new Date(Date.UTC(filters.start_date.getFullYear(), filters.start_date.getMonth(), filters.start_date.getDate()));
+            newSearchParams.set("start_date", startDateUTC.toISOString().slice(0, 10));
+        }
+        if (filters.end_date !== null) {
+            const endDateUTC = new Date(Date.UTC(filters.end_date.getFullYear(), filters.end_date.getMonth(), filters.end_date.getDate()));
+            newSearchParams.set("end_date", endDateUTC.toISOString().slice(0, 10));
+        }        
+        if (filters.tassel_min !== null) {
             newSearchParams.set("tassel_min", filters.tassel_min.toString());
-          }
-          if (filters.tassel_max !== null) {
+        }
+        if (filters.tassel_max !== null) {
             newSearchParams.set("tassel_max", filters.tassel_max.toString());
-          }
-          if (!(filters.in_queue && filters.processing && filters.done)) {
+        }
+        if (!(filters.in_queue && filters.processing && filters.done)) {
             if (filters.in_queue) {
-            newSearchParams.set("in_queue", "true");
+                newSearchParams.set("in_queue", "true");
             }
             if (filters.processing) {
                 newSearchParams.set("processing", "true");
@@ -67,8 +67,7 @@ function FilterModal({ open, setOpen }) {
             if (filters.done) {
                 newSearchParams.set("done", "true");
             }
-          }
-          
+        }
     
         setSearchParams(newSearchParams);
         setOpen(false);
@@ -201,3 +200,4 @@ function FilterModal({ open, setOpen }) {
 }
 
 export default FilterModal;
+
