@@ -13,7 +13,7 @@ import { StorageContext } from "./StorageContext";
 import { AuthContext } from "../Authentication/AuthContext";
 
 
-function UserSideBar({setCollapsed, collapsed}) {
+function UserSideBar({setPremiumWarning, setCollapsed, collapsed}) {
     const [isHovering, setIsHovering] = useState(false);
     const { storage } = useContext(StorageContext);
     const { user } = useContext(AuthContext);
@@ -53,9 +53,15 @@ function UserSideBar({setCollapsed, collapsed}) {
                         <Sidebar.Item as={Link} to="/user/chat" icon={IoIosHelpCircle}>
                             CornSult
                         </Sidebar.Item>
-                        <Sidebar.Item as={Link} to="/user/quick-count" icon={PiClockCountdownBold}>
-                            Quick Count
-                        </Sidebar.Item>
+                        {user.role === "regular" ? (
+                            <Sidebar.Item className="cursor-pointer" icon={PiClockCountdownBold} onClick={()=>{setPremiumWarning(true)}}>
+                                Quick Count
+                            </Sidebar.Item>
+                        ) : (
+                            <Sidebar.Item as={Link} to="/user/quick-count" icon={PiClockCountdownBold}>
+                                Quick Count
+                            </Sidebar.Item>
+                        )}
                         <Sidebar.Item icon={MdCloudQueue}>
                             Storage {user.role === "regular" ? `(${Math.round(storage / 100 * 100)}% full)` : 'Unlimited'}
                         </Sidebar.Item>

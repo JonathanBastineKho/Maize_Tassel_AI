@@ -316,18 +316,11 @@ function InterpolationCanvas() {
                         <h1 className="text-2xl font-bold">Total tassel:&nbsp;&nbsp;&nbsp;
                             <span className="text-gray-700 font-normal text-lg">{result?.total_interpolated_tassels}</span>
                         </h1>
-                        
                     </div>
-                    <Button className="bg-green-500 focus:ring-4 focus:ring-green-300 enabled:hover:bg-green-600">
-                        Save Result
-                    </Button>
                 </div>
-                
                 <img src={result?.plot_url} className="mx-auto" />
                 </>
             }
-            
-
         </div>
     );
 }

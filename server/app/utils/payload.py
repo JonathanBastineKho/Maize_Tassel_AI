@@ -168,4 +168,3 @@ class InterpolationResult(BaseModel):
     total_interpolated_tassels: float
     tassels_per_sqm: float
     plot_url: str
-    signature: str

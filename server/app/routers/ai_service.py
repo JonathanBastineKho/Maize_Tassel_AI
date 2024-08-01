@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form
 from fastapi.responses import StreamingResponse
 from app.utils import llm_mgr, storage_mgr
 from app.utils.payload import LoginRequired, FutureYieldInput, TasselData, InterpolationResult
-from app.database.schema import TypeOfUser, Chat, Folder
+from app.database.schema import TypeOfUser, Chat, Folder, Image
 from sqlalchemy.orm import Session
 from app.database.utils import get_db
 import numpy as np
@@ -134,24 +134,10 @@ async def interpolate_tassels(data: TasselData, user: dict = Depends(LoginRequir
 
     # Generate signed URL for the plot
     plot_url = await storage_mgr.get_image(plot_path)
-    result_data = {
-        "total_actual_tassels": total_actual_tassels,
-        "total_interpolated_tassels": float(round(max(total_actual_tassels, total_interpolated_tassels_tps))),
-        "tassels_per_sqm": float(tassels_per_sqm_tps),
-        "plot_url": plot_url[0]
-    }
 
-    data_string = json.dumps(result_data, sort_keys=True)
-
-    signature = hmac.new(Config.SECRET_KEY.encode(), data_string.encode(), hashlib.sha256).hexdigest()
     return InterpolationResult(
         total_actual_tassels=total_actual_tassels,
         total_interpolated_tassels=float(round(max(total_actual_tassels, total_interpolated_tassels_tps))),
         tassels_per_sqm=float(tassels_per_sqm_tps),
         plot_url=plot_url[0],
-        signature=signature
     )
-
-@router.post("/save-interpolation")
-def save_interpolation():
-    pass
