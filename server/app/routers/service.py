@@ -17,13 +17,10 @@ from app import Config
 from app.utils import storage_mgr
 from app.database.schema import Folder, TypeOfUser, Image, Prediction, TypeOfImageStatus
 from app.database.utils import get_db
-from app.utils.payload import LoginRequired, FolderPayload, ImagePayload, CreateFolderBody, ImageFeedback, RenameFolderBody, RenameImageBody, Interpolation
+from app.utils.payload import LoginRequired, FolderPayload, ImagePayload, CreateFolderBody, ImageFeedback, RenameFolderBody, RenameImageBody
 from app.utils.sockets import sio_server
 from app.utils import job_mgr, session_mgr
 from math import isfinite
-
-import numpy as np
-from scipy.interpolate import RBFInterpolator
 
 router = APIRouter(tags=["Regular Service"], prefix="/service")
 
@@ -285,6 +282,22 @@ async def search_item(
         "images": image_data
     }
 
+@router.get("/search-all-images")
+async def search_all_images(folder_id: str, user: dict = Depends(LoginRequired(roles_required={TypeOfUser.REGULAR, TypeOfUser.PREMIUM})), db: Session = Depends(get_db)):
+    fldr = Folder.retrieve(db, folder_id=folder_id)
+    if fldr.user_email != user['email']:
+        raise HTTPException(401, detail="Unauthorized")
+    images = Image.search(db, folder_id=folder_id, status=TypeOfImageStatus.DONE)
+    image_urls = await storage_mgr.get_image([image.thumbnail_url for image in images])
+    return {
+        "images" : [
+            {
+                "name" : image.name,
+                "thumbnail_url" : url
+            }
+            for image, url in zip(images, image_urls)
+        ]
+    }
 
 @router.get("/view-image")
 async def view_image(img_name: str, folder_id: Optional[str] = None, db: Session = Depends(get_db), user: dict = Depends(LoginRequired(roles_required={TypeOfUser.REGULAR, TypeOfUser.PREMIUM}))):
@@ -693,6 +706,13 @@ def search_all_folders(user: dict = Depends(LoginRequired(roles_required={TypeOf
         "folder_list" : [{"name" : fldr.name, "id" : fldr.id} for fldr in fldrs]
     }
 
+@router.get("/search-all-folders-indiv")
+def search_all_folders(user: dict = Depends(LoginRequired(roles_required={TypeOfUser.REGULAR, TypeOfUser.PREMIUM})), db: Session = Depends(get_db)):
+    fldrs = Folder.search_all(db, email=user['email'])
+    return {
+        "folder_list" : [{"name" : fldr.name, "id" : fldr.id} for fldr in fldrs]
+    }
+
 @router.get("/view-weather-forecast")
 def view_weather_forecast(lon: float, lat: float, _: dict = Depends(LoginRequired(roles_required={TypeOfUser.REGULAR, TypeOfUser.PREMIUM}))):
     res = requests.get("https://api.openweathermap.org/data/2.5/forecast/daily",
@@ -724,104 +744,3 @@ def receive_after_update(mapper, connection, target):
                     'name': target.name,
                     'status': new_status
                 }, room=session_id))
-
-@router.post("/interpolate")
-def interpolate(input: Interpolation):
-    # VALIDATE POSITIONS
-    for i, (pos, dim) in enumerate(zip(input.positions, input.imgDimensions)):
-        x, y = pos
-        width, height = dim
-
-        #check if dimensions are valid
-        if width <= 0 or height <= 0:
-            raise ValueError(f"Error: Image {i+1} has invalid dimensions {dim}. Dimensions must be greater than zero.")
-
-        #check if the image is within farm boundaries
-        if x + width > input.farmWidth or y + height > input.farmHeight:
-            raise ValueError(f"Error: Image {i+1} at position {pos} with dimensions {dim} goes out of farm boundaries.")
-        
-        #check for overlapping images
-        for j, (otherPos, otherDim) in enumerate(zip(input.positions, input.imgDimensions)):
-            if i != j:
-                otherX, otherY = otherPos
-                otherWidth, otherHeight = otherDim
-                if (x < otherX + otherWidth and x + width > otherX and
-                    y < otherY + otherHeight and y + height > otherY):
-                    raise ValueError(f"Error: Image {i+1} at position {pos} with dimensions {dim} overlaps with image {j+1}.")
-        
-    print("Validated Positions:", input.positions)
-    print("Validated Image Dimensions:", input.imgDimensions)
-
-    #combine all tassel coordinate with their respective image position in the interpolation map
-    allTassels = []
-    for imgIdx, (imgX, imgY) in enumerate(input.positions):
-        imgWidth, imgHeight = input.imgDimensions[imgIdx]
-        for tasselX, tasselY in input.tasselCoordinates[imgIdx]:
-            #scale tassel coordinates to farm size and add image position
-            farmX = imgX + tasselX * imgWidth
-            farmY = imgY + tasselY * imgHeight
-            allTassels.append((farmX, farmY))
-
-    allTassels = np.array(allTassels)
-
-    #Grid
-    gridResolution = 100
-    gridX, gridY = np.mgrid[0:input.farmWidth:gridResolution*1j, 0:input.farmHeight:gridResolution*1j]
-
-    #calculate the density of tassels for each image
-    points = np.array(input.positions)
-
-    tasselCounts = []
-    for image in input.tasselCoordinates:
-        tasselCounts.append(len(image))
-
-    values = np.array(tasselCounts) / np.array([dim[0] * dim[1] for dim in input.imgDimensions])
-
-    #RBF Interpolation
-    rbf = RBFInterpolator(points, values, kernel='linear')
-
-    #Create grid of points for interpolation
-    gridPoints = np.column_stack((gridX.ravel(), gridY.ravel()))
-    gridZ = rbf(gridPoints).reshape(gridX.shape)
-
-    #Integrate the density over the entire farm area to estimate the total number of tassels
-    dx = input.farmWidth / gridResolution
-    dy = input.farmHeight / gridResolution
-    totalEstimatedTassels = np.sum(gridZ) * dx * dy
-
-    # Create a list to store the estimated tassel count for each coordinate
-    tassel_count_data = []
-
-    # Iterate through the grid and calculate estimated tassel count for each cell
-    for i in range(gridResolution):
-        for j in range(gridResolution):
-            x = round(gridX[i, j], 2)  # Round to 2 decimal places for readability
-            y = round(gridY[i, j], 2)
-            density = gridZ[i, j]
-            
-            # Calculate the area of each grid cell
-            cell_area = (input.farmWidth / gridResolution) * (input.farmHeight / gridResolution)
-            
-            # Estimate tassel count for this cell
-            estimated_tassels = round(density * cell_area, 2)
-            
-            # Store the result in the dictionary
-            tassel_count_data.append({
-                "x": str(x),
-                "y": str(y),
-                "value": estimated_tassels
-            })
-    
-    # Prepare actual tassel positions for JSON output (in farm coordinates)
-    actual_tassel_positions = [
-        {"x": round(x, 2), "y": round(y, 2)} for x, y in allTassels
-    ]
-
-    # Convert the dictionary to JSON
-    result_json = json.dumps({
-        "estimatedTasselCountsPerCoordinate": tassel_count_data,
-        "totalInterpolatedTasselCount": int(totalEstimatedTassels),
-        "actualTasselPositions": actual_tassel_positions
-    }, indent=2)
-
-    return result_json

@@ -5,6 +5,7 @@ import { IoMdImages, IoMdPerson, IoIosHelpCircle, IoMdSettings } from "react-ico
 import { MdCloudQueue } from "react-icons/md";
 import { FaCreditCard } from "react-icons/fa6";
 import { LuSettings2 } from "react-icons/lu";
+import { PiClockCountdownBold } from "react-icons/pi";
 import { progressTheme } from "../theme";
 import { Link } from "react-router-dom";
 import { useContext, useState } from "react";
@@ -51,6 +52,9 @@ function UserSideBar({setCollapsed, collapsed}) {
                         </Sidebar.Item>
                         <Sidebar.Item as={Link} to="/user/chat" icon={IoIosHelpCircle}>
                             CornSult
+                        </Sidebar.Item>
+                        <Sidebar.Item as={Link} to="/user/quick-count" icon={PiClockCountdownBold}>
+                            Quick Count
                         </Sidebar.Item>
                         <Sidebar.Item icon={MdCloudQueue}>
                             Storage {user.role === "regular" ? `(${Math.round(storage / 100 * 100)}% full)` : 'Unlimited'}

@@ -18,7 +18,6 @@ function HistoricalChart({ forecastData, historicalData }) {
     </div>
   )
 
-  console.log(forecastData);
   const chartOptions = {
     chart: {
       toolbar: {

@@ -116,7 +116,7 @@ class StorageManager:
         async def generate_signed_url(blob):
             return blob.generate_signed_url(
                 version="v4",
-                expiration=datetime.timedelta(minutes=15),
+                expiration=datetime.timedelta(minutes=30),
                 method="GET"
             )
 

@@ -93,4 +93,10 @@ class Folder(Base):
             cls.user_email == email,
             cls.parent_id != None
         ).all()
+    
+    @classmethod
+    def search_all_indiv(cls, db: Session, email: str):
+        return db.query(cls).filter(
+            cls.user_email == email,
+        ).all()
 
