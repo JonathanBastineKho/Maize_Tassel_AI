@@ -7,6 +7,7 @@ import {
   IoIosHelpCircle,
   IoMdSettings,
 } from "react-icons/io";
+import { PiClockCountdownBold } from "react-icons/pi";
 import { MdCloudQueue } from "react-icons/md";
 import { FaCreditCard } from "react-icons/fa6";
 import { LuSettings2 } from "react-icons/lu";
@@ -49,6 +50,9 @@ function UserDrawer({ open, setOpen }) {
               <Sidebar.ItemGroup>
                 <Sidebar.Item as={Link} to="/user/profile" icon={IoMdPerson}>Profile</Sidebar.Item>
                 <Sidebar.Item as={Link} to="/user/chat" icon={IoIosHelpCircle}>CornSult</Sidebar.Item>
+                <Sidebar.Item as={Link} to="/user/quick-count" icon={PiClockCountdownBold}>
+                  Quick Count
+                </Sidebar.Item>
                 <Sidebar.Item icon={MdCloudQueue}>
                   Storage {user.role === "regular" ? `(${Math.round(storage / 100 * 100)}% full)` : 'Unlimited'}
                 </Sidebar.Item>

@@ -1,7 +1,7 @@
 import re
 from fastapi import Request, HTTPException
 from pydantic import BaseModel, Field, ConfigDict, field_validator
-from typing import Set, List, Optional, Literal
+from typing import Set, List, Optional, Literal, Tuple
 from . import session_mgr
 from app.database.schema import TypeOfUser
 
@@ -157,9 +157,14 @@ class FutureYieldInput(BaseModel):
     weather_forecast: list
     historical_count: list
       
-class Interpolation(BaseModel):
-    farmWidth: int
-    farmHeight: int
-    positions: List[tuple]
-    imgDimensions: List[tuple]
-    tasselCoordinates: List[List[tuple]]
+class TasselData(BaseModel):
+    farm_width: float
+    farm_height: float
+    tassel_coordinates: List[Tuple[float, float]]
+    folder_id: str
+
+class InterpolationResult(BaseModel):
+    total_actual_tassels: int
+    total_interpolated_tassels: float
+    tassels_per_sqm: float
+    plot_url: str
