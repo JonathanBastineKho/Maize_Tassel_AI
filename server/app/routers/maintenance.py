@@ -407,19 +407,10 @@ def deploy_model(model_deploy: DeployModel, db: Session = Depends(get_db), _: di
         print(e)
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/queue-stats")
-def get_queue_stats(poll_interval = 5, timeout = 60):
-    
-    start_time = time.time()
+@router.get("/worker-stats")
+def get_queue_stats(_: dict = Depends(LoginRequired(roles_required={TypeOfUser.ADMIN}))):
     try: 
         stats = job_mgr.get_queue_stats() 
-        # if stats['messages'] > 0:
-        #     return {"Success": True, "stats": stats}
-        
-        # if time.time() - start_time > timeout:
-        #     return {"Success": False, "messsage": "Timeout"}
-       
-        # time.sleep(poll_interval)
         return {'stats': stats}
         
     except Exception as e:
