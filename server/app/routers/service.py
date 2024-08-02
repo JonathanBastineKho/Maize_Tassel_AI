@@ -300,15 +300,18 @@ async def search_all_images(folder_id: str, user: dict = Depends(LoginRequired(r
     }
 
 @router.get("/view-image")
-async def view_image(img_name: str, folder_id: Optional[str] = None, db: Session = Depends(get_db), user: dict = Depends(LoginRequired(roles_required={TypeOfUser.REGULAR, TypeOfUser.PREMIUM}))):
+async def view_image(img_name: str, folder_id: Optional[str] = None, db: Session = Depends(get_db), user: dict = Depends(LoginRequired(roles_required={TypeOfUser.REGULAR, TypeOfUser.PREMIUM, TypeOfUser.ADMIN}))):
     image_data = {}
     # Check if folder ID belongs to the user
-    if not folder_id:
-        fldr = Folder.retrieve_root(db, user_email=user['email'])
+    if user['role'] != TypeOfUser.ADMIN:
+        if not folder_id:
+            fldr = Folder.retrieve_root(db, user_email=user['email'])
+        else:
+            fldr = Folder.retrieve(db, folder_id=folder_id)
+            if fldr.user_email != user['email']:
+                raise HTTPException(401, detail="Unauthorized")
     else:
         fldr = Folder.retrieve(db, folder_id=folder_id)
-        if fldr.user_email != user['email']:
-            raise HTTPException(401, detail="Unauthorized")
 
     # Get image URL
     img = Image.retrieve(db, name=img_name, folder_id=fldr.id)

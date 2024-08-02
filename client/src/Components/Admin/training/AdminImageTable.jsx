@@ -2,15 +2,18 @@ import { Table, Checkbox, Label, Avatar, Badge } from "flowbite-react";
 import { checkBoxTheme, tableTheme } from "../../theme";
 import axios from "axios";
 import { useState, useEffect, useMemo, useRef } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import InifiniteScroll from "react-infinite-scroll-component";
 import { format } from 'date-fns';
 import { BsThreeDotsVertical } from "react-icons/bs";
+import UploadedImageModal from "./UploadedImageModal";
 
 function AdminImageTable({ image, setImage }) {
+  const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [currImageIdx, setCurrImageIdx] = useState(0);
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const search = searchParams.get("search") || "";
@@ -92,7 +95,9 @@ function AdminImageTable({ image, setImage }) {
   }, [page, search]);
 
   return (
-    <InifiniteScroll
+    <>
+    <UploadedImageModal images={image} currImageIdx={currImageIdx} setCurrImageIdx={setCurrImageIdx} />
+      <InifiniteScroll
       className="mb-48"
       dataLength={image.length}
       next={fetchItem}
@@ -111,6 +116,7 @@ function AdminImageTable({ image, setImage }) {
             <Checkbox 
             checked={areAllChecked}
             onChange={(e) => {
+              e.stopPropagation();
               setImage(prevImages => prevImages.map(img => ({ ...img, checked: e.target.checked })));
             }}
             theme={checkBoxTheme} />
@@ -127,12 +133,16 @@ function AdminImageTable({ image, setImage }) {
             Array(5).fill(0).map((_, index) => <LoadingRow key={`loading-${index}`} />)
           ) : (
             image.map((img, idx) => (
-              <Table.Row className="cursor-pointer" key={idx}>
+              <Table.Row 
+              onClick={() => {navigate(`/admin/images/${img.folder_id}/${img.name}`)}}
+              className="cursor-pointer" key={idx}>
                 <Table.Cell className="w-fit md:w-auto">
                   <Checkbox
                     theme={checkBoxTheme}
                     checked={img.checked}
-                    onChange={() => {
+                    onClick={(e) => e.stopPropagation()} 
+                    onChange={(e) => {
+                      e.stopPropagation();
                       setImage(prevImages => {
                         const newImages = [...prevImages];
                         newImages[idx] = { ...newImages[idx], checked: !newImages[idx].checked };
@@ -162,6 +172,7 @@ function AdminImageTable({ image, setImage }) {
         </Table.Body>
       </Table>
     </InifiniteScroll>
+    </>
   );
 }
 

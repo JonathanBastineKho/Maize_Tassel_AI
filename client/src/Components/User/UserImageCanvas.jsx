@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 
-function ImageUserCanvas({ sideBarOpen, img, labels, setLabel }) {
+function ImageUserCanvas({ sideBarOpen, img, labels }) {
     const canvasRef = useRef(null);
     const containerRef = useRef(null);
     const [ctx, setCtx] = useState(null);
@@ -9,7 +9,6 @@ function ImageUserCanvas({ sideBarOpen, img, labels, setLabel }) {
     const [offset, setOffset] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
     const [startPan, setStartPan] = useState({ x: 0, y: 0 });
-    console.log(labels);
     const drawCanvas = useCallback(() => {
         const canvas = canvasRef.current;
         const context = ctx;

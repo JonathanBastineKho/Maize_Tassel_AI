@@ -89,6 +89,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           <Route path="dashboard" element={<AdminDashboardPage />} />
           <Route path="users" element={<AdminUsersPage />} />
           <Route path="images" element={<AdminImagePage />} />
+          <Route path="images/:folder_id/:imageName" element={<AdminImagePage />} />
           <Route path="datasets" element={<AdminDatasetPage />} />
           <Route path="datasets/:dataset_name" element={<AdminDatasetImagePage />} />
           <Route path="datasets/:dataset_name/:folder_id/:imageName" element={<AdminDatasetImagePage />} />
