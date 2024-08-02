@@ -1,5 +1,6 @@
 import asyncio, uuid
 import wandb
+import time 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from typing import Optional, List
 from config import Config
@@ -10,6 +11,7 @@ from app.utils.payload import CreateDataset, LoginRequired, ImagePayload, TrainP
 from app.utils import storage_mgr, cloud_run_mgr, llm_mgr, job_mgr
 from app.database.utils import get_db
 from app.database.schema import Model, TypeOfUser, Dataset, DatasetImageLink, Image, TypeOfImageStatus, Prediction, Label
+
 
 router = APIRouter(tags=["Maintenance"], prefix="/maintenance")
 
@@ -404,3 +406,21 @@ def deploy_model(model_deploy: DeployModel, db: Session = Depends(get_db), _: di
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/queue-stats")
+def get_queue_stats(poll_interval = 5, timeout = 60):
+    
+    start_time = time.time()
+    try: 
+        stats = job_mgr.get_queue_stats() 
+        # if stats['messages'] > 0:
+        #     return {"Success": True, "stats": stats}
+        
+        # if time.time() - start_time > timeout:
+        #     return {"Success": False, "messsage": "Timeout"}
+       
+        # time.sleep(poll_interval)
+        return {'stats': stats}
+        
+    except Exception as e:
+        raise HTTPException(500, detail=f"An error occurred while getting queue stats: {str(e)}")
