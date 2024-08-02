@@ -71,16 +71,18 @@ class JobManager:
         )
     
     def get_queue_stats(self, username=Config.RABBIT_MQ_USERNAME, password=Config.RABBIT_MQ_PASSWORD):
-        management_port = 15672 
-        url = f'http://{self.rabbit_host}:{management_port}/api/channels'
+        url = f'http://{self.rabbit_host}:{15672}/api/channels'
         response = requests.get(url, auth=(username, password))
         if response.status_code == 200:
             channels = json.loads(response.text)
             ack_details_list = []
-            for channel in channels: 
-                if 'message_stats' in channel and 'ack_details' in channel['message_stats']:
-                    ack_details = channel['message_stats']['ack_details']
-                    ack_details_list.append(ack_details)       
+            for channel in channels:
+                if channel['user'] == 'worker':
+                    if 'message_stats' in channel and 'ack_details' in channel['message_stats']:
+                        ack_details = channel['message_stats']['ack_details']
+                        ack_details_list.append(ack_details)
+                    else:
+                        ack_details_list.append({"rate" : 0})    
             return ack_details_list
         else: 
             raise Exception(f"{response.status_code}, {response.text}")

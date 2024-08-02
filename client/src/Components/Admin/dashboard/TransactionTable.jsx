@@ -22,7 +22,7 @@ function TransactionTable({transactions, loading}) {
                         <Table.HeadCell>Amount</Table.HeadCell>
                         <Table.HeadCell>Status</Table.HeadCell>
                     </Table.Head>
-                    <Table.Body>
+                    <Table.Body className="max-h-96 overflow-y-auto">
                     {loading ? (
                         <Table.Row>
                             <Table.Cell colSpan={4} className="text-center">
