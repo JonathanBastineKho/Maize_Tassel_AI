@@ -21,6 +21,7 @@ import {
   FaThumbsUp,
 } from "react-icons/fa6";
 import { IoMdArrowRoundBack, IoMdArrowRoundForward } from "react-icons/io";
+import ImageUserCanvas from "./UserImageCanvas";
 
 export function SideBarContent({
   img,
@@ -147,7 +148,9 @@ export function SideBarContent({
           <Textarea
             rows={4}
             theme={textAreaTheme}
+            readOnly
             placeholder={`${img?.description ? "" : "No description here."}`}
+            value={`${img?.description ? img?.description : ""}`}
           />
         </div>
         <div className="mt-8">
@@ -449,49 +452,14 @@ function UserImageModal({ index, setIndex, imageList }) {
         )}
 
         {/* Content */}
-        <div className="flex-1 flex justify-center items-center py-28 px-6 md:px-24">
-          {loading ? (
-            <div className="items-center mx-auto">
-              <Spinner theme={spinnerTheme} />
-            </div>
-          ) : (
-            <div className="relative h-full">
-              <img
-                src={img.url}
-                alt="Image"
-                ref={imgRef}
-                className="max-h-full object-contain"
-                onLoad={handleImageLoad}
-              />
-              {img.status === "done" && showBox
-                ? img.prediction.map((prediction, key) => (
-                    <div
-                      key={key}
-                      className={`absolute border-2`}
-                      style={{
-                        borderColor: boundingBoxColor,
-                        left:
-                          (prediction.xCenter - prediction.width / 2) *
-                          (imgSize.width / img.width),
-                        top:
-                          (prediction.yCenter - prediction.height / 2) *
-                          (imgSize.height / img.height),
-                        width: prediction.width * (imgSize.width / img.width),
-                        height:
-                          prediction.height * (imgSize.height / img.height),
-                      }}
-                    >
-                      {showConfidence && (
-                        <div className="absolute top-0 left-0 p-1 text-xs text-white bg-black bg-opacity-50 rounded-br">
-                          {(prediction.confidence * 100).toFixed(2)}%
-                        </div>
-                      )}
-                    </div>
-                  ))
-                : null}
-            </div>
-          )}
-        </div>
+        <ImageUserCanvas
+          sideBarOpen={sideBarOpen}
+          img={img}
+          labels={img?.status === "done" ? img.prediction : []}
+          color={boundingBoxColor}
+          showBox={showBox}
+          showConfidence={showConfidence}
+        />
         <div className="md:hidden">
           <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)}>
             <Drawer.Header title="Prediction" />

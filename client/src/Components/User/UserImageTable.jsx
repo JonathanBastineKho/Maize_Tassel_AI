@@ -4,7 +4,7 @@ import { Checkbox, Table, Badge, Avatar, Spinner, Label } from "flowbite-react";
 import { useEffect, useState } from "react";
 import { FaFolder, FaCheck } from "react-icons/fa";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import { spinnerTheme, tableTheme, isValidDate, isValidInteger } from "../theme";
+import { spinnerTheme, tableTheme, isValidDate, isValidInteger, checkBoxTheme } from "../theme";
 import UserImageModal from "./UserImageModal";
 import ActionButton from "./ActionButton";
 import InifiniteScroll from "react-infinite-scroll-component";
@@ -186,7 +186,7 @@ function UserImageTable({
           <Table hoverable theme={tableTheme} className="z-50">
             <Table.Head className="p-4">
               <Table.HeadCell>
-                <Checkbox checked={selectedItems.length === folder.length + image.item.size} onChange={toggleAll} />
+                <Checkbox theme={checkBoxTheme} checked={selectedItems.length === folder.length + image.item.size} onChange={toggleAll} />
               </Table.HeadCell>
               <Table.HeadCell>Name</Table.HeadCell>
               <Table.HeadCell>Size</Table.HeadCell>
@@ -202,7 +202,7 @@ function UserImageTable({
                   navigate(`/user/images/${fldr.id}`);
                 }}>
                   <Table.Cell>
-                    <Checkbox onClick={(e) => e.stopPropagation()} checked={selectedItems.some((item) => item.id === fldr.id && item.type === "folder")} onChange={(e) => handleCheck(fldr.id, "folder", e)} />
+                    <Checkbox theme={checkBoxTheme} onClick={(e) => e.stopPropagation()} checked={selectedItems.some((item) => item.id === fldr.id && item.type === "folder")} onChange={(e) => handleCheck(fldr.id, "folder", e)} />
                   </Table.Cell>
                   <Table.Cell className="whitespace-nowrap font-medium text-gray-900 flex flex-row gap-2 items-center">
                     <FaFolder className="text-gray-500 w-6 h-6" />
@@ -254,7 +254,7 @@ function UserImageTable({
                     }
                   }}>
                     <Table.Cell>
-                      <Checkbox onClick={(e) => e.stopPropagation()} checked={selectedItems.some((item) => item.id === key && item.type === "image")} onChange={(e) => handleCheck(key, "image", e)} />
+                      <Checkbox theme={checkBoxTheme} onClick={(e) => e.stopPropagation()} checked={selectedItems.some((item) => item.id === key && item.type === "image")} onChange={(e) => handleCheck(key, "image", e)} />
                     </Table.Cell>
                     <Table.Cell className="whitespace-nowrap font-medium text-gray-900 flex flex-row gap-2 items-center">
                       <Avatar size="xs" img={img.thumbnail_url} />

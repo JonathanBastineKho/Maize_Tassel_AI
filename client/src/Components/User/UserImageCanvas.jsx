@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 
-function ImageUserCanvas({ sideBarOpen, img, labels }) {
+function ImageUserCanvas({ sideBarOpen, img, labels, color = 'red', showBox = true, showConfidence = false }) {
     const canvasRef = useRef(null);
     const containerRef = useRef(null);
     const [ctx, setCtx] = useState(null);
@@ -13,6 +13,9 @@ function ImageUserCanvas({ sideBarOpen, img, labels }) {
         const canvas = canvasRef.current;
         const context = ctx;
         if (!context || !image || !canvas) return;
+
+        canvas.width = containerRef.current.clientWidth;
+        canvas.height = containerRef.current.clientHeight;
 
         context.clearRect(0, 0, canvas.width, canvas.height);
     
@@ -28,16 +31,30 @@ function ImageUserCanvas({ sideBarOpen, img, labels }) {
         context.drawImage(image, 0, 0);
 
         // Draw bounding boxes
-        context.strokeStyle = 'red';
-        context.lineWidth = 2 / (scale * scaleFactor);
-        labels.forEach(box => {
-            const x = box.xCenter - box.width / 2;
-            const y = box.yCenter - box.height / 2;
-            context.strokeRect(x, y, box.width, box.height);
-        });
+        if (showBox) {
+            context.strokeStyle = color;
+            context.lineWidth = 2 / (scale * scaleFactor);
+            context.fillStyle = 'white';
+            context.font = `${12 / (scale * scaleFactor)}px Arial`;
+
+            labels.forEach(box => {
+                const x = box.xCenter - box.width / 2;
+                const y = box.yCenter - box.height / 2;
+                context.strokeRect(x, y, box.width, box.height);
+
+                if (showConfidence) {
+                    const confidence = (box.confidence * 100).toFixed(2) + '%';
+                    const textWidth = context.measureText(confidence).width;
+                    context.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                    context.fillRect(x, y, textWidth + 4, 20 / (scale * scaleFactor));
+                    context.fillStyle = 'white';
+                    context.fillText(confidence, x + 2, y + 14 / (scale * scaleFactor));
+                }
+            });
+        }
 
         context.restore();
-    }, [ctx, image, labels, scale, offset, sideBarOpen]);
+    }, [ctx, image, labels, scale, offset, sideBarOpen, color, showBox, showConfidence]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -51,7 +68,7 @@ function ImageUserCanvas({ sideBarOpen, img, labels }) {
     }, [sideBarOpen]);
 
     useEffect(() => {
-        if (img) {
+        if (img && img.url) {
             const imgObj = new Image();
             imgObj.src = img.url;
             imgObj.onload = () => {
@@ -63,20 +80,17 @@ function ImageUserCanvas({ sideBarOpen, img, labels }) {
     }, [img]);
 
     useEffect(() => {
-        drawCanvas();
-    }, [drawCanvas, sideBarOpen]);
+        if (image) {
+            drawCanvas();
+        }
+    }, [drawCanvas, image, sideBarOpen]);
 
     useEffect(() => {
         const handleResize = () => {
-            const canvas = canvasRef.current;
-            const container = containerRef.current;
-            if (canvas && container) {
-                canvas.width = container.clientWidth;
-                canvas.height = container.clientHeight;
+            if (canvasRef.current && containerRef.current) {
                 drawCanvas();
             }
         };
-
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, [drawCanvas]);
