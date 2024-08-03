@@ -17,6 +17,7 @@ function AdminImageTable({ image, setImage }) {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const search = searchParams.get("search") || "";
+  const filterBadFeedbackParam = searchParams.get("filter_bad_feedback") === "true";
   const abortControllerRef = useRef(null);
 
   const fetchItem = (currentPage = page, currentImageLength = image.length) => {
@@ -25,7 +26,7 @@ function AdminImageTable({ image, setImage }) {
     }
     abortControllerRef.current = new AbortController();
     axios
-      .get(`/api/maintenance/search-images?search=${search}&page=${currentPage}&page_size=20`)
+      .get(`/api/maintenance/search-images?search=${search}&page=${currentPage}&page_size=20&filter_bad_feedback=${filterBadFeedbackParam}`)
       .then((res) => {
         if (res.status === 200) {
           const newImages = res.data.images.map(img => ({
@@ -81,7 +82,7 @@ function AdminImageTable({ image, setImage }) {
   useEffect(() => {
     setLoading(true);
     setPage(1);
-  }, [search]);
+  }, [search, filterBadFeedbackParam]);
 
   useEffect(() => {
     if (page === 1) {
@@ -92,7 +93,7 @@ function AdminImageTable({ image, setImage }) {
         abortControllerRef.current.abort();
       }
     };
-  }, [page, search]);
+  }, [page, search, filterBadFeedbackParam]);
 
   return (
     <>
@@ -134,7 +135,11 @@ function AdminImageTable({ image, setImage }) {
           ) : (
             image.map((img, idx) => (
               <Table.Row 
-              onClick={() => {navigate(`/admin/images/${img.folder_id}/${img.name}`)}}
+              onClick={() => {
+                const currentParams = new URLSearchParams(location.search);
+                const paramsString = currentParams.toString();
+                navigate(`/admin/images/${img.folder_id}/${img.name}${paramsString ? `?${paramsString}` : ''}`);
+              }}
               className="cursor-pointer" key={idx}>
                 <Table.Cell className="w-fit md:w-auto">
                   <Checkbox

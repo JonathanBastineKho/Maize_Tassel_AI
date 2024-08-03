@@ -25,6 +25,7 @@ def search_images(
         end_date: Optional[str] = None,
         min_tassel_count: Optional[int] = None,
         max_tassel_count: Optional[int] = None,
+        filter_bad_feedback: Optional[bool] = False,
         db: Session = Depends(get_db),
         _: dict = Depends(LoginRequired(roles_required={TypeOfUser.ADMIN}))):
     # parsing start and end dates
@@ -49,7 +50,7 @@ def search_images(
     else:
         images = Image.search(db, offset=offset, page_size=page_size,
                                 start_date=start_date_obj, end_date=end_date_obj, min_tassel_count=min_tassel_count,
-                                max_tassel_count=max_tassel_count, status=TypeOfImageStatus.DONE)
+                                max_tassel_count=max_tassel_count, status=TypeOfImageStatus.DONE, filter_bad_feedback=filter_bad_feedback)
     has_more = len(images) > 0
 
     # Filtering the images through LLM
@@ -58,23 +59,25 @@ def search_images(
             img_uris = [f"gs://{Config.PRIVATE_BUCKET_NAME}/{url}" for url in dataset_image_urls]
         else:
             img_uris = [f"gs://{Config.PRIVATE_BUCKET_NAME}/{image.image_url}" for image in images]
-        
         img_idx = llm_mgr.filter_image(image_uris=img_uris, search=search)
         images = [images[i] for i in img_idx if i < len(images)]
         if dataset_name:
-            dataset_image_urls, dataset_thumbnail_urls, label_counts = [], [], []
+            new_dataset_image_urls, new_dataset_thumbnail_urls, new_label_counts = [], [], []
             for i in img_idx:
                 if i < len(label_counts):
-                    dataset_image_urls.append(dataset_image_urls[i])
-                    dataset_thumbnail_urls.append(dataset_image_urls[i])
-                    label_counts.append(label_counts[i])
-
+                    new_dataset_image_urls.append(dataset_image_urls[i])
+                    new_dataset_thumbnail_urls.append(dataset_thumbnail_urls[i])
+                    new_label_counts.append(label_counts[i])
     # Getting the data
     if dataset_name:
-        image_urls = asyncio.run(storage_mgr.get_image([url for url in dataset_thumbnail_urls]))
+        if search:
+            image_urls = asyncio.run(storage_mgr.get_image([url for url in new_dataset_thumbnail_urls]))
+        else:
+            image_urls = asyncio.run(storage_mgr.get_image([url for url in dataset_thumbnail_urls]))
     else:
         image_urls = asyncio.run(storage_mgr.get_image([image.thumbnail_url for image in images]))
-        
+    if not search and dataset_name:
+        new_label_counts = label_counts
     image_data = [
         {
             "name": image.name,
@@ -87,7 +90,7 @@ def search_images(
         for image, thumb_url, label_count in zip(
             images, 
             image_urls, 
-            label_counts if dataset_name else [None] * len(images)
+            new_label_counts if dataset_name else [None] * len(images)
         )
     ]
     return {"Success" : True,

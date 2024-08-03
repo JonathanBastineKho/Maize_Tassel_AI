@@ -8,6 +8,7 @@ import AddToDatasetModal from "./AddToDatasetModal";
 import { FaCheck } from "react-icons/fa6";
 import { HiExclamation } from "react-icons/hi";
 import ToastMsg from "../../Other/ToastMsg";
+import { Drawer } from "flowbite-react";
 
 function UploadedImageModal({ images, currImageIdx, setCurrImageIdx }) {
     const navigate = useNavigate();
@@ -73,7 +74,9 @@ function UploadedImageModal({ images, currImageIdx, setCurrImageIdx }) {
                         </div>)
                     }
                     <div className="md:hidden">
-
+                      <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)}>
+                        <UploadedImageSideBarContent setAddDatasetModalOpen={setAddDatasetModalOpen} img={img} prediction={label} />
+                      </Drawer>
                     </div>
                     {/* Canvas */}
                     <div className="flex-grow">

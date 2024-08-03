@@ -79,6 +79,7 @@ class LLMmanager:
                 {{"matched_indices": []}}
 
                 If no images match, return an empty list for matched_indices.
+                If there are matching image based on the search description, return the indices of the image.
                 Ensure your response is a valid JSON object and nothing else.
                 """
 
@@ -97,7 +98,6 @@ class LLMmanager:
                 )
                 
                 try:
-                    print(response.text)
                     result = json.loads(response.text).get("matched_indices")
                     if isinstance(result, list):
                         self.current_location_index = (self.current_location_index + 1) % len(self.locations)

@@ -1,10 +1,11 @@
 import { Button, TextInput, Tooltip } from "flowbite-react";
-import { FaFilter, FaInfoCircle, FaPlus, FaCheck } from "react-icons/fa";
+import { FaInfoCircle, FaPlus, FaCheck } from "react-icons/fa";
 import { HiExclamation } from "react-icons/hi";
 import { PiStarFourFill } from "react-icons/pi";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import ToastMsg from "../../Components/Other/ToastMsg";
+import { FaFilterCircleXmark } from "react-icons/fa6";
 
 import { inputTheme } from "../../Components/theme";
 import AdminImageTable from "../../Components/Admin/training/AdminImageTable";
@@ -22,7 +23,6 @@ const ConditionalTooltip = ({ children, showTooltip, tooltipContent }) => {
 
 function AdminImagePage() {
   const [image, setImage] = useState([]); // Images in the search
-  const [filterModalOpen, setFilterModalOpen] = useState(false);
   const [addDatasetModalOpen, setAddDatasetModalOpen] = useState(false);
 
   // Toast Message
@@ -33,12 +33,35 @@ function AdminImagePage() {
   const navigate = useNavigate();
   const searchParams = new URLSearchParams(location.search);
   const searchValue = searchParams.get("search") || "";
+  const filterBadFeedbackParam = searchParams.get("filter_bad_feedback") === "true";
 
   const [inputValue, setInputValue] = useState(searchValue);
+  const [filterBadFeedback, setFilterBadFeedback] = useState(filterBadFeedbackParam);
 
   const isAnyChecked = useMemo(() => {
     return image.some(img => img.checked);
   }, [image]);
+
+  const updateURL = useCallback((search, filter) => {
+    const params = new URLSearchParams();
+    if (search) {
+      params.set("search", search);
+    }
+    if (filter) {
+      params.set("filter_bad_feedback", "true");
+    }
+    navigate(`/admin/images?${params.toString()}`, { replace: true });
+  }, [navigate]);
+
+  const handleSearch = useCallback(() => {
+    updateURL(inputValue, filterBadFeedback);
+  }, [inputValue, filterBadFeedback, updateURL]);
+
+  const handleFilterToggle = useCallback(() => {
+    const newFilterState = !filterBadFeedback;
+    setFilterBadFeedback(newFilterState);
+    updateURL(inputValue, newFilterState);
+  }, [filterBadFeedback, inputValue, updateURL]);
 
   return (
     <div className="px-5 mt-24 flex flex-col gap-5">
@@ -57,11 +80,7 @@ function AdminImagePage() {
             onChange={(e) => {setInputValue(e.target.value)}}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
-                if (inputValue === ''){
-                  navigate('/admin/images');
-                } else {
-                  navigate(`/admin/images?search=${encodeURIComponent(inputValue)}`);
-                }
+                handleSearch();
               }
             }}
           />
@@ -72,9 +91,12 @@ function AdminImagePage() {
                 <FaInfoCircle className="w-5 h-5 text-gray-500" />
               </button>
             </Tooltip>
-            <button className="hover:bg-gray-100 p-2 rounded-md" onClick={() => setFilterModalOpen(true)}>
-              <FaFilter className="w-5 h-5 text-gray-500"/>
-            </button>
+            <Tooltip content="Filter bad feedback">
+              <button className={`hover:bg-gray-100 p-2 rounded-md ${filterBadFeedback ? 'bg-gray-200' : ''}`} 
+              onClick={handleFilterToggle}>
+                <FaFilterCircleXmark className="w-5 h-5 text-gray-500"/>
+              </button>
+            </Tooltip>
           </div>
         </div>
         <ConditionalTooltip

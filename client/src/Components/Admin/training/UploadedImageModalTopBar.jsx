@@ -41,7 +41,9 @@ function UploadedImageModalTopBar ({
                 currIdx === 0 ? "cursor-not-allowed" : "hover:bg-gray-200"
                 }`}
                 onClick={() => {
-                navigate(`/admin/images/${images[currIdx - 1].folder_id}/${encodeURIComponent(images[currIdx - 1].name)}`)
+                const currentParams = new URLSearchParams(location.search);
+                const paramsString = currentParams.toString();
+                navigate(`/admin/images/${images[currIdx - 1].folder_id}/${encodeURIComponent(images[currIdx - 1].name)}${paramsString ? `?${paramsString}` : ''}`)
                 setCurrIdx(currIdx - 1);
                 }}
             >
@@ -58,7 +60,9 @@ function UploadedImageModalTopBar ({
                     : "hover:bg-gray-200"
                 }`}
                 onClick={() => {
-                    navigate(`/admin/images/${images[currIdx + 1].folder_id}/${encodeURIComponent(images[currIdx + 1].name)}`)
+                    const currentParams = new URLSearchParams(location.search);
+                    const paramsString = currentParams.toString();
+                    navigate(`/admin/images/${images[currIdx + 1].folder_id}/${encodeURIComponent(images[currIdx + 1].name)}${paramsString ? `?${paramsString}` : ''}`)
                 setCurrIdx(currIdx + 1);
                 }}
             >
@@ -69,7 +73,9 @@ function UploadedImageModalTopBar ({
             <button
             className="hover:bg-gray-200 p-2 rounded-md mr-2"
             onClick={() => {
-                navigate(`/admin/images`)
+                const currentParams = new URLSearchParams(location.search);
+                const paramsString = currentParams.toString();
+                navigate(`/admin/images${paramsString ? `?${paramsString}` : ''}`)
             }}
             >
             <MdClose className="w-5 h-5" />
