@@ -189,9 +189,9 @@ function UserImageTable({
                 <Checkbox theme={checkBoxTheme} checked={selectedItems.length === folder.length + image.item.size} onChange={toggleAll} />
               </Table.HeadCell>
               <Table.HeadCell>Name</Table.HeadCell>
-              <Table.HeadCell>Size</Table.HeadCell>
-              <Table.HeadCell className="min-w-32">Status</Table.HeadCell>
-              <Table.HeadCell>Date Uploaded</Table.HeadCell>
+              <Table.HeadCell className="hidden md:table-cell">Size</Table.HeadCell>
+              <Table.HeadCell className="min-w-32 hidden md:table-cell">Status</Table.HeadCell>
+              <Table.HeadCell className="hidden md:table-cell">Date Uploaded</Table.HeadCell>
               <Table.HeadCell>
                 <span className="sr-only">Action</span>
               </Table.HeadCell>
@@ -208,13 +208,13 @@ function UserImageTable({
                     <FaFolder className="text-gray-500 w-6 h-6" />
                     <Label className="truncate max-w-72">{fldr.name}</Label>
                   </Table.Cell>
-                  <Table.Cell>
+                  <Table.Cell className="hidden md:table-cell">
                     -
                   </Table.Cell>
-                  <Table.Cell>
+                  <Table.Cell className="hidden md:table-cell">
                     -
                   </Table.Cell>
-                  <Table.Cell>
+                  <Table.Cell className="hidden md:table-cell">
                     {new Date(fldr.create_date).toLocaleDateString(undefined, {
                       month: "long",
                       day: "numeric",
@@ -260,8 +260,8 @@ function UserImageTable({
                       <Avatar size="xs" img={img.thumbnail_url} />
                       <Label className="truncate max-w-72">{key}</Label>
                     </Table.Cell>
-                    <Table.Cell>{img.size} MB</Table.Cell>
-                    <Table.Cell>
+                    <Table.Cell className="hidden md:table-cell">{img.size} MB</Table.Cell>
+                    <Table.Cell className="hidden md:table-cell">
                       {img.status === "in_queue" ? (
                         <Badge className="w-fit" color="gray">
                           In Queue
@@ -280,7 +280,7 @@ function UserImageTable({
                         </Badge>
                       ) : null}
                     </Table.Cell>
-                    <Table.Cell>
+                    <Table.Cell className="hidden md:table-cell">
                       {new Date(img.upload_date).toLocaleDateString(undefined, {
                         month: "long",
                         day: "numeric",

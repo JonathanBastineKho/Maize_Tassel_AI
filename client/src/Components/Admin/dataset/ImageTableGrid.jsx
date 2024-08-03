@@ -7,6 +7,7 @@ import axios from "axios";
 import InfiniteScroll from "react-infinite-scroll-component";
 import { format } from "date-fns";
 import ImageModal from "./ImageModal";
+import { BsThreeDotsVertical } from "react-icons/bs";
 
 function ImageTableGrid({ images, setImages, rowView }) {
   const navigate = useNavigate();
@@ -136,10 +137,13 @@ function ImageTableGrid({ images, setImages, rowView }) {
         <Table hoverable theme={tableTheme}>
           <Table.Head>
             <Table.HeadCell>Name</Table.HeadCell>
-            <Table.HeadCell className="text-center">
+            <Table.HeadCell className="text-center hidden md:table-cell">
               Tassel Count
             </Table.HeadCell>
-            <Table.HeadCell>Upload Date</Table.HeadCell>
+            <Table.HeadCell className="hidden md:table-cell">Upload Date</Table.HeadCell>
+            <Table.HeadCell>
+              <span className="sr-only">Action</span>
+            </Table.HeadCell>
           </Table.Head>
           <Table.Body className="divide-y">
             {loading
@@ -155,14 +159,17 @@ function ImageTableGrid({ images, setImages, rowView }) {
                     navigate(`/admin/datasets/test/${img.folder_id}/${encodeURI(img.name)}${paramsString ? `?${paramsString}` : ''}`)}} 
                   className="cursor-pointer" key={idx}>
                     <Table.Cell className="w-full md:w-auto whitespace-nowrap font-medium text-gray-900 flex flex-row gap-2 items-center ">
-                      <Avatar size="xs" img={img.thumbnail_url} />
+                      <Avatar size="xs" className="min-w-6" img={img.thumbnail_url} />
                       <Label className="truncate max-w-64">{img.name}</Label>
                     </Table.Cell>
-                    <Table.Cell className="text-center">
+                    <Table.Cell className="text-center hidden md:table-cell">
                       {img.tassel_count}
                     </Table.Cell>
-                    <Table.Cell>
+                    <Table.Cell className="hidden md:table-cell">
                       {format(img.upload_date, "MMMM dd, yyyy")}
+                    </Table.Cell>
+                    <Table.Cell>
+                      <BsThreeDotsVertical />
                     </Table.Cell>
                   </Table.Row>
                 ))}

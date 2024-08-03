@@ -70,9 +70,9 @@ function AdminImagePage() {
       <AddToDatasetModal setPartialSuccessAddToast={setPartialSuccessAddToast} setSuccessAddToast={setSuccessAddToast} image={image} open={addDatasetModalOpen} setOpen={setAddDatasetModalOpen} />
       <h2 className="font-bold text-2xl">Uploaded Images</h2>
       <div className="flex flex-wrap flex-row justify-between gap-3 w-full">
-        <div className="flex flex-row items-center gap-4">
+        <div className="flex flex-row items-center gap-4 w-full md:w-fit">
           <TextInput
-            className="w-96"
+            className="w-full md:w-96"
             placeholder="Inteligence Search"
             icon={PiStarFourFill}
             theme={inputTheme}

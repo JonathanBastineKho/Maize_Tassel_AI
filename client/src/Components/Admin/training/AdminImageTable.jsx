@@ -157,7 +157,7 @@ function AdminImageTable({ image, setImage }) {
                   />
                   </Table.Cell>
                 <Table.Cell className="w-full md:w-auto whitespace-nowrap font-medium text-gray-900 flex flex-row gap-2 items-center ">
-                  <Avatar size="xs" img={img.thumbnail_url} />
+                  <Avatar size="xs" className="min-w-6" img={img.thumbnail_url} />
                   <Label className="truncate max-w-64">{img.name}</Label>
                 </Table.Cell>
                 <Table.Cell className="hidden md:table-cell">

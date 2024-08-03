@@ -52,7 +52,7 @@ def search_images(
                                 start_date=start_date_obj, end_date=end_date_obj, min_tassel_count=min_tassel_count,
                                 max_tassel_count=max_tassel_count, status=TypeOfImageStatus.DONE, filter_bad_feedback=filter_bad_feedback)
     has_more = len(images) > 0
-
+    new_dataset_image_urls, new_dataset_thumbnail_urls, new_label_counts = [], [], []
     # Filtering the images through LLM
     if len(images) > 0 and search:
         if dataset_name:
@@ -62,7 +62,7 @@ def search_images(
         img_idx = llm_mgr.filter_image(image_uris=img_uris, search=search)
         images = [images[i] for i in img_idx if i < len(images)]
         if dataset_name:
-            new_dataset_image_urls, new_dataset_thumbnail_urls, new_label_counts = [], [], []
+            
             for i in img_idx:
                 if i < len(label_counts):
                     new_dataset_image_urls.append(dataset_image_urls[i])

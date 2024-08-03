@@ -113,7 +113,7 @@ function AdminDatasetPage() {
                 <Table className="mt-4" hoverable theme={tableTheme}>
                     <Table.Head>
                         <Table.HeadCell>Dataset Name</Table.HeadCell>
-                        <Table.HeadCell>Create Date</Table.HeadCell>
+                        <Table.HeadCell className="hidden md:table-cell">Create Date</Table.HeadCell>
                         <Table.HeadCell>
                             <span className="sr-only">Action</span>
                         </Table.HeadCell>
@@ -134,7 +134,7 @@ function AdminDatasetPage() {
                                     <FaFolder className="text-gray-500 w-6 h-6" />
                                     <Label className="truncate max-w-72">{dataset.name}</Label>
                                 </Table.Cell>
-                                <Table.Cell>
+                                <Table.Cell className="hidden md:table-cell">
                                     {format(dataset.create_date, "MMMM dd, yyyy")}
                                 </Table.Cell>
                                 <Table.Cell>

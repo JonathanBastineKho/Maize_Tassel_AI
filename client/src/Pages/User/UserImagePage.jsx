@@ -165,9 +165,9 @@ function UserImagePage() {
       />
       <h2 className="font-bold text-2xl">Your Images</h2>
       <div className="flex flex-wrap flex-row justify-between gap-3 w-full">
-        <div className="flex flex-row items-center gap-4">
+        <div className="flex flex-row items-center gap-4 md:w-fit w-full">
           <TextInput
-            className="w-96"
+            className="w-full md:w-96"
             placeholder="Search your image"
             icon={HiSearch}
             theme={inputTheme}
