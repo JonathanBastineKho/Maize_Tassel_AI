@@ -1,10 +1,9 @@
 import { Sidebar, Progress } from "flowbite-react";
 import { sidebarTheme } from "../theme";
 import { HiChartPie } from "react-icons/hi";
-import { IoMdImages, IoMdPerson, IoIosHelpCircle, IoMdSettings } from "react-icons/io";
+import { IoMdImages, IoMdPerson, IoIosHelpCircle } from "react-icons/io";
 import { MdCloudQueue } from "react-icons/md";
 import { FaCreditCard } from "react-icons/fa6";
-import { LuSettings2 } from "react-icons/lu";
 import { PiClockCountdownBold } from "react-icons/pi";
 import { progressTheme } from "../theme";
 import { Link } from "react-router-dom";
@@ -75,14 +74,6 @@ function UserSideBar({setPremiumWarning, setCollapsed, collapsed}) {
                         }
                     </Sidebar.ItemGroup>
                 </Sidebar.Items>
-                <div className={`p-2 transition-all duration-100 ease-in-out flex ${collapsed ? "flex-col" : ""} gap-8 justify-center items-center`}>
-                    <button className="hover:bg-gray-100 p-3 rounded-md">
-                        <IoMdSettings className="w-5 h-5 text-gray-600" />
-                    </button>
-                    <button className="hover:bg-gray-100 p-3 rounded-md">
-                        <LuSettings2 className="w-5 h-5 text-gray-600" />
-                    </button>
-                </div>
             </div>
         </Sidebar>
     );

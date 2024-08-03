@@ -119,7 +119,11 @@ import {
                         <span className="block text-sm text-gray-500">{user.role.charAt(0).toUpperCase() + user.role.slice(1)}</span>
                     </DropdownHeader>
                     <DropdownItem as={Link} to={user.role === 'admin' ? '/admin/dashboard' : '/user/dashboard'}>Dashboard</DropdownItem>
-                    <DropdownItem>Settings</DropdownItem>
+                    {user.role === 'admin' ? (
+                    <DropdownItem as={Link} to="/admin/images" >Images</DropdownItem>
+                    ) : (
+                    <DropdownItem as={Link} to="/user/profile">Profile</DropdownItem>
+                    )}
                     <DropdownDivider />
                     <DropdownItem onClick={signOut}>Sign out</DropdownItem>
                 </Dropdown><NavbarToggle /></>

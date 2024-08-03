@@ -31,7 +31,6 @@ function AdminDatasetPage() {
         axios.get("/api/maintenance/search-dataset", { params })
         .then((res) => {
             if (res.status === 200) {
-                console.log(res.data.dataset);
                 if (page === 1) {
                     setDatasets(res.data.dataset);
                 } else {
