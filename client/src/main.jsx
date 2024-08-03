@@ -26,7 +26,7 @@ import UserImagePage from './Pages/User/UserImagePage';
 import AdminDashboardPage from './Pages/Admin/AdminDashboardPage';
 import AdminUsersPage from './Pages/Admin/AdminUsersPage';
 
-import TestPage from './Pages/TestPage';
+import ErrorPage from './Pages/ErrorPage';
 import UserSubscriptionPage from './Pages/User/UserSubscriptionPage';
 import UserProfilePage from './Pages/User/UserProfilePage';
 import SuccessSubscriptionPage from './Pages/User/SuccessSubscriptionPage';
@@ -89,13 +89,14 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           <Route path="dashboard" element={<AdminDashboardPage />} />
           <Route path="users" element={<AdminUsersPage />} />
           <Route path="images" element={<AdminImagePage />} />
+          <Route path="images/:folder_id/:imageName" element={<AdminImagePage />} />
           <Route path="datasets" element={<AdminDatasetPage />} />
           <Route path="datasets/:dataset_name" element={<AdminDatasetImagePage />} />
           <Route path="datasets/:dataset_name/:folder_id/:imageName" element={<AdminDatasetImagePage />} />
           <Route path="models" element={<AdminModelPage />} />
         </Route>
    {/* Other Path */}
-      <Route path="/test" element={<TestPage />}/>
+      <Route path="*" element={<ErrorPage />}/>
       </Routes>
     </BrowserRouter>
   </AuthProvider>

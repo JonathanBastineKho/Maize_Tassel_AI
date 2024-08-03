@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useContext } from "react";
 import { Button, Timeline, Card, Footer } from "flowbite-react";
 import CountUp from 'react-countup';
 import Spline from "@splinetool/react-spline";
 import { useInView } from "react-intersection-observer";
 import { FaArrowRight, FaCheck, FaChartLine, FaClock, FaLock, FaChartPie, FaCogs, FaDatabase, FaTimes } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+import { AuthContext } from "../../Components/Authentication/AuthContext";
 
 function HomePage() {
 
@@ -21,16 +22,16 @@ function HomePage() {
             threshold: 0.2,
     });
     const navigate = useNavigate();
+    const { user } = useContext(AuthContext);
 
   return (
     <div className="mt-20">
-      <section className="py-10" id="home">
+      <section className="py-10 relative" id="home">
         <div className="container mx-auto px-8">
           <div className="flex flex-col md:flex-row items-center justify-between">
-            <div className="md:w-1/2">
+            <div className="md:w-1/2 z-[40]">
             <h1 className="text-6xl font-bold mb-4">
                 Welcome to <span ref={titleRef} className={`transition-opacity duration-1000 ${titleVisible ? 'opacity-100' : 'opacity-0'}`}>CornSight</span>
-                {/* <span className="bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">CornSight</span> */}
             </h1>
               <p className="text-xl mb-8 text-gray-600">
                 Revolutionizing Maize Tassel Counting with AI
@@ -39,7 +40,13 @@ function HomePage() {
                 <Button
                   size="lg"
                   className="rounded-2xl bg-gradient-to-r from-green-400 to-cyan-600 text-white font-semibold shadow-md hover:from-green-500 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2 focus:ring-offset-gray-800 transition-all duration-800 ease-in-out mr-4"
-                  onClick={() => {navigate("/user/dashboard")}}
+                  onClick={() => {
+                    if (user.role === 'admin'){
+                      navigate("/admin/dashboard");
+                    } else {
+                      navigate("/user/dashboard");
+                    }
+                    }}
                 >
                     <div className="flex flex-row justify-between items-center gap-4">
                         <div>
@@ -67,7 +74,7 @@ function HomePage() {
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
           <div className="z-[-1] absolute top-32 -left-10 w-40 h-40 bg-green-200 rounded-full filter blur-xl opacity-70 transform rotate-45"></div>
           <div className="absolute top-28 right-10 w-20 h-28 bg-green-300 rounded-full filter blur-xl opacity-70"></div>
-          <div className="absolute bottom-80 right-24 w-[36rem] h-48 bg-green-100 rounded-full filter blur-xl opacity-70 transform -rotate-12"></div>
+          <div className="absolute bottom-10 right-[40rem] w-[19rem] h-40 bg-green-100 rounded-full filter blur-xl opacity-60 transform -rotate-12"></div>
           <div className="absolute bottom-10 right-20 w-30 h-30 bg-green-200 rounded-full filter blur-xl opacity-70 transform rotate-12"></div>
         </div>
       </section>
@@ -275,8 +282,20 @@ function HomePage() {
                   <FaTimes className="flex-shrink-0 w-5 h-5 text-red-500 dark:text-red-400" />
                   <span>Folder management system</span>
                 </li>
+                <li className="flex items-center space-x-3">
+                  <FaTimes className="flex-shrink-0 w-5 h-5 text-red-500 dark:text-red-400" />
+                  <span>Quick Count</span>
+                </li>
               </ul>
-              <Button className="w-full" color="gray">
+              <Button 
+              onClick={()=>{
+                if (user.role === 'admin') {
+                  navigate("/admin/dashboard");
+                } else {
+                  navigate("/user/subscription");
+                }
+              }}
+              className="w-full" color="gray">
                 Get started
               </Button>
             </Card>
@@ -315,8 +334,20 @@ function HomePage() {
                   <FaCheck className="flex-shrink-0 w-5 h-5 text-green-500 dark:text-green-400" />
                   <span>Folder management system</span>
                 </li>
+                <li className="flex items-center space-x-3">
+                  <FaCheck className="flex-shrink-0 w-5 h-5 text-green-500 dark:text-green-400" />
+                  <span>Quick count</span>
+                </li>
               </ul>
-              <Button className="w-full bg-green-500 focus:ring-4 focus:ring-green-300 enabled:hover:bg-green-600">
+              <Button 
+              onClick={()=>{
+                if (user.role === 'admin') {
+                  navigate("/admin/dashboard");
+                } else {
+                  navigate("/user/subscription");
+                }
+              }}
+              className="w-full bg-green-500 focus:ring-4 focus:ring-green-300 enabled:hover:bg-green-600">
                 Get started
               </Button>
             </Card>
@@ -355,8 +386,20 @@ function HomePage() {
                   <FaCheck className="flex-shrink-0 w-5 h-5 text-green-500 dark:text-green-400" />
                   <span>Folder management system</span>
                 </li>
+                <li className="flex items-center space-x-3">
+                  <FaCheck className="flex-shrink-0 w-5 h-5 text-green-500 dark:text-green-400" />
+                  <span>Quick count</span>
+                </li>
               </ul>
-              <Button className="w-full bg-green-500 focus:ring-4 focus:ring-green-300 enabled:hover:bg-green-600">
+              <Button 
+              onClick={()=>{
+                if (user.role === 'admin') {
+                  navigate("/admin/dashboard");
+                } else {
+                  navigate("/user/subscription");
+                }
+              }}
+              className="w-full bg-green-500 focus:ring-4 focus:ring-green-300 enabled:hover:bg-green-600">
                 Get started
               </Button>
             </Card>
@@ -373,12 +416,6 @@ function HomePage() {
               alt="CornSight Logo"
               name="CornSight"
             />
-            <Footer.LinkGroup>
-              <Footer.Link href="#">About</Footer.Link>
-              <Footer.Link href="#">Privacy Policy</Footer.Link>
-              <Footer.Link href="#">Terms & Conditions</Footer.Link>
-              <Footer.Link href="#">Contact</Footer.Link>
-            </Footer.LinkGroup>
           </div>
           <Footer.Divider />
           <Footer.Copyright href="#" by="CornSight™" year={2024} />

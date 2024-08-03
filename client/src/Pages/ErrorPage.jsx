@@ -5,7 +5,7 @@ function ErrorPage({}) {
   let loc = useLocation();
   return (
   <>
-    <div className="flex items-center justify-center h-screen bg-gray-200">
+    <div className="flex items-center justify-center h-screen">
       <div className="text-center">
         <div className="flex justify-center">
         <img

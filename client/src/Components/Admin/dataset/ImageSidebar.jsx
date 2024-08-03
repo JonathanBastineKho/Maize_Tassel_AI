@@ -13,7 +13,6 @@ import { PiRectangleDashedDuotone } from "react-icons/pi";
 
 function ImageSideBarContent({ saveChanges, saveLoading, imageHasBeenCropped, imageHasBeenReannotate, setImageHasBeenReannotate,
     croppingMode, setCroppingMode, newBoxToggle, setNewBoxToggle, selectedBox, label, setLabel, img }) {
-        console.log(saveLoading);
     
         return (
         <div className="md:pt-24 p-2 md:p-5 flex flex-col h-full md:h-screen relative">

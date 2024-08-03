@@ -105,9 +105,9 @@ function AdminUsersTable({
         <Table theme={tableTheme} hoverable striped>
           <Table.Head>
             <Table.HeadCell>Name</Table.HeadCell>
-            <Table.HeadCell>Subscription</Table.HeadCell>
-            <Table.HeadCell>Status</Table.HeadCell>
-            <Table.HeadCell>Country</Table.HeadCell>
+            <Table.HeadCell className="hidden md:table-cell">Subscription</Table.HeadCell>
+            <Table.HeadCell className="hidden md:table-cell">Status</Table.HeadCell>
+            <Table.HeadCell className="hidden md:table-cell">Country</Table.HeadCell>
             <Table.HeadCell>
               <span className="sr-only">Edit</span>
             </Table.HeadCell>
@@ -143,10 +143,10 @@ function AdminUsersTable({
                     </div>
                   </div>
                 </Table.Cell>
-                <Table.Cell>
+                <Table.Cell className="hidden md:table-cell">
                   {user.role[0].toUpperCase() + user.role.slice(1)}
                 </Table.Cell>
-                <Table.Cell>
+                <Table.Cell className="hidden md:table-cell">
                   {user.suspended ? (
                     <div className="flex flex-row gap-2 items-center">
                       <div className="rounded-full bg-red-500 w-2.5 h-2.5"> </div>
@@ -159,7 +159,7 @@ function AdminUsersTable({
                     </div>
                   )}
                 </Table.Cell>
-                <Table.Cell>{user.country ? user.country : "-"}</Table.Cell>
+                <Table.Cell className="hidden md:table-cell">{user.country ? user.country : "-"}</Table.Cell>
                 <Table.Cell>
                   <UserActionButton 
                   user={{name: user.name, email: user.email, idx: idx}}

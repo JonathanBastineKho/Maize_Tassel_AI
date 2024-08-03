@@ -93,7 +93,6 @@ function AddToDatasetModal({ image, open, setOpen, setSuccessAddToast, setPartia
           }
         })
         .catch((err) => {
-          console.log(err);
           if (err.response.status === 401) {
             navigate("/login");
           } else if (err.response.status === 400) {

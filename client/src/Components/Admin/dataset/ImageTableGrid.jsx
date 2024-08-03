@@ -7,6 +7,8 @@ import axios from "axios";
 import InfiniteScroll from "react-infinite-scroll-component";
 import { format } from "date-fns";
 import ImageModal from "./ImageModal";
+import ImageDatasetActionButton from "./ImageDatasetActionButton";
+import WarningDelete from "./WarningDelete";
 
 function ImageTableGrid({ images, setImages, rowView }) {
   const navigate = useNavigate();
@@ -16,30 +18,48 @@ function ImageTableGrid({ images, setImages, rowView }) {
   const [loading, setLoading] = useState(true);
   const [currIdx, setCurrIdx] = useState(0);
 
+  const [warningDeleteOpen, setWarningOpenDelete] = useState(false);
+  const [imageToDelete, setImageToDelete] = useState(null);
+  const [loadingDelete, setLoadingDelete] = useState(false);
+
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const search = searchParams.get("search") || "";
   const abortControllerRef = useRef(null);
 
-  const LoadingRow = () => (
-    <Table.Row className="animate-pulse">
-      <Table.Cell className="w-fit md:w-auto">
-        <div className="h-4 w-4 bg-gray-200 rounded"></div>
-      </Table.Cell>
-      <Table.Cell className="w-full md:w-auto">
-        <div className="flex items-center space-x-2">
-          <div className="rounded-full bg-gray-200 h-8 w-8"></div>
-          <div className="h-4 bg-gray-200 rounded w-48"></div>
+  const LoadingRow = () => {
+    if (rowView){
+      return (
+        <Table.Row className="animate-pulse">
+          <Table.Cell className="w-fit md:w-auto">
+            <div className="h-4 w-4 bg-gray-200 rounded"></div>
+          </Table.Cell>
+          <Table.Cell className="w-full md:w-auto">
+            <div className="flex items-center space-x-2">
+              <div className="rounded-full bg-gray-200 h-8 w-8"></div>
+              <div className="h-4 bg-gray-200 rounded w-48"></div>
+            </div>
+          </Table.Cell>
+          <Table.Cell className="hidden md:table-cell">
+            <div className="h-6 bg-gray-200 rounded w-16"></div>
+          </Table.Cell>
+          <Table.Cell className="hidden md:table-cell">
+            <div className="h-4 bg-gray-200 rounded w-full"></div>
+          </Table.Cell>
+        </Table.Row>
+      );
+    } else {
+      return (
+        <div className="animate-pulse flex flex-col h-48 bg-white border border-gray-200 rounded-lg shadow">
+          <div className="flex-grow overflow-hidden rounded-t-lg bg-gray-200"></div>
+          <div className="p-4">
+            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+          </div>
         </div>
-      </Table.Cell>
-      <Table.Cell className="hidden md:table-cell">
-        <div className="h-6 bg-gray-200 rounded w-16"></div>
-      </Table.Cell>
-      <Table.Cell className="hidden md:table-cell">
-        <div className="h-4 bg-gray-200 rounded w-full"></div>
-      </Table.Cell>
-    </Table.Row>
-  );
+      );
+    }
+    
+  };
 
   const fetchItem = (
     currentPage = page,
@@ -106,6 +126,32 @@ function ImageTableGrid({ images, setImages, rowView }) {
     return (
     <>
     <ImageModal currIdx={currIdx} setCurrIdx={setCurrIdx} images={images} />
+    <WarningDelete open={warningDeleteOpen} setOpen={setWarningOpenDelete} setItemToDelete={setImageToDelete} loading={loadingDelete} 
+    deleteItem={()=>{
+      setLoadingDelete(true);
+      axios.delete("/api/maintenance/remove-image-dataset", {data: {
+        name: dataset_name,
+        img_name: images[imageToDelete].name,
+        folder_id: images[imageToDelete].folder_id
+      }})
+      .then((res) => {
+        if (res.status === 200){
+          setImageToDelete(null);
+          setWarningOpenDelete(false);
+          setImages(prevImages => {
+            const newImages = [...prevImages];
+            newImages.splice(imageToDelete, 1);
+            return newImages;
+          });
+        }
+      })
+      .catch((err)=>{
+        if (err.response.status === 401){
+          navigate("/login");
+        }
+      })
+      .finally(()=>{setLoadingDelete(false);})
+    }} />
     <InfiniteScroll
         className="mb-48"
         dataLength={images.length}
@@ -122,10 +168,13 @@ function ImageTableGrid({ images, setImages, rowView }) {
         <Table hoverable theme={tableTheme}>
           <Table.Head>
             <Table.HeadCell>Name</Table.HeadCell>
-            <Table.HeadCell className="text-center">
+            <Table.HeadCell className="text-center hidden md:table-cell">
               Tassel Count
             </Table.HeadCell>
-            <Table.HeadCell>Upload Date</Table.HeadCell>
+            <Table.HeadCell className="hidden md:table-cell">Upload Date</Table.HeadCell>
+            <Table.HeadCell>
+              <span className="sr-only">Action</span>
+            </Table.HeadCell>
           </Table.Head>
           <Table.Body className="divide-y">
             {loading
@@ -136,17 +185,25 @@ function ImageTableGrid({ images, setImages, rowView }) {
                   <Table.Row
                   onClick={() => {
                     setCurrIdx(idx);
-                    navigate(`/admin/datasets/test/${img.folder_id}/${encodeURI(img.name)}`)}} 
+                    const currentParams = new URLSearchParams(location.search);
+                    const paramsString = currentParams.toString();
+                    navigate(`/admin/datasets/test/${img.folder_id}/${encodeURI(img.name)}${paramsString ? `?${paramsString}` : ''}`)}} 
                   className="cursor-pointer" key={idx}>
                     <Table.Cell className="w-full md:w-auto whitespace-nowrap font-medium text-gray-900 flex flex-row gap-2 items-center ">
-                      <Avatar size="xs" img={img.thumbnail_url} />
+                      <Avatar size="xs" className="min-w-6" img={img.thumbnail_url} />
                       <Label className="truncate max-w-64">{img.name}</Label>
                     </Table.Cell>
-                    <Table.Cell className="text-center">
+                    <Table.Cell className="text-center hidden md:table-cell">
                       {img.tassel_count}
                     </Table.Cell>
-                    <Table.Cell>
+                    <Table.Cell className="hidden md:table-cell">
                       {format(img.upload_date, "MMMM dd, yyyy")}
+                    </Table.Cell>
+                    <Table.Cell>
+                      <ImageDatasetActionButton deleteAction={() => {
+                        setImageToDelete(idx);
+                        setWarningOpenDelete(true);
+                      }} />
                     </Table.Cell>
                   </Table.Row>
                 ))}
@@ -182,7 +239,9 @@ function ImageTableGrid({ images, setImages, rowView }) {
                 key={idx}
                 onClick={() => {
                     setCurrIdx(idx);
-                    navigate(`/admin/datasets/test/${img.folder_id}/${encodeURI(img.name)}`)}}
+                    const currentParams = new URLSearchParams(location.search);
+                    const paramsString = currentParams.toString();
+                    navigate(`/admin/datasets/test/${img.folder_id}/${encodeURI(img.name)}${paramsString ? `?${paramsString}` : ''}`)}}
                 className="cursor-pointer flex flex-col h-48 bg-white border border-gray-200 rounded-lg shadow"
               >
                 <div className="flex-grow overflow-hidden rounded-t-lg">

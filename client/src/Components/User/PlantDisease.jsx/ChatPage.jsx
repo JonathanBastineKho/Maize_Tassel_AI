@@ -114,6 +114,31 @@ function ChatPage() {
         
     }, [input, file])
 
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault(); // Prevent default behavior
+            if (e.shiftKey) {
+                // Shift+Enter: Add a new line
+                setInput(prevInput => prevInput + '\n');
+                if (textRef.current) {
+                    const selection = window.getSelection();
+                    const range = selection.getRangeAt(0);
+                    const br = document.createElement('br');
+                    range.deleteContents();
+                    range.insertNode(br);
+                    range.setStartAfter(br);
+                    range.setEndAfter(br);
+                    range.collapse(false);
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                }
+            } else {
+                // Enter only: Send the message
+                handleSendMessage();
+            }
+        }
+    };
+
     useEffect(() => {
         axios.get("/api/ai/get-quota")
         .then((res) => {
@@ -313,7 +338,8 @@ function ChatPage() {
                         <div
                         ref={textRef}
                         contentEditable={!(user.role === 'regular' && quota >= 5)}
-                        className='w-full max-h-[200px] overflow-y-auto focus:outline-none text-gray-700'
+                        onKeyDown={handleKeyDown}
+                        className='w-full max-h-[200px] overflow-y-auto focus:outline-none text-gray-700 whitespace-pre-wrap'
                         onInput={(e) => {setInput(e.target.textContent)}} 
                         />
                         {input === '' && !(user.role === 'regular' && quota >= 5) && (

@@ -21,3 +21,4 @@ numpy==1.26.4
 google-cloud-run==0.10.5
 google-cloud-aiplatform==1.59.0
 scipy==1.14.0
+matplotlib==3.9.1

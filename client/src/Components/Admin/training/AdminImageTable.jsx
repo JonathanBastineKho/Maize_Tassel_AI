@@ -2,18 +2,22 @@ import { Table, Checkbox, Label, Avatar, Badge } from "flowbite-react";
 import { checkBoxTheme, tableTheme } from "../../theme";
 import axios from "axios";
 import { useState, useEffect, useMemo, useRef } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import InifiniteScroll from "react-infinite-scroll-component";
 import { format } from 'date-fns';
-import { BsThreeDotsVertical } from "react-icons/bs";
+import UploadedImageModal from "./UploadedImageModal";
+import UploadedActionButton from "./UploadedActionButton";
 
-function AdminImageTable({ image, setImage }) {
+function AdminImageTable({ image, setImage, setAddDatasetModalOpen }) {
+  const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [currImageIdx, setCurrImageIdx] = useState(0);
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const search = searchParams.get("search") || "";
+  const filterBadFeedbackParam = searchParams.get("filter_bad_feedback") === "true";
   const abortControllerRef = useRef(null);
 
   const fetchItem = (currentPage = page, currentImageLength = image.length) => {
@@ -22,7 +26,7 @@ function AdminImageTable({ image, setImage }) {
     }
     abortControllerRef.current = new AbortController();
     axios
-      .get(`/api/maintenance/search-images?search=${search}&page=${currentPage}&page_size=20`)
+      .get(`/api/maintenance/search-images?search=${search}&page=${currentPage}&page_size=20&filter_bad_feedback=${filterBadFeedbackParam}`)
       .then((res) => {
         if (res.status === 200) {
           const newImages = res.data.images.map(img => ({
@@ -78,7 +82,7 @@ function AdminImageTable({ image, setImage }) {
   useEffect(() => {
     setLoading(true);
     setPage(1);
-  }, [search]);
+  }, [search, filterBadFeedbackParam]);
 
   useEffect(() => {
     if (page === 1) {
@@ -89,10 +93,12 @@ function AdminImageTable({ image, setImage }) {
         abortControllerRef.current.abort();
       }
     };
-  }, [page, search]);
+  }, [page, search, filterBadFeedbackParam]);
 
   return (
-    <InifiniteScroll
+    <>
+    <UploadedImageModal images={image} currImageIdx={currImageIdx} setCurrImageIdx={setCurrImageIdx} />
+      <InifiniteScroll
       className="mb-48"
       dataLength={image.length}
       next={fetchItem}
@@ -111,6 +117,7 @@ function AdminImageTable({ image, setImage }) {
             <Checkbox 
             checked={areAllChecked}
             onChange={(e) => {
+              e.stopPropagation();
               setImage(prevImages => prevImages.map(img => ({ ...img, checked: e.target.checked })));
             }}
             theme={checkBoxTheme} />
@@ -127,12 +134,20 @@ function AdminImageTable({ image, setImage }) {
             Array(5).fill(0).map((_, index) => <LoadingRow key={`loading-${index}`} />)
           ) : (
             image.map((img, idx) => (
-              <Table.Row className="cursor-pointer" key={idx}>
+              <Table.Row 
+              onClick={() => {
+                const currentParams = new URLSearchParams(location.search);
+                const paramsString = currentParams.toString();
+                navigate(`/admin/images/${img.folder_id}/${img.name}${paramsString ? `?${paramsString}` : ''}`);
+              }}
+              className="cursor-pointer" key={idx}>
                 <Table.Cell className="w-fit md:w-auto">
                   <Checkbox
                     theme={checkBoxTheme}
                     checked={img.checked}
-                    onChange={() => {
+                    onClick={(e) => e.stopPropagation()} 
+                    onChange={(e) => {
+                      e.stopPropagation();
                       setImage(prevImages => {
                         const newImages = [...prevImages];
                         newImages[idx] = { ...newImages[idx], checked: !newImages[idx].checked };
@@ -142,7 +157,7 @@ function AdminImageTable({ image, setImage }) {
                   />
                   </Table.Cell>
                 <Table.Cell className="w-full md:w-auto whitespace-nowrap font-medium text-gray-900 flex flex-row gap-2 items-center ">
-                  <Avatar size="xs" img={img.thumbnail_url} />
+                  <Avatar size="xs" className="min-w-6" img={img.thumbnail_url} />
                   <Label className="truncate max-w-64">{img.name}</Label>
                 </Table.Cell>
                 <Table.Cell className="hidden md:table-cell">
@@ -154,7 +169,7 @@ function AdminImageTable({ image, setImage }) {
                   <Label className="text-gray-500">{format(new Date(img.upload_date), 'MMMM d, yyyy')}</Label>
                 </Table.Cell>
                 <Table.Cell>
-                  <BsThreeDotsVertical />
+                    <UploadedActionButton setAddDatasetModalOpen={setAddDatasetModalOpen} setImage={setImage} idx={idx} />
                 </Table.Cell>
               </Table.Row>
             ))
@@ -162,6 +177,7 @@ function AdminImageTable({ image, setImage }) {
         </Table.Body>
       </Table>
     </InifiniteScroll>
+    </>
   );
 }
 

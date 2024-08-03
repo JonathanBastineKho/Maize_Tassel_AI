@@ -1,30 +1,24 @@
-import { Sidebar } from "flowbite-react";
+import { Drawer, Sidebar } from "flowbite-react";
 import { sidebarTheme } from "../theme";
+import { Link } from "react-router-dom";
 import { HiChartPie } from "react-icons/hi";
 import { IoMdPeople } from "react-icons/io";
 import { BsStars } from "react-icons/bs";
-import { Link } from "react-router-dom";
-import { useState } from "react";
 
-
-function AdminSideBar({setCollapsed, collapsed}) {
-    const [isHovering, setIsHovering] = useState(false);
-
-    const handleMouseEnter = () => {
-        if (collapsed) {
-        setIsHovering(true);
-        setCollapsed(false);
-        }
-    };
-
-    const handleMouseLeave = () => {
-        if (isHovering) {
-        setIsHovering(false);
-        setCollapsed(true);
-        }
-    };
+function AdminDrawer({ open, setOpen }){
     return (
-        <Sidebar theme={sidebarTheme} className="z-40" collapsed={collapsed} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
+        <Drawer 
+            theme={{
+                root: {
+                    base: "fixed z-40 overflow-y-auto bg-white py-4 px-1 transition-transform"
+                }
+            }}
+        open={open} onClose={()=>{setOpen(false)}}>
+            <Sidebar theme={{
+                root: {
+                    inner: "h-full overflow-y-auto overflow-x-hidden rounded px-3 py-4"
+                }
+            }} className="z-40 h-full flex flex-col">
             <div className="flex flex-col justify-between h-full">
                 <Sidebar.Items>
                     <Sidebar.ItemGroup>
@@ -43,7 +37,8 @@ function AdminSideBar({setCollapsed, collapsed}) {
                 </Sidebar.Items>
             </div>
         </Sidebar>
+        </Drawer>
     );
 }
 
-export default AdminSideBar;
+export default AdminDrawer;

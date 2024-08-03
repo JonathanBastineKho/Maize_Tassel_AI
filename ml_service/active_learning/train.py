@@ -316,7 +316,7 @@ def prepare_yolo_data(label_data: dict, output_dir: str, dataset_bins: dict, tra
     for dataset_name, images in label_data.items():
         # Get number of bins for this dataset, or use default if not specified
         image_list = list(images.keys())
-        n_bins = dataset_bins.get(dataset_name, 5)
+        n_bins = dataset_bins.get(dataset_name, 10)
         bins, bin_edges = create_bins(images, n_bins)
 
         # Reassign single-sample bins before the first split

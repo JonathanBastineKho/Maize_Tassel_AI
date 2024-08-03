@@ -5,12 +5,10 @@ import {
   IoMdImages,
   IoMdPerson,
   IoIosHelpCircle,
-  IoMdSettings,
 } from "react-icons/io";
 import { PiClockCountdownBold } from "react-icons/pi";
 import { MdCloudQueue } from "react-icons/md";
 import { FaCreditCard } from "react-icons/fa6";
-import { LuSettings2 } from "react-icons/lu";
 import { progressTheme } from "../theme";
 import { Link } from "react-router-dom";
 import { useContext } from "react";
@@ -74,17 +72,6 @@ function UserDrawer({ open, setOpen }) {
             </Sidebar.Items>
           </Sidebar>
         </Drawer.Items>
-      </div>
-
-      <div
-        className={`p-2 transition-all duration-100 ease-in-out flex gap-8 justify-center items-center`}
-      >
-        <button className="hover:bg-gray-100 p-3 rounded-md">
-          <IoMdSettings className="w-5 h-5 text-gray-600" />
-        </button>
-        <button className="hover:bg-gray-100 p-3 rounded-md">
-          <LuSettings2 className="w-5 h-5 text-gray-600" />
-        </button>
       </div>
     </Drawer>
   );

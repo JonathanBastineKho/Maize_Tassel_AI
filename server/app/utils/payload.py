@@ -114,6 +114,10 @@ class CreateDataset(BaseModel):
         if not re.match(r'^[a-zA-Z0-9]+$', v):
             raise ValueError('Dataset name can only contain letters and numbers')
         return v
+    
+class ImageDataset(CreateDataset):
+    folder_id: str
+    img_name: str
 
 class TrainParams(BaseModel):
     dataset_names: List[str]
@@ -168,3 +172,4 @@ class InterpolationResult(BaseModel):
     total_interpolated_tassels: float
     tassels_per_sqm: float
     plot_url: str
+
