@@ -2,7 +2,6 @@ import { Button, Table, TextInput, Label } from "flowbite-react";
 import AdminBreadCrumb from "../../Components/Admin/dataset/BreadCrumb";
 import { HiSearch } from "react-icons/hi";
 import { FaFolder } from "react-icons/fa";
-import { BsThreeDotsVertical } from "react-icons/bs";
 import { inputTheme, tableTheme } from "../../Components/theme";
 import InifiniteScroll from "react-infinite-scroll-component";
 import { useState, useEffect, useRef } from "react";
@@ -10,6 +9,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { format } from "date-fns";
 import CreateDatasetModal from "../../Components/Admin/dataset/CreateDatasetModal";
+import ImageDatasetActionButton from "../../Components/Admin/dataset/ImageDatasetActionButton";
+import WarningDelete from "../../Components/Admin/dataset/WarningDelete";
 
 function AdminDatasetPage() {
     const navigate = useNavigate();
@@ -17,6 +18,10 @@ function AdminDatasetPage() {
     const searchParams = new URLSearchParams(location.search);
     const search = searchParams.get("search") || "";
     const [inputValue, setInputValue] = useState(search);
+
+    const [warningDeleteOpen, setWarningOpenDelete] = useState(false);
+    const [datasetToDelete, setDatasetToDelete] = useState(null);
+    const [loadingDelete, setLoadingDelete] = useState(false);
 
     const [page, setPage] = useState(1);
     const [datasets, setDatasets] = useState([]);
@@ -98,6 +103,30 @@ function AdminDatasetPage() {
                     Create Dataset
                 </Button>
             </div>
+            <WarningDelete open={warningDeleteOpen} setOpen={setWarningOpenDelete} setItemToDelete={setDatasetToDelete} loading={loadingDelete} 
+                deleteItem={()=>{
+                setLoadingDelete(true);
+                axios.delete("/api/maintenance/delete-dataset", {data: {
+                    name: datasets[datasetToDelete].name,
+                }})
+                .then((res) => {
+                    if (res.status === 200){
+                    setDatasetToDelete(null);
+                    setWarningOpenDelete(false);
+                    setDatasets(prevDataset => {
+                        const newDataset = [...prevDataset];
+                        newDataset.splice(datasetToDelete, 1);
+                        return newDataset;
+                    });
+                    }
+                })
+                .catch((err)=>{
+                    if (err.response.status === 401){
+                    navigate("/login");
+                    }
+                })
+                .finally(()=>{setLoadingDelete(false);})
+                }} />
             <InifiniteScroll
             dataLength={datasets.length}
             next={fetch}
@@ -138,7 +167,10 @@ function AdminDatasetPage() {
                                     {format(dataset.create_date, "MMMM dd, yyyy")}
                                 </Table.Cell>
                                 <Table.Cell>
-                                    <BsThreeDotsVertical />
+                                <ImageDatasetActionButton deleteAction={() => {
+                                    setDatasetToDelete(idx);
+                                    setWarningOpenDelete(true);
+                                }} />
                                 </Table.Cell>
                             </Table.Row>
                         ))}

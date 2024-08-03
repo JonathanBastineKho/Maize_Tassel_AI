@@ -35,3 +35,14 @@ class Dataset(Base):
         query = query.offset(offset).limit(page_size)
         
         return query.all()
+    
+    @classmethod
+    def retrieve(cls, db: Session, dataset_name: str):
+        dataset = db.query(cls).filter(cls.name == dataset_name).one_or_none()
+        if not dataset:
+            raise HTTPException(400, detail="Dataset name invalid")
+        return dataset
+    
+    def delete(self, db: Session):
+        db.delete(self)
+        db.commit()

@@ -5,10 +5,10 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import InifiniteScroll from "react-infinite-scroll-component";
 import { format } from 'date-fns';
-import { BsThreeDotsVertical } from "react-icons/bs";
 import UploadedImageModal from "./UploadedImageModal";
+import UploadedActionButton from "./UploadedActionButton";
 
-function AdminImageTable({ image, setImage }) {
+function AdminImageTable({ image, setImage, setAddDatasetModalOpen }) {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
@@ -169,7 +169,7 @@ function AdminImageTable({ image, setImage }) {
                   <Label className="text-gray-500">{format(new Date(img.upload_date), 'MMMM d, yyyy')}</Label>
                 </Table.Cell>
                 <Table.Cell>
-                  <BsThreeDotsVertical />
+                    <UploadedActionButton setAddDatasetModalOpen={setAddDatasetModalOpen} setImage={setImage} idx={idx} />
                 </Table.Cell>
               </Table.Row>
             ))

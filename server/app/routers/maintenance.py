@@ -7,7 +7,7 @@ from config import Config
 from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from app.utils.payload import CreateDataset, LoginRequired, ImagePayload, TrainParams, DeployModel, ReannotateImage, CroppedImage
+from app.utils.payload import CreateDataset, LoginRequired, ImagePayload, TrainParams, DeployModel, ReannotateImage, CroppedImage, ImageDataset
 from app.utils import storage_mgr, cloud_run_mgr, llm_mgr, job_mgr
 from app.database.utils import get_db
 from app.database.schema import Model, TypeOfUser, Dataset, DatasetImageLink, Image, TypeOfImageStatus, Prediction, Label
@@ -189,6 +189,16 @@ async def add_image(response: Response, dataset: CreateDataset, images: List[Ima
         }
     response.status_code = 200
     return {"Success": True}
+
+@router.delete("/remove-image-dataset")
+def remove_image_dataset(img: ImageDataset, db: Session = Depends(get_db), _: dict = Depends(LoginRequired(roles_required={TypeOfUser.ADMIN}))):
+    im = DatasetImageLink.retrieve(db, dataset_name=img.name, image_name=img.img_name, folder_id=img.folder_id)
+    im[0].delete(db)
+
+@router.delete("/delete-dataset")
+def delete_dataset(dataset: CreateDataset, db: Session = Depends(get_db), _: dict = Depends(LoginRequired(roles_required={TypeOfUser.ADMIN}))):
+    dts = Dataset.retrieve(db, dataset_name=dataset.name)
+    dts.delete(db)
 
 @router.patch("/crop-image")
 async def crop_image(crop_image: CroppedImage, db: Session = Depends(get_db), _: dict = Depends(LoginRequired(roles_required={TypeOfUser.ADMIN}))):

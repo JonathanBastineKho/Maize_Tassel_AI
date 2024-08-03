@@ -57,10 +57,10 @@ function SubscriptionCard({ cancelled, lastSub }) {
     "Unlimited Storage",
     "Priority Processing",
     "Bulk Upload",
-    "Unlimited historical data",
+    "Quick count",
     "Tassel count forecast",
     "Folder management",
-    "Farm Management",
+    "CornSult",
     "Weather forecast",
   ];
 

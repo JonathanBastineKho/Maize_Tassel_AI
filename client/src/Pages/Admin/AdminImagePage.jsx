@@ -119,6 +119,7 @@ function AdminImagePage() {
       </div>
     <AdminImageTable
     image={image}
+    setAddDatasetModalOpen={setAddDatasetModalOpen}
     setImage={setImage} />
     </div>
   );

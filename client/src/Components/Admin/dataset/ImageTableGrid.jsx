@@ -7,7 +7,8 @@ import axios from "axios";
 import InfiniteScroll from "react-infinite-scroll-component";
 import { format } from "date-fns";
 import ImageModal from "./ImageModal";
-import { BsThreeDotsVertical } from "react-icons/bs";
+import ImageDatasetActionButton from "./ImageDatasetActionButton";
+import WarningDelete from "./WarningDelete";
 
 function ImageTableGrid({ images, setImages, rowView }) {
   const navigate = useNavigate();
@@ -16,6 +17,10 @@ function ImageTableGrid({ images, setImages, rowView }) {
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(true);
   const [currIdx, setCurrIdx] = useState(0);
+
+  const [warningDeleteOpen, setWarningOpenDelete] = useState(false);
+  const [imageToDelete, setImageToDelete] = useState(null);
+  const [loadingDelete, setLoadingDelete] = useState(false);
 
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
@@ -121,6 +126,32 @@ function ImageTableGrid({ images, setImages, rowView }) {
     return (
     <>
     <ImageModal currIdx={currIdx} setCurrIdx={setCurrIdx} images={images} />
+    <WarningDelete open={warningDeleteOpen} setOpen={setWarningOpenDelete} setItemToDelete={setImageToDelete} loading={loadingDelete} 
+    deleteItem={()=>{
+      setLoadingDelete(true);
+      axios.delete("/api/maintenance/remove-image-dataset", {data: {
+        name: dataset_name,
+        img_name: images[imageToDelete].name,
+        folder_id: images[imageToDelete].folder_id
+      }})
+      .then((res) => {
+        if (res.status === 200){
+          setImageToDelete(null);
+          setWarningOpenDelete(false);
+          setImages(prevImages => {
+            const newImages = [...prevImages];
+            newImages.splice(imageToDelete, 1);
+            return newImages;
+          });
+        }
+      })
+      .catch((err)=>{
+        if (err.response.status === 401){
+          navigate("/login");
+        }
+      })
+      .finally(()=>{setLoadingDelete(false);})
+    }} />
     <InfiniteScroll
         className="mb-48"
         dataLength={images.length}
@@ -169,7 +200,10 @@ function ImageTableGrid({ images, setImages, rowView }) {
                       {format(img.upload_date, "MMMM dd, yyyy")}
                     </Table.Cell>
                     <Table.Cell>
-                      <BsThreeDotsVertical />
+                      <ImageDatasetActionButton deleteAction={() => {
+                        setImageToDelete(idx);
+                        setWarningOpenDelete(true);
+                      }} />
                     </Table.Cell>
                   </Table.Row>
                 ))}

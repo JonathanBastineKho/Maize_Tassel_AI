@@ -35,6 +35,10 @@ class DatasetImageLink(Base):
         db.commit()
         return new
     
+    def delete(self, db: Session):
+        db.delete(self)
+        db.commit()
+    
     @classmethod
     def retrieve(cls, db: Session, dataset_name: str, image_name: str, folder_id: str):
         result = db.query(cls, Image.feedback, Image.upload_date).\
