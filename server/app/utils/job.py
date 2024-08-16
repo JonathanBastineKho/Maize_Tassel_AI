@@ -21,7 +21,7 @@ class JobManager:
             host=self.rabbit_host,
             port=self.rabbit_port,
             credentials=credentials,
-            heartbeat=600
+            heartbeat=0
         )
 
         self.connection = pika.BlockingConnection(parameters)

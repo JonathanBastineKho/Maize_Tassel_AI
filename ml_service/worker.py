@@ -104,12 +104,12 @@ class Worker:
         self.model_update_queue = result.method.queue
         self.channel.queue_bind(exchange=self.model_update_exchange, queue=self.model_update_queue)
 
+        self.channel.basic_qos(prefetch_count=1)
         self.channel.basic_consume(
             queue=self.rabbit_queue,
             on_message_callback=self.process_inference_job,
-            # auto_ack=True
+            auto_ack=False
         )
-        self.channel.basic_qos(prefetch_count=1)
         self.channel.basic_consume(
             queue=self.model_update_queue,
             on_message_callback=self.process_model_update,

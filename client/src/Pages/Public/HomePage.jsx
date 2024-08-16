@@ -41,7 +41,7 @@ function HomePage() {
                   size="lg"
                   className="rounded-2xl bg-gradient-to-r from-green-400 to-cyan-600 text-white font-semibold shadow-md hover:from-green-500 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2 focus:ring-offset-gray-800 transition-all duration-800 ease-in-out mr-4"
                   onClick={() => {
-                    if (user.role === 'admin'){
+                    if (user?.role === 'admin'){
                       navigate("/admin/dashboard");
                     } else {
                       navigate("/user/dashboard");
@@ -182,7 +182,7 @@ function HomePage() {
             <div className="md:w-1/2 px-32">
                 <video
                 className="w-full h-auto rounded-2xl shadow-xl"
-                src="https://storage.googleapis.com/corn_sight_public/Product%20Demo.mp4"
+                src="https://storage.googleapis.com/cornsight_public/Product%20Demo.mp4"
                 autoPlay
                 loop
                 muted
@@ -289,7 +289,7 @@ function HomePage() {
               </ul>
               <Button 
               onClick={()=>{
-                if (user.role === 'admin') {
+                if (user?.role === 'admin') {
                   navigate("/admin/dashboard");
                 } else {
                   navigate("/user/subscription");
@@ -341,7 +341,7 @@ function HomePage() {
               </ul>
               <Button 
               onClick={()=>{
-                if (user.role === 'admin') {
+                if (user?.role === 'admin') {
                   navigate("/admin/dashboard");
                 } else {
                   navigate("/user/subscription");
@@ -393,7 +393,7 @@ function HomePage() {
               </ul>
               <Button 
               onClick={()=>{
-                if (user.role === 'admin') {
+                if (user?.role === 'admin') {
                   navigate("/admin/dashboard");
                 } else {
                   navigate("/user/subscription");
@@ -412,7 +412,7 @@ function HomePage() {
           <div className="w-full justify-between sm:flex sm:items-center sm:justify-between">
             <Footer.Brand
               href="/"
-              src="https://storage.googleapis.com/corn_sight_public/apple-touch-icon.png"
+              src="https://storage.googleapis.com/cornsight_public/apple-touch-icon.png"
               alt="CornSight Logo"
               name="CornSight"
             />

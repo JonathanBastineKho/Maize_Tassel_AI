@@ -127,7 +127,7 @@ function WeatherChart({ forecastData, weatherData }) {
     },
   };
 
-  if (!weatherData) {
+  if (!weatherData || !weatherData?.list) {
     return (
       <Card className="h-full">
         <div className="animate-pulse flex flex-col space-y-4">

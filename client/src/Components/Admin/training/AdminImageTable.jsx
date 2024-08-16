@@ -138,7 +138,7 @@ function AdminImageTable({ image, setImage, setAddDatasetModalOpen }) {
               onClick={() => {
                 const currentParams = new URLSearchParams(location.search);
                 const paramsString = currentParams.toString();
-                navigate(`/admin/images/${img.folder_id}/${img.name}${paramsString ? `?${paramsString}` : ''}`);
+                navigate(`/admin/images/${img.folder_id}/${encodeURIComponent(img.name)}${paramsString ? `?${paramsString}` : ''}`);
               }}
               className="cursor-pointer" key={idx}>
                 <Table.Cell className="w-fit md:w-auto">

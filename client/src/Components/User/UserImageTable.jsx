@@ -116,7 +116,7 @@ function UserImageTable({
   useEffect(() => {
     let socket;
     const connectToWebSocket = () => {
-      socket = io("http://localhost:8000", {
+      socket = io("https://cornsight.com", {
         path: "/job_socket",
         withCredentials: true,
       });

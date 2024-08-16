@@ -13,7 +13,7 @@ class User(Base):
     password = Column(String, nullable=True)
     phone = Column(String, nullable=True)
     country = Column(String, nullable=True)
-    profile_pict = Column(String, default="https://storage.googleapis.com/corn_sight_public/default_profile.jpg")
+    profile_pict = Column(String, default="https://storage.googleapis.com/cornsight_public/default_profile.jpg")
     verified = Column(Boolean, default=False)
     role = Column(Enum(TypeOfUser.ADMIN, TypeOfUser.REGULAR, TypeOfUser.PREMIUM), default=TypeOfUser.REGULAR)
 

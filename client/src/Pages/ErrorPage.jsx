@@ -10,7 +10,7 @@ function ErrorPage({}) {
         <div className="flex justify-center">
         <img
           className="object-contain h-32 justify-center"
-          src="https://storage.googleapis.com/corn_sight_public/404.png"
+          src="https://storage.googleapis.com/cornsight_public/404.png"
         />
         </div>
         <h1 className="text-6xl font-semibold text-gray-700 text-center ">404</h1>

@@ -45,7 +45,7 @@ async def update_profile_pict(
     ):
     response = await storage_mgr.upload_profile_pict(file, user['email'])
     path = response["image_path"]
-    usr = User.update(db, email=user['email'], profile_pict=f"https://storage.googleapis.com/corn_sight_public/{path}")
+    usr = User.update(db, email=user['email'], profile_pict=f"https://storage.googleapis.com/cornsight_public/{path}")
     session_mgr.logout_user(request)
     return session_mgr.login_user(email=usr.email, name=usr.name, verified=usr.verified, role=usr.role, profile_pict=usr.profile_pict, request=request)
 

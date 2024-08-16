@@ -15,11 +15,11 @@ async def create_checkout_session(request: CheckoutSessionRequest, user: dict = 
         else:
             price_id = "price_1PIW9KRoeifimUyGOtTjhLx9"
 
-        success_url = "http://localhost:5173/subscription/success?session_id={CHECKOUT_SESSION_ID}"
+        success_url = "http://cornsight.com/subscription/success?session_id={CHECKOUT_SESSION_ID}"
 
         checkout_session = stripe.checkout.Session.create(
             success_url=success_url,
-            cancel_url="http://localhost:5173/user/subscription",
+            cancel_url="http://cornsight.com/user/subscription",
             payment_method_types=["card"],
             line_items=[{
                 "price" : price_id,
@@ -45,7 +45,7 @@ async def manage_subscription(user: dict = Depends(LoginRequired(roles_required=
             # Create the billing portal session
             session = stripe.billing_portal.Session.create(
                 customer=customer_id,
-                return_url="http://localhost:5173/user/subscription",
+                return_url="http://cornsight.com/user/subscription",
             )
             
             return {"url": session.url}

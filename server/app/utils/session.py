@@ -32,7 +32,7 @@ class SessionManager:
         if session_token and self.r.exists(session_token):
             raise HTTPException(status_code=403, detail="Users already Logged in")
 
-    def login_user(self, email:str, name:str, verified:bool, role:str, request: Request, profile_pict:str = "https://storage.googleapis.com/corn_sight_public/default_profile.jpg"):
+    def login_user(self, email:str, name:str, verified:bool, role:str, request: Request, profile_pict:str = "https://storage.googleapis.com/cornsight_public/default_profile.jpg"):
         
         self.check_if_already_logged_in(request)
         

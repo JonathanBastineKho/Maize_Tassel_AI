@@ -36,7 +36,7 @@ async def update_job_status(background_tasks: BackgroundTasks, job_status: JobSt
             background_tasks.add_task(
                 email_sender.send_prediction_email,
                 email=job_status.email,
-                link=f"http://localhost:5173/user/images/{job_status.folder_id}/{job_status.name}",
+                link=f"https://cornsight.com/user/images/{job_status.folder_id}/{job_status.name}",
                 status=TypeOfImageStatus.ERROR
             )
         elif session_mgr.increment_job_current_count(job_status['job_id'], has_error=True)[0]:
@@ -44,7 +44,7 @@ async def update_job_status(background_tasks: BackgroundTasks, job_status: JobSt
             background_tasks.add_task(
                 email_sender.send_prediction_email,
                 email=job_status.email,
-                link=f"http://localhost:5173/user/images/{job_status.folder_id}",
+                link=f"https://cornsight.com/user/images/{job_status.folder_id}",
                 status=TypeOfImageStatus.ERROR
             )
     return {"Success" : True}
@@ -73,7 +73,7 @@ async def prediction(background_tasks: BackgroundTasks, prediction:JobPrediction
         background_tasks.add_task(
             email_sender.send_prediction_email,
             email=prediction.email,
-            link=f"http://localhost:5173/user/images/{prediction.folder_id}/{prediction.name}",
+            link=f"http://cornsight.com/user/images/{prediction.folder_id}/{prediction.name}",
             status=TypeOfImageStatus.DONE
         )
     else:
@@ -83,14 +83,14 @@ async def prediction(background_tasks: BackgroundTasks, prediction:JobPrediction
             background_tasks.add_task(
                 email_sender.send_prediction_email,
                 email=prediction.email,
-                link=f"http://localhost:5173/user/images/{prediction.folder_id}",
+                link=f"https://cornsight.com/user/images/{prediction.folder_id}",
                 status=TypeOfImageStatus.ERROR
             )
         elif res[0] and not res[1]:
             background_tasks.add_task(
                 email_sender.send_prediction_email,
                 email=prediction.email,
-                link=f"http://localhost:5173/user/images/{prediction.folder_id}",
+                link=f"https://cornsight.com/user/images/{prediction.folder_id}",
                 status=TypeOfImageStatus.DONE
             )
     return {"Success" : True}

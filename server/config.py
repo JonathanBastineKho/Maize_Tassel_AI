@@ -8,16 +8,16 @@ class Config:
     # Fast API configuration
     SECRET_KEY = os.environ.get("SECRET_KEY") or "dont-share-my-secret"
     DATABASE_URL = os.environ.get("DATABASE_URL") or "sqlite:///./app.db"
-    CONFIRMATION_LINK = os.environ.get("CONFIRMATION_EMAIL") or "http://localhost:5173/confirm"
-    RESET_PASSWORD_LINK = os.environ.get("RESET_PASSWORD") or "http://localhost:5173/reset-password"
+    CONFIRMATION_LINK = os.environ.get("CONFIRMATION_EMAIL") or "https://cornsight.com/confirm"
+    RESET_PASSWORD_LINK = os.environ.get("RESET_PASSWORD") or "https://cornsight.com/reset-password"
     ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL")
     ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
 
     # Third Party
     GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
     GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
-    PRIVATE_BUCKET_NAME = os.environ.get("PRIVATE_BUCKET_NAME") or "corn_sight_private"
-    PUBLIC_BUCKET_NAME = os.environ.get("PUBLIC_BUCKET_NAME") or "corn_sight_public"
+    PRIVATE_BUCKET_NAME = os.environ.get("PRIVATE_BUCKET_NAME") or "cornsight_private"
+    PUBLIC_BUCKET_NAME = os.environ.get("PUBLIC_BUCKET_NAME") or "cornsight_public"
     MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
     MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
     STRIPE_SECRET = os.environ.get("STRIPE_SECRET")

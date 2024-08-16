@@ -6,3 +6,4 @@ ultralytics==8.2.10
 google-cloud-storage==2.16.0
 python-dotenv==1.0.1
 pillow==10.3.0
+numpy==1.26.4

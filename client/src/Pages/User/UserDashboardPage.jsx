@@ -113,7 +113,7 @@ function UserDashboardPage() {
             setForecastingYield(true);
             if (weather !== null && historicalData.date_count.length > 0) {
                 axios.post("/api/ai/future-yield",
-                    {historical_count: historicalData.date_count, weather_forecast: weather.list}
+                    {historical_count: historicalData.date_count, weather_forecast: weather?.list}
                 )
                 .then((res) => {
                     if (res.status === 200){

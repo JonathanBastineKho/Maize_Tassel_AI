@@ -302,7 +302,7 @@ def train_model(train_params: TrainParams, db: Session = Depends(get_db), _: dic
         images = Dataset.search_images(db, dataset_name=dataset_name)
         total_images += len(images)
         for image in images:
-            labels = Label.retrieve(db, folder_id=image.image_folder_id, image_name=image.image_name)
+            labels = Label.retrieve(db, dataset_name=dataset_name, folder_id=image.image_folder_id, image_name=image.image_name)
             label_data[dataset_name][f"{image.image_folder_id}/image/{image.image_name}"] = [
                 {
                     "box_id": label.box_id,

@@ -84,7 +84,7 @@ import {
               </button>
               <NavbarBrand as={Link} to="/">
                   <img
-                  src="https://storage.googleapis.com/corn_sight_public/apple-touch-icon.png"
+                  src="https://storage.googleapis.com/cornsight_public/apple-touch-icon.png"
                   className="mr-3 h-6 sm:h-9"
                   alt="logo"
                   />

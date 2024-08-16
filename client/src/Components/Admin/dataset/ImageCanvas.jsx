@@ -405,16 +405,26 @@ function ImageAdminCanvas({ setImageHasBeenCropped, setImageHasBeenReannotate, n
         setCropResizeHandle(null);
         if (newBoxToggle && newBoxStart) {
             const { x, y } = getMousePos(e);
+            // Constrain the box within the image boundaries
+            const constrainedX1 = Math.max(0, Math.min(newBoxStart.x, image.width));
+            const constrainedY1 = Math.max(0, Math.min(newBoxStart.y, image.height));
+            const constrainedX2 = Math.max(0, Math.min(x, image.width));
+            const constrainedY2 = Math.max(0, Math.min(y, image.height));
+
             const newBox = {
-                xCenter: (newBoxStart.x + x) / 2,
-                yCenter: (newBoxStart.y + y) / 2,
-                width: Math.abs(x - newBoxStart.x),
-                height: Math.abs(y - newBoxStart.y),
+                xCenter: (constrainedX1 + constrainedX2) / 2,
+                yCenter: (constrainedY1 + constrainedY2) / 2,
+                width: Math.abs(constrainedX2 - constrainedX1),
+                height: Math.abs(constrainedY2 - constrainedY1),
             };
-            setLabel(prevLabels => {
-                setImageHasBeenReannotate(true);
-                return [...prevLabels, newBox];
-            });
+
+            // Only add the box if it has a non-zero width and height
+            if (newBox.width > 0 && newBox.height > 0) {
+                setLabel(prevLabels => {
+                    setImageHasBeenReannotate(true);
+                    return [...prevLabels, newBox];
+                });
+            }
             setNewBoxStart(null);
             drawCanvas();
             return;

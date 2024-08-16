@@ -33,7 +33,7 @@ function UnverifiedPage() {
       <Card className="p-4 text-center sm:w-96 md:w-[28rem]">
         <img
           className="w-28 mx-auto block my-1"
-          src="https://storage.googleapis.com/corn_sight_public/mail.png"
+          src="https://storage.googleapis.com/cornsight_public/mail.png"
           alt="Mail logo"
         />
         <h1 className="text-2xl font-bold tracking-tight text-gray-900">

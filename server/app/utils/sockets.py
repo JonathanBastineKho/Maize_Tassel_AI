@@ -7,7 +7,8 @@ from app.database.schema import TypeOfUser
 
 sio_server = socketio.AsyncServer(
     async_mode='asgi',
-    cors_allowed_origins=["http://localhost:5173"]
+    cors_allowed_origins=["http://localhost:5173", "http://localhost:8000", "https://cornsight.com", "https://www.cornsight.com"],
+    allow_credentials=True
 )
 
 sio_app = socketio.ASGIApp(

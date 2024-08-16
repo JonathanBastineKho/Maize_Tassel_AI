@@ -15,7 +15,7 @@ function WeatherForecast({ weatherData, location, setLocation}) {
     const [showMap, setShowMap] = useState(false);
     const [mapPosition, setMapPosition] = useState(null);
 
-    if (!weatherData) {
+    if (!weatherData || !weatherData?.list) {
         return (
           <Card>
             <div className="animate-pulse flex flex-col space-y-4">
@@ -62,7 +62,7 @@ function WeatherForecast({ weatherData, location, setLocation}) {
                 <div className="flex flex-row justify-between gap-3 items-center">
                     <div className="flex flex-col gap-0.5 items-center">
                         <Avatar 
-                            img={`http://openweathermap.org/img/wn/${currWeather[0].weather[0].icon}@2x.png`}
+                            img={`http://openweathermap.org/img/wn/${currWeather[0]?.weather[0].icon}@2x.png`}
                             size="lg"
                         />
                         <Label className="text-sm text-gray-500">{currWeather[0].pop ? `${Math.round(currWeather[0].pop * 100)}%` : ''}</Label>
@@ -96,7 +96,7 @@ function WeatherForecast({ weatherData, location, setLocation}) {
                                             </div>
                                             <div className="flex flex-col gap-1 items-center">
                                                 <Avatar 
-                                                    img={`http://openweathermap.org/img/wn/${day.weather[0].icon}.png`}
+                                                    img={`http://openweathermap.org/img/wn/${day?.weather[0].icon}.png`}
                                                     size="sm"
                                                 />
                                                 <Label className="text-xs text-gray-500">{day.pop ? `${Math.round(day.pop * 100)}%` : ''}</Label>

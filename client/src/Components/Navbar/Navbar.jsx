@@ -93,7 +93,7 @@ import {
         isScrolled ? "shadow-lg shadow-gray-200/20" : ""
       }`}>
         <NavbarBrand as={Link} to="/">
-          <img src="https://storage.googleapis.com/corn_sight_public/apple-touch-icon.png" className="mr-3 h-6 sm:h-9" alt="logo" />
+          <img src="https://storage.googleapis.com/cornsight_public/apple-touch-icon.png" className="mr-3 h-6 sm:h-9" alt="logo" />
           <span className="self-center whitespace-nowrap text-xl font-bold text-gray-800">CornSight</span>
         </NavbarBrand>
         <div className="flex md:order-2">

@@ -187,7 +187,7 @@ function ImageTableGrid({ images, setImages, rowView }) {
                     setCurrIdx(idx);
                     const currentParams = new URLSearchParams(location.search);
                     const paramsString = currentParams.toString();
-                    navigate(`/admin/datasets/test/${img.folder_id}/${encodeURI(img.name)}${paramsString ? `?${paramsString}` : ''}`)}} 
+                    navigate(`/admin/datasets/${dataset_name}/${img.folder_id}/${encodeURIComponent(img.name)}${paramsString ? `?${paramsString}` : ''}`)}} 
                   className="cursor-pointer" key={idx}>
                     <Table.Cell className="w-full md:w-auto whitespace-nowrap font-medium text-gray-900 flex flex-row gap-2 items-center ">
                       <Avatar size="xs" className="min-w-6" img={img.thumbnail_url} />
@@ -241,7 +241,7 @@ function ImageTableGrid({ images, setImages, rowView }) {
                     setCurrIdx(idx);
                     const currentParams = new URLSearchParams(location.search);
                     const paramsString = currentParams.toString();
-                    navigate(`/admin/datasets/test/${img.folder_id}/${encodeURI(img.name)}${paramsString ? `?${paramsString}` : ''}`)}}
+                    navigate(`/admin/datasets/${dataset_name}/${img.folder_id}/${encodeURIComponent(img.name)}${paramsString ? `?${paramsString}` : ''}`)}}
                 className="cursor-pointer flex flex-col h-48 bg-white border border-gray-200 rounded-lg shadow"
               >
                 <div className="flex-grow overflow-hidden rounded-t-lg">
